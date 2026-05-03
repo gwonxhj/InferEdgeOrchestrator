@@ -100,6 +100,28 @@ Device validation status:
 - Jetson Orin Nano physical-device run: pending hardware execution.
 - See `docs/jetson_smoke_test.md` for the exact command and validation record.
 
+## Phase 5 InferEdge Integration
+
+InferEdge remains the deployment validation pipeline. InferEdgeOrchestrator is
+the runtime operation control layer. The projects are connected only through
+files, not direct module imports.
+
+Create an Orchestrator config from an InferEdge `result.json`:
+
+```bash
+python3 -m inferedge_orchestrator from-inferedge \
+  --result examples/inferedge_result_sample.json \
+  --output configs/from_inferedge.json \
+  --task-name detector \
+  --model-path models/detector.onnx \
+  --priority 100 \
+  --target-fps 15 \
+  --queue-size 4
+```
+
+The helper reads `expected_latency_ms` and recommends `latency_budget_ms` using a
+configurable multiplier. See `docs/inferedge_integration.md`.
+
 ## Quickstart
 
 Run the tests:

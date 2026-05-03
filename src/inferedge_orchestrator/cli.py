@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from inferedge_orchestrator.config import load_config
+from inferedge_orchestrator.inferedge_adapter import write_config_from_inferedge_result
 from inferedge_orchestrator.runtime import OrchestratorRuntime
 from inferedge_orchestrator.scenarios import write_overload_comparison
 
@@ -42,6 +43,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="interval between generated dummy frame cycles",
     )
     compare_parser.set_defaults(func=_compare_overload)
+
+    inferedge_parser = subparsers.add_parser(
+        "from-inferedge",
+        help="create orchestrator config from an InferEdge result.json file",
+    )
+    inferedge_parser.add_argument("--result", required=True, help="InferEdge result.json path")
+    inferedge_parser.add_argument("--output", required=True, help="output orchestrator config path")
+    inferedge_parser.add_argument("--task-name", required=True)
+    inferedge_parser.add_argument("--model-path", required=True)
+    inferedge_parser.add_argument("--priority", type=int, required=True)
+    inferedge_parser.add_argument("--target-fps", type=float, required=True)
+    inferedge_parser.add_argument("--queue-size", type=int, default=2)
+    inferedge_parser.add_argument("--drop-policy", default="drop_oldest")
+    inferedge_parser.add_argument("--worker", default="onnxruntime")
+    inferedge_parser.add_argument("--budget-multiplier", type=float, default=1.5)
+    inferedge_parser.set_defaults(func=_from_inferedge)
 
     return parser
 
@@ -92,4 +109,23 @@ def _compare_overload(args: argparse.Namespace) -> int:
         f"improvement={effect['p95_end_to_end_improvement_ms']}ms "
         f"low_priority_drops={effect['low_priority_drops']}"
     )
+    return 0
+
+
+def _from_inferedge(args: argparse.Namespace) -> int:
+    config = write_config_from_inferedge_result(
+        args.result,
+        args.output,
+        task_name=args.task_name,
+        model_path=args.model_path,
+        priority=args.priority,
+        target_fps=args.target_fps,
+        queue_size=args.queue_size,
+        drop_policy=args.drop_policy,
+        worker=args.worker,
+        budget_multiplier=args.budget_multiplier,
+    )
+    latency_budget = config["tasks"][0]["latency_budget_ms"]
+    print(f"wrote config: {args.output}")
+    print(f"{args.task_name}: recommended latency_budget_ms={latency_budget}")
     return 0
