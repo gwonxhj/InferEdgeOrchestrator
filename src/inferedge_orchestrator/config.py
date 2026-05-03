@@ -7,7 +7,8 @@ from typing import Any, Iterable
 
 
 DROP_POLICIES = {"drop_oldest", "drop_newest", "drop_low_priority"}
-WORKERS = {"dummy"}
+INPUT_SOURCES = {"dummy", "image", "video"}
+WORKERS = {"dummy", "onnxruntime"}
 
 
 @dataclass(frozen=True)
@@ -62,6 +63,8 @@ class OrchestratorConfig:
     tasks: tuple[TaskConfig, ...]
     name: str = "default"
     overload_backlog_threshold: int = 8
+    input_source: str = "dummy"
+    input_path: str | None = None
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "OrchestratorConfig":
@@ -71,6 +74,8 @@ class OrchestratorConfig:
             tasks=tasks,
             name=str(run.get("name", "default")),
             overload_backlog_threshold=int(run.get("overload_backlog_threshold", 8)),
+            input_source=str(run.get("input_source", "dummy")),
+            input_path=run.get("input_path"),
         )
         config.validate()
         return config
@@ -83,6 +88,10 @@ class OrchestratorConfig:
             raise ValueError("task names must be unique")
         if self.overload_backlog_threshold <= 0:
             raise ValueError("overload_backlog_threshold must be > 0")
+        if self.input_source not in INPUT_SOURCES:
+            raise ValueError(f"unsupported input_source {self.input_source!r}")
+        if self.input_source in {"image", "video"} and not self.input_path:
+            raise ValueError(f"{self.input_source} input_source requires input_path")
 
     def task_map(self) -> dict[str, TaskConfig]:
         return {task.name: task for task in self.tasks}

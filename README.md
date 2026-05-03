@@ -33,6 +33,33 @@ Phase 1 proves the scheduler policy without running real models.
 Phase 1 intentionally does not execute ONNX models. ONNX Runtime support belongs
 to Phase 2.
 
+## Phase 2 ONNX Runtime Smoke
+
+Install the ONNX extras in your local environment:
+
+```bash
+python3 -m pip install -e '.[onnx,dev]'
+```
+
+Create a tiny identity model for smoke testing:
+
+```bash
+python3 scripts/create_identity_onnx.py --output models/identity.onnx
+```
+
+Run the ONNX Runtime worker demo:
+
+```bash
+python3 -m inferedge_orchestrator run \
+  --config configs/phase2_onnx_demo.json \
+  --output reports/phase2_onnx_demo.json \
+  --frames 1
+```
+
+The `worker` field selects whether a task runs through the dummy worker or the
+ONNX Runtime worker. Image and video inputs can be routed by setting
+`run.input_source` to `image` or `video` with `run.input_path`.
+
 ## Quickstart
 
 Run the tests:
