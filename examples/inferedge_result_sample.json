@@ -1,0 +1,8 @@
+{
+  "runtime": {
+    "device": "jetson_orin_nano",
+    "summary": {
+      "expected_latency_ms": 42.2
+    }
+  }
+}
