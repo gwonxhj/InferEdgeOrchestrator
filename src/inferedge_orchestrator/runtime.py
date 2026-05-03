@@ -4,6 +4,7 @@ from pathlib import Path
 
 from inferedge_orchestrator.config import OrchestratorConfig
 from inferedge_orchestrator.frames import build_frame_source
+from inferedge_orchestrator.monitor import ResourceMonitor
 from inferedge_orchestrator.policy import LoadSheddingPolicy
 from inferedge_orchestrator.scheduler import PriorityScheduler
 from inferedge_orchestrator.task_queue import BoundedTaskQueues
@@ -24,8 +25,10 @@ class OrchestratorRuntime:
         )
         self.worker = WorkerPool(sleep_dummy=sleep_worker)
         self.telemetry = TelemetryCollector(config.tasks, run_name=config.name)
+        self.monitor = ResourceMonitor()
 
     def run(self, *, frames: int, drain: bool = True) -> dict[str, object]:
+        self.telemetry.record_resource_snapshot(self.monitor.capture(stage="start"))
         for cycle in range(frames):
             now_ms = float(cycle)
             for frame in self.source.frames_for_cycle(
@@ -45,6 +48,7 @@ class OrchestratorRuntime:
                 if not self._execute_one():
                     break
 
+        self.telemetry.record_resource_snapshot(self.monitor.capture(stage="end"))
         return self.telemetry.to_report()
 
     def run_to_file(self, *, frames: int, output: str | Path, drain: bool = True) -> None:

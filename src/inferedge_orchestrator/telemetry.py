@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from inferedge_orchestrator.config import TaskConfig
+from inferedge_orchestrator.monitor import ResourceSnapshot
 from inferedge_orchestrator.policy import PolicyDecision
 from inferedge_orchestrator.scheduler import ScheduleDecision
 from inferedge_orchestrator.task_queue import DropRecord
@@ -44,6 +45,7 @@ class TelemetryCollector:
         self.overload_events: list[dict[str, Any]] = []
         self.drop_events: list[dict[str, Any]] = []
         self.result_events: list[dict[str, Any]] = []
+        self.resource_snapshots: list[dict[str, object]] = []
 
     def record_backlog(self, backlog: dict[str, int]) -> None:
         for task_name, value in backlog.items():
@@ -93,6 +95,9 @@ class TelemetryCollector:
         if decision.event == "load_shedding":
             self.overload_events.append(event)
 
+    def record_resource_snapshot(self, snapshot: ResourceSnapshot) -> None:
+        self.resource_snapshots.append(snapshot.to_dict())
+
     def to_report(self) -> dict[str, Any]:
         return {
             "run": {"name": self.run_name},
@@ -110,6 +115,7 @@ class TelemetryCollector:
             "policy_decisions": self.policy_decisions,
             "drop_events": self.drop_events,
             "result_events": self.result_events,
+            "resource_snapshots": self.resource_snapshots,
             "schedule_decisions": self.schedule_decisions,
         }
 
