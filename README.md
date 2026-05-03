@@ -79,6 +79,27 @@ classifier drops increase under overload, but detector p95 end-to-end latency is
 protected. This project is not a benchmark tool; the point is runtime stability
 under competing edge inference work.
 
+## Phase 4 Jetson Smoke Test
+
+Run the dummy-input smoke on Jetson Orin Nano:
+
+```bash
+python3 -m inferedge_orchestrator run \
+  --config configs/phase4_jetson_smoke.json \
+  --output reports/jetson_smoke_dummy.json \
+  --frames 20
+```
+
+Telemetry includes `resource_snapshots` at `start` and `end`. Optional
+`tegrastats` output can be parsed with
+`inferedge_orchestrator.monitor.parse_tegrastats_line`.
+
+Device validation status:
+
+- Local smoke and telemetry structure: validated by tests.
+- Jetson Orin Nano physical-device run: pending hardware execution.
+- See `docs/jetson_smoke_test.md` for the exact command and validation record.
+
 ## Quickstart
 
 Run the tests:
