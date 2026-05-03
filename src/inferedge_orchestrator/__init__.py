@@ -1,4 +1,4 @@
-"""InferEdgeOrchestrator phase 1 scheduler core."""
+"""InferEdgeOrchestrator lightweight edge inference scheduler."""
 
 from inferedge_orchestrator.config import OrchestratorConfig, TaskConfig
 from inferedge_orchestrator.runtime import OrchestratorRuntime
