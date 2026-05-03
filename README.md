@@ -8,6 +8,8 @@ It is not a Triton or DeepStream replacement. The goal is to show how a
 constrained edge device can protect high-priority inference workloads when
 latency spikes, queue backlog, and frame drops appear under overload.
 
+Portfolio positioning: Triton/DeepStream 대체가 아니라 lightweight edge scheduler.
+
 ## Relationship to InferEdge
 
 InferEdge is the deployment validation pipeline. It handles model conversion,
