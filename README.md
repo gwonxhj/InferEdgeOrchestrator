@@ -60,6 +60,25 @@ The `worker` field selects whether a task runs through the dummy worker or the
 ONNX Runtime worker. Image and video inputs can be routed by setting
 `run.input_source` to `image` or `video` with `run.input_path`.
 
+## Phase 3 Overload Scenario
+
+Run the overload comparison:
+
+```bash
+python3 -m inferedge_orchestrator compare-overload \
+  --config configs/phase3_overload.json \
+  --output reports/phase3_overload.json \
+  --frames 20
+```
+
+The comparison writes a no-scheduler FIFO baseline and a scheduled policy run to
+the same JSON report. In the baseline, every task is processed in arrival order,
+so a low-priority classifier can sit in front of a high-priority detector and
+push up detector end-to-end latency. With priority scheduling and load shedding,
+classifier drops increase under overload, but detector p95 end-to-end latency is
+protected. This project is not a benchmark tool; the point is runtime stability
+under competing edge inference work.
+
 ## Quickstart
 
 Run the tests:
