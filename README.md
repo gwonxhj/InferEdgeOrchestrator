@@ -19,6 +19,50 @@ InferEdgeOrchestrator is the runtime operation control layer. It starts after a
 model is considered deployable and controls how multiple inference tasks behave
 when they run together on a constrained device.
 
+## Ecosystem Lifecycle
+
+```mermaid
+flowchart LR
+    subgraph Validation["Validation Layer"]
+        Forge["InferEdgeForge\nmodel conversion\nbuild provenance"]
+        Runtime["InferEdge-Runtime\ndevice execution\nresult.json"]
+        Lab["InferEdgeLab\ncomparison\ndeployment decision"]
+        AIGuard["InferEdgeAIGuard\noptional anomaly/risk\nrecommendation"]
+    end
+
+    subgraph Operation["Operation Layer"]
+        Orchestrator["InferEdgeOrchestrator\npriority scheduling\nload shedding\nruntime telemetry"]
+    end
+
+    Forge --> Runtime --> Lab
+    Lab -. optional guard analysis .-> AIGuard
+    Lab -->|"deployable model + result.json"| Orchestrator
+    AIGuard -. risk signals .-> Lab
+```
+
+The lifecycle boundary is intentional:
+
+- InferEdge answers whether a model is safe and reasonable to deploy.
+- InferEdgeOrchestrator controls how deployed inference tasks behave together.
+- The integration is file-based through `result.json`, not direct imports between
+  projects.
+
+## Why Not Triton or DeepStream?
+
+InferEdgeOrchestrator is not a general-purpose inference server, media pipeline,
+or deployment platform. It is a small scheduler-focused runtime layer for
+showing how overload control works on constrained edge devices.
+
+Triton and DeepStream are strong production systems when the goal is broad model
+serving, stream processing, or GPU-optimized deployment. This project has a
+different portfolio purpose: it makes scheduling decisions visible and testable.
+The code directly models per-task priority, bounded queues, drop policy,
+deadline pressure, and telemetry so the behavior can be explained from first
+principles.
+
+In short, this repository demonstrates runtime operation control, not platform
+replacement.
+
 ## Phase 1 Scope
 
 Phase 1 proves the scheduler policy without running real models.
