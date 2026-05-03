@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Protocol
 
 from inferedge_orchestrator.config import TaskConfig
 from inferedge_orchestrator.frames import FrameEnvelope
@@ -13,6 +15,11 @@ class WorkerResult:
     frame_id: str
     latency_ms: float
     output: dict[str, object]
+
+
+class Worker(Protocol):
+    def run(self, task: TaskConfig, frame: FrameEnvelope) -> WorkerResult:
+        ...
 
 
 class DummyWorker:
@@ -32,3 +39,87 @@ class DummyWorker:
             latency_ms=latency_ms,
             output={"worker": "dummy", "sequence": frame.sequence},
         )
+
+
+class OnnxRuntimeWorker:
+    def __init__(self) -> None:
+        self._sessions: dict[str, object] = {}
+
+    def run(self, task: TaskConfig, frame: FrameEnvelope) -> WorkerResult:
+        started = time.perf_counter()
+        session = self._session_for(task)
+        inputs = session.get_inputs()
+        if not inputs:
+            raise RuntimeError(f"{task.name}: ONNX model has no inputs")
+        feed = self._build_feed(inputs, frame)
+        outputs = session.run(None, feed)
+        latency_ms = (time.perf_counter() - started) * 1000.0
+        return WorkerResult(
+            task_name=task.name,
+            frame_id=frame.frame_id,
+            latency_ms=latency_ms,
+            output={
+                "worker": "onnxruntime",
+                "model_path": task.model_path,
+                "output_count": len(outputs),
+                "output_shapes": [list(output.shape) for output in outputs],
+            },
+        )
+
+    def _session_for(self, task: TaskConfig):
+        if not task.model_path:
+            raise ValueError(f"{task.name}: onnxruntime worker requires model_path")
+        model_path = str(Path(task.model_path))
+        if model_path not in self._sessions:
+            try:
+                import onnxruntime as ort
+            except ModuleNotFoundError as exc:
+                raise RuntimeError(
+                    "onnxruntime worker requires the optional onnxruntime dependency. "
+                    "Install inferedge-orchestrator[onnx]."
+                ) from exc
+            self._sessions[model_path] = ort.InferenceSession(
+                model_path,
+                providers=["CPUExecutionProvider"],
+            )
+        return self._sessions[model_path]
+
+    def _build_feed(self, inputs: list[object], frame: FrameEnvelope) -> dict[str, object]:
+        try:
+            import numpy as np
+        except ModuleNotFoundError as exc:
+            raise RuntimeError(
+                "onnxruntime worker requires numpy. Install inferedge-orchestrator[onnx]."
+            ) from exc
+
+        payload = frame.payload if isinstance(frame.payload, dict) else {}
+        explicit_inputs = payload.get("onnx_inputs")
+        if isinstance(explicit_inputs, dict):
+            return {str(name): np.asarray(value) for name, value in explicit_inputs.items()}
+
+        feed: dict[str, object] = {}
+        for model_input in inputs:
+            shape = _concrete_shape(model_input.shape)
+            feed[model_input.name] = np.zeros(shape, dtype=np.float32)
+        return feed
+
+
+class WorkerPool:
+    def __init__(self, *, sleep_dummy: bool = False) -> None:
+        self._workers: dict[str, Worker] = {
+            "dummy": DummyWorker(sleep=sleep_dummy),
+            "onnxruntime": OnnxRuntimeWorker(),
+        }
+
+    def run(self, task: TaskConfig, frame: FrameEnvelope) -> WorkerResult:
+        return self._workers[task.worker].run(task, frame)
+
+
+def _concrete_shape(shape: list[object]) -> tuple[int, ...]:
+    concrete: list[int] = []
+    for value in shape:
+        if isinstance(value, int) and value > 0:
+            concrete.append(value)
+        else:
+            concrete.append(1)
+    return tuple(concrete)

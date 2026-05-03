@@ -43,6 +43,7 @@ class TelemetryCollector:
         self.policy_decisions: list[dict[str, Any]] = []
         self.overload_events: list[dict[str, Any]] = []
         self.drop_events: list[dict[str, Any]] = []
+        self.result_events: list[dict[str, Any]] = []
 
     def record_backlog(self, backlog: dict[str, int]) -> None:
         for task_name, value in backlog.items():
@@ -71,6 +72,14 @@ class TelemetryCollector:
         task.executed += 1
         task.latencies_ms.append(result.latency_ms)
         task.max_queue_backlog = max(task.max_queue_backlog, backlog_after)
+        self.result_events.append(
+            {
+                "task": result.task_name,
+                "frame_id": result.frame_id,
+                "latency_ms": _rounded(result.latency_ms),
+                "output": result.output,
+            }
+        )
 
     def record_policy_decision(self, decision: PolicyDecision) -> None:
         event = {
@@ -100,6 +109,7 @@ class TelemetryCollector:
             "overload_events": self.overload_events,
             "policy_decisions": self.policy_decisions,
             "drop_events": self.drop_events,
+            "result_events": self.result_events,
             "schedule_decisions": self.schedule_decisions,
         }
 

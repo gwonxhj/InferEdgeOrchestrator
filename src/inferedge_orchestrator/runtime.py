@@ -3,12 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from inferedge_orchestrator.config import OrchestratorConfig
-from inferedge_orchestrator.frames import DummyFrameSource
+from inferedge_orchestrator.frames import build_frame_source
 from inferedge_orchestrator.policy import LoadSheddingPolicy
 from inferedge_orchestrator.scheduler import PriorityScheduler
 from inferedge_orchestrator.task_queue import BoundedTaskQueues
 from inferedge_orchestrator.telemetry import TelemetryCollector
-from inferedge_orchestrator.workers import DummyWorker
+from inferedge_orchestrator.workers import WorkerPool
 
 
 class OrchestratorRuntime:
@@ -16,13 +16,13 @@ class OrchestratorRuntime:
         self.config = config
         self.task_map = config.task_map()
         self.queues = BoundedTaskQueues(config.tasks)
-        self.source = DummyFrameSource()
+        self.source = build_frame_source(config)
         self.scheduler = PriorityScheduler(config.tasks)
         self.policy = LoadSheddingPolicy(
             config.tasks,
             backlog_threshold=config.overload_backlog_threshold,
         )
-        self.worker = DummyWorker(sleep=sleep_worker)
+        self.worker = WorkerPool(sleep_dummy=sleep_worker)
         self.telemetry = TelemetryCollector(config.tasks, run_name=config.name)
 
     def run(self, *, frames: int, drain: bool = True) -> dict[str, object]:
