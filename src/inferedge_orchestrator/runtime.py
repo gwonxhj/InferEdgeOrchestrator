@@ -1,0 +1,77 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from inferedge_orchestrator.config import OrchestratorConfig
+from inferedge_orchestrator.frames import DummyFrameSource
+from inferedge_orchestrator.policy import LoadSheddingPolicy
+from inferedge_orchestrator.scheduler import PriorityScheduler
+from inferedge_orchestrator.task_queue import BoundedTaskQueues
+from inferedge_orchestrator.telemetry import TelemetryCollector
+from inferedge_orchestrator.workers import DummyWorker
+
+
+class OrchestratorRuntime:
+    def __init__(self, config: OrchestratorConfig, *, sleep_worker: bool = False) -> None:
+        self.config = config
+        self.task_map = config.task_map()
+        self.queues = BoundedTaskQueues(config.tasks)
+        self.source = DummyFrameSource()
+        self.scheduler = PriorityScheduler(config.tasks)
+        self.policy = LoadSheddingPolicy(
+            config.tasks,
+            backlog_threshold=config.overload_backlog_threshold,
+        )
+        self.worker = DummyWorker(sleep=sleep_worker)
+        self.telemetry = TelemetryCollector(config.tasks, run_name=config.name)
+
+    def run(self, *, frames: int, drain: bool = True) -> dict[str, object]:
+        for cycle in range(frames):
+            now_ms = float(cycle)
+            for frame in self.source.frames_for_cycle(
+                self.config.tasks,
+                cycle=cycle,
+                now_ms=now_ms,
+            ):
+                result = self.queues.enqueue(frame)
+                if result.dropped is not None:
+                    self.telemetry.record_drop(result.dropped)
+            self._record_backlog_and_shed()
+            self._execute_one()
+
+        if drain:
+            while self.queues.total_backlog() > 0:
+                self._record_backlog_and_shed()
+                if not self._execute_one():
+                    break
+
+        return self.telemetry.to_report()
+
+    def run_to_file(self, *, frames: int, output: str | Path, drain: bool = True) -> None:
+        self.run(frames=frames, drain=drain)
+        self.telemetry.write_json(output)
+
+    def _record_backlog_and_shed(self) -> None:
+        self.telemetry.record_backlog(self.queues.snapshot_backlog())
+        drops, decisions = self.policy.apply(self.queues)
+        for drop in drops:
+            self.telemetry.record_drop(drop)
+        for decision in decisions:
+            self.telemetry.record_policy_decision(decision)
+        self.telemetry.record_backlog(self.queues.snapshot_backlog())
+
+    def _execute_one(self) -> bool:
+        decision = self.scheduler.choose_next(self.queues)
+        if decision is None:
+            return False
+        self.telemetry.record_schedule(decision)
+        frame = self.queues.pop(decision.task_name)
+        if frame is None:
+            return False
+        task = self.task_map[decision.task_name]
+        result = self.worker.run(task, frame)
+        self.telemetry.record_execution(
+            result,
+            backlog_after=self.queues.backlog(decision.task_name),
+        )
+        return True
