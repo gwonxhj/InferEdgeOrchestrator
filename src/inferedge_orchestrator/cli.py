@@ -6,6 +6,7 @@ from pathlib import Path
 
 from inferedge_orchestrator.config import load_config
 from inferedge_orchestrator.runtime import OrchestratorRuntime
+from inferedge_orchestrator.scenarios import write_overload_comparison
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -26,6 +27,21 @@ def build_parser() -> argparse.ArgumentParser:
     report_parser = subparsers.add_parser("report", help="summarize telemetry JSON")
     report_parser.add_argument("--input", required=True, help="telemetry JSON input path")
     report_parser.set_defaults(func=_report)
+
+    compare_parser = subparsers.add_parser(
+        "compare-overload",
+        help="compare FIFO baseline with scheduled load shedding",
+    )
+    compare_parser.add_argument("--config", required=True, help="path to JSON config")
+    compare_parser.add_argument("--output", required=True, help="comparison JSON output path")
+    compare_parser.add_argument("--frames", type=int, default=20, help="dummy frame cycles")
+    compare_parser.add_argument(
+        "--frame-interval-ms",
+        type=float,
+        default=10.0,
+        help="interval between generated dummy frame cycles",
+    )
+    compare_parser.set_defaults(func=_compare_overload)
 
     return parser
 
@@ -56,4 +72,24 @@ def _report(args: argparse.Namespace) -> int:
             f"max_queue_backlog={task['max_queue_backlog']}"
         )
     print(f"overload_events={len(data.get('overload_events', []))}")
+    return 0
+
+
+def _compare_overload(args: argparse.Namespace) -> int:
+    config = load_config(args.config)
+    report = write_overload_comparison(
+        config,
+        output=args.output,
+        frames=args.frames,
+        frame_interval_ms=args.frame_interval_ms,
+    )
+    effect = report["effect"]
+    print(f"wrote comparison: {args.output}")
+    print(
+        f"{effect['protected_task']}: "
+        f"baseline_p95={effect['baseline_p95_end_to_end_latency_ms']}ms "
+        f"scheduled_p95={effect['scheduled_p95_end_to_end_latency_ms']}ms "
+        f"improvement={effect['p95_end_to_end_improvement_ms']}ms "
+        f"low_priority_drops={effect['low_priority_drops']}"
+    )
     return 0
