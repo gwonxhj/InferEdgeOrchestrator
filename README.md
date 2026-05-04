@@ -101,6 +101,7 @@ CAPTURE_TEGRASTATS=1 scripts/smoke_jetson_dummy.sh
 
 | Item | Value |
 | --- | --- |
+| Timestamp | `2026-05-04T12:44:02Z` |
 | Device | `nano01` |
 | OS / L4T | `Ubuntu 22.04.5 LTS`, `L4T R36.4.7` |
 | Kernel | `Linux 5.15.148-tegra aarch64` |
@@ -118,6 +119,40 @@ CAPTURE_TEGRASTATS=1 scripts/smoke_jetson_dummy.sh
 Result: Jetson smoke validation confirmed that the CLI executes on device,
 telemetry is generated, resource snapshots are recorded, and low-priority drops
 are visible. This is smoke validation, not benchmark evidence.
+
+### Jetson ONNX Runtime Smoke
+
+Command:
+
+```bash
+CAPTURE_TEGRASTATS=1 scripts/smoke_jetson_onnx.sh
+```
+
+| Item | Value |
+| --- | --- |
+| Timestamp | `2026-05-04T13:09:45Z` |
+| Device | `nano01` |
+| OS / L4T | `Ubuntu 22.04.5 LTS`, `L4T R36.4.7` |
+| Kernel | `Linux 5.15.148-tegra aarch64` |
+| Python | `3.10.12` |
+| ONNX Runtime | `1.23.2` |
+| Model | `models/identity.onnx` |
+| Worker | `onnxruntime` |
+| Provider | `CPUExecutionProvider` |
+| Result | `PASS` |
+| Telemetry | `reports/jetson_onnx_smoke.json` |
+| Optional tegrastats samples | `13` |
+
+| Task | Executed | Dropped | Mean latency | P95 latency | Output shape | Resource snapshot RSS |
+| --- | ---: | ---: | ---: | ---: | --- | --- |
+| identity | 1 | 0 | 202.05ms | 202.05ms | `[1, 2]` | `13.465MB -> 54.043MB` |
+
+Result: Jetson ONNX Runtime smoke validation confirmed that the real ONNX
+Runtime worker path executes on device and records inference latency, output
+metadata, result events, and resource snapshots. The ONNX Runtime warning about
+GPU device discovery is expected for this smoke because the worker currently
+uses `CPUExecutionProvider`; this result should not be interpreted as TensorRT
+or GPU benchmark evidence.
 
 ## Phase 1 Scope
 
@@ -161,6 +196,15 @@ python3 -m inferedge_orchestrator run \
 The `worker` field selects whether a task runs through the dummy worker or the
 ONNX Runtime worker. Image and video inputs can be routed by setting
 `run.input_source` to `image` or `video` with `run.input_path`.
+
+On Jetson, use the dedicated ONNX smoke script with a Python environment that
+already has `numpy`, `onnx`, and `onnxruntime` installed:
+
+```bash
+PYTHON_BIN=$HOME/miniconda3/envs/yolo_env/bin/python \
+  CAPTURE_TEGRASTATS=1 \
+  scripts/smoke_jetson_onnx.sh
+```
 
 ## Phase 3 Overload Scenario
 
