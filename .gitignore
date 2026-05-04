@@ -5,4 +5,5 @@ __pycache__/
 reports/*.json
 reports/*.log
 reports/jetson_validation.md
+reports/jetson_onnx_validation.md
 models/*.onnx
