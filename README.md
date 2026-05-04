@@ -65,31 +65,28 @@ replacement.
 
 ## Validation Results
 
-These results are split into two categories on purpose. The synthetic overload
-scenario validates the scheduler and load shedding policy in a deterministic
-setting. The Jetson smoke run validates that the orchestrator CLI and telemetry
-path run on actual edge hardware.
+These results are organized as lifecycle evidence. Smoke runs show that the
+runtime and worker paths execute on physical edge hardware, the synthetic
+overload scenario shows why scheduling and load shedding matter, and the
+InferEdge handoff keeps validation output separate from operation control.
 
-### Synthetic Overload Scenario
+Portfolio reading order:
 
-Command:
+- Start with Jetson smoke validation to confirm the runtime and telemetry path
+  work on physical edge hardware.
+- Then read the ONNX Runtime smoke to confirm the real worker interface runs on
+  Jetson, while keeping the result labeled as smoke validation.
+- Use the synthetic overload scenario to understand why priority scheduling and
+  load shedding matter under multi-task inference pressure.
+- Finish with InferEdge handoff evidence to see how deployment validation feeds
+  operation control through files.
 
-```bash
-python3 -m inferedge_orchestrator compare-overload \
-  --config configs/phase3_overload.json \
-  --output reports/phase3_overload.json \
-  --frames 20
-```
-
-| Mode | Detector executed | Detector dropped | Detector p95 end-to-end latency | Classifier executed | Classifier dropped | Overload events |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| FIFO baseline | 20 | 0 | 782.0ms | 20 | 0 | 0 |
-| Scheduler + load shedding | 20 | 0 | 8.0ms | 4 | 16 | 16 |
-
-Result: low-priority classifier drops increased under overload, but the
-high-priority detector stayed within the intended latency budget. The p95
-end-to-end latency improvement for detector was `774.0ms` in this deterministic
-policy validation run.
+| Evidence | Lifecycle question | Artifact |
+| --- | --- | --- |
+| Jetson dummy smoke | Does the CLI produce telemetry on edge hardware? | `reports/jetson_smoke_dummy.json` |
+| Jetson ONNX Runtime smoke | Does the real ONNX worker path execute on edge hardware? | `reports/jetson_onnx_smoke.json` |
+| Synthetic overload comparison | Does scheduling protect high-priority work under backlog? | `reports/phase3_overload.json` |
+| InferEdge result handoff | Can validation output seed operation-control config without coupling projects? | `configs/from_inferedge.json` |
 
 ### Jetson Smoke Validation
 
@@ -153,6 +150,48 @@ metadata, result events, and resource snapshots. The ONNX Runtime warning about
 GPU device discovery is expected for this smoke because the worker currently
 uses `CPUExecutionProvider`; this result should not be interpreted as TensorRT
 or GPU benchmark evidence.
+
+### Synthetic Overload Scenario
+
+Command:
+
+```bash
+python3 -m inferedge_orchestrator compare-overload \
+  --config configs/phase3_overload.json \
+  --output reports/phase3_overload.json \
+  --frames 20
+```
+
+| Mode | Detector executed | Detector dropped | Detector p95 end-to-end latency | Classifier executed | Classifier dropped | Overload events |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| FIFO baseline | 20 | 0 | 782.0ms | 20 | 0 | 0 |
+| Scheduler + load shedding | 20 | 0 | 8.0ms | 4 | 16 | 16 |
+
+Result: low-priority classifier drops increased under overload, but the
+high-priority detector stayed within the intended latency budget. The p95
+end-to-end latency improvement for detector was `774.0ms` in this deterministic
+policy validation run.
+
+### InferEdge Handoff Evidence
+
+Command:
+
+```bash
+python3 -m inferedge_orchestrator from-inferedge \
+  --result examples/inferedge_result_sample.json \
+  --output configs/from_inferedge.json \
+  --task-name detector \
+  --model-path models/detector.onnx \
+  --priority 100 \
+  --target-fps 15 \
+  --queue-size 4
+```
+
+Result: the helper reads InferEdge `result.json` latency signals and writes an
+Orchestrator task config with a recommended `latency_budget_ms`. With the sample
+artifact, `expected_latency_ms=42.2` produces `latency_budget_ms=64.0` using the
+default multiplier. This keeps InferEdge as the deployment validation pipeline
+and InferEdgeOrchestrator as the runtime operation control layer.
 
 ## Phase 1 Scope
 
