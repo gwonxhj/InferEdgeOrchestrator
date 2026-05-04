@@ -130,15 +130,18 @@ under competing edge inference work.
 Run the dummy-input smoke on Jetson Orin Nano:
 
 ```bash
-python3 -m inferedge_orchestrator run \
-  --config configs/phase4_jetson_smoke.json \
-  --output reports/jetson_smoke_dummy.json \
-  --frames 20
+scripts/smoke_jetson_dummy.sh
 ```
 
 Telemetry includes `resource_snapshots` at `start` and `end`. Optional
 `tegrastats` output can be parsed with
 `inferedge_orchestrator.monitor.parse_tegrastats_line`.
+
+Canonical smoke artifacts:
+
+- `reports/jetson_smoke_dummy.json`
+- `reports/jetson_validation.md`
+- optional `reports/tegrastats_smoke.log`
 
 Device validation status:
 
