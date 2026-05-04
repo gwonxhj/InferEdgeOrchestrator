@@ -1,25 +1,64 @@
 # InferEdgeOrchestrator
 
-InferEdgeOrchestrator is a lightweight runtime scheduler for running multiple
-edge inference tasks with explicit priority, latency budget, queue, and load
-shedding policies.
+InferEdgeOrchestrator is a lightweight runtime scheduler for constrained edge
+devices. It controls multiple inference tasks after deployment, using
+per-task priority, latency budgets, bounded queues, load shedding, and telemetry
+so high-priority workloads stay responsive when backlog and latency spikes
+appear.
 
-It is not a Triton or DeepStream replacement. The goal is to show how a
-constrained edge device can protect high-priority inference workloads when
-latency spikes, queue backlog, and frame drops appear under overload.
+It is not a Triton or DeepStream replacement. The project is a scheduler-focused
+edge runtime layer that makes overload-control decisions explicit, testable, and
+explainable.
 
 Portfolio positioning: Triton/DeepStream 대체가 아니라 lightweight edge scheduler.
 
-## Relationship to InferEdge
+## What It Does
 
-InferEdge is the deployment validation pipeline. It handles model conversion,
-runtime result collection, analysis, and deployment decisions.
+| Runtime concern | Implementation |
+| --- | --- |
+| Multi-task inference | Config-driven task registration for detector/classifier/OCR-style workloads |
+| Priority control | Priority and deadline-aware scheduling based on `priority` and `latency_budget_ms` |
+| Backlog control | Bounded per-task queues with `drop_oldest`, `drop_newest`, and low-priority shedding behavior |
+| Overload stability | Adaptive load shedding limits low-priority work to protect high-priority latency |
+| Worker abstraction | Shared worker interface with `dummy` and `onnxruntime` workers |
+| Runtime evidence | Telemetry JSON records executed/dropped counts, latency, backlog, result events, resource snapshots, and policy decisions |
+| Edge validation | Jetson Orin Nano smoke scripts validate CLI, telemetry, `tegrastats` parsing, and ONNX Runtime worker execution |
 
-InferEdgeOrchestrator is the runtime operation control layer. It starts after a
-model is considered deployable and controls how multiple inference tasks behave
-when they run together on a constrained device.
+## Runtime Model
 
-## Ecosystem Lifecycle
+```text
+Input Source
+-> Frame Router
+-> Bounded Task Queues
+-> Priority + Deadline-Aware Scheduler
+-> Inference Worker
+-> Result Aggregator
+-> Telemetry Logger
+```
+
+Each task is defined by operational policy:
+
+```json
+{
+  "name": "detector",
+  "model_path": "models/detector.onnx",
+  "priority": 100,
+  "target_fps": 15,
+  "latency_budget_ms": 80,
+  "queue_size": 4,
+  "drop_policy": "drop_oldest",
+  "worker": "dummy"
+}
+```
+
+The scheduler's job is not to run every frame. It decides which task should run
+next, which frames are stale enough to drop, and when low-priority work should
+be limited so high-priority latency remains inside budget.
+
+## InferEdge Boundary
+
+InferEdge is the deployment validation pipeline. InferEdgeOrchestrator is the
+runtime operation control layer.
 
 ```mermaid
 flowchart LR
@@ -40,120 +79,59 @@ flowchart LR
     AIGuard -. risk signals .-> Lab
 ```
 
-The lifecycle boundary is intentional:
+The boundary is intentional:
 
 - InferEdge answers whether a model is safe and reasonable to deploy.
 - InferEdgeOrchestrator controls how deployed inference tasks behave together.
-- The integration is file-based through `result.json`, not direct imports between
-  projects.
+- The integration is file-based through `result.json`, not direct imports.
 
-## Why Not Triton or DeepStream?
+## Implementation Map
 
-InferEdgeOrchestrator is not a general-purpose inference server, media pipeline,
-or deployment platform. It is a small scheduler-focused runtime layer for
-showing how overload control works on constrained edge devices.
-
-Triton and DeepStream are strong production systems when the goal is broad model
-serving, stream processing, or GPU-optimized deployment. This project has a
-different portfolio purpose: it makes scheduling decisions visible and testable.
-The code directly models per-task priority, bounded queues, drop policy,
-deadline pressure, and telemetry so the behavior can be explained from first
-principles.
-
-In short, this repository demonstrates runtime operation control, not platform
-replacement.
-
-## Validation Results
-
-These results are organized as lifecycle evidence. Smoke runs show that the
-runtime and worker paths execute on physical edge hardware, the synthetic
-overload scenario shows why scheduling and load shedding matter, and the
-InferEdge handoff keeps validation output separate from operation control.
-
-Portfolio reading order:
-
-- Start with Jetson smoke validation to confirm the runtime and telemetry path
-  work on physical edge hardware.
-- Then read the ONNX Runtime smoke to confirm the real worker interface runs on
-  Jetson, while keeping the result labeled as smoke validation.
-- Use the synthetic overload scenario to understand why priority scheduling and
-  load shedding matter under multi-task inference pressure.
-- Finish with InferEdge handoff evidence to see how deployment validation feeds
-  operation control through files.
-
-| Evidence | Lifecycle question | Artifact |
+| Phase | Delivered capability | Evidence |
 | --- | --- | --- |
-| Jetson dummy smoke | Does the CLI produce telemetry on edge hardware? | `reports/jetson_smoke_dummy.json` |
-| Jetson ONNX Runtime smoke | Does the real ONNX worker path execute on edge hardware? | `reports/jetson_onnx_smoke.json` |
-| Synthetic overload comparison | Does scheduling protect high-priority work under backlog? | `reports/phase3_overload.json` |
-| InferEdge result handoff | Can validation output seed operation-control config without coupling projects? | `configs/from_inferedge.json` |
+| Phase 1: Scheduler Core | Config schema, dummy frame source, bounded queues, priority/deadline scheduler, dummy worker, load shedding, telemetry export | Pytest coverage for scheduler, queue, shedding, and telemetry |
+| Phase 2: ONNX Runtime Worker | Config-selectable ONNX Runtime worker, identity ONNX smoke model, image/video input path support | `configs/phase2_onnx_demo.json`, `scripts/create_identity_onnx.py` |
+| Phase 3: Overload Scenario | FIFO baseline vs scheduler/load-shedding comparison | `python3 -m inferedge_orchestrator compare-overload ...` |
+| Phase 4: Jetson Smoke | Jetson CLI smoke, telemetry generation, resource snapshots, optional `tegrastats` parsing | `scripts/smoke_jetson_dummy.sh`, `scripts/smoke_jetson_onnx.sh` |
+| Phase 5: InferEdge Handoff | `result.json` latency signal converted into Orchestrator task config | `python3 -m inferedge_orchestrator from-inferedge ...` |
 
-### Jetson Smoke Validation
+## Validation Evidence
 
-Command:
+These results are lifecycle evidence, not benchmark claims. Smoke runs prove the
+runtime paths execute on edge hardware; the synthetic overload run proves the
+scheduler policy; the InferEdge handoff proves the validation-to-operation file
+boundary.
+
+| Evidence | Key result | Artifact |
+| --- | --- | --- |
+| Jetson dummy smoke | `nano01` generated telemetry, resource snapshots, and low-priority drops: detector `20/0`, classifier `2/18` executed/dropped | `reports/jetson_smoke_dummy.json` |
+| Jetson ONNX Runtime smoke | `onnxruntime` worker executed identity ONNX on Jetson with `CPUExecutionProvider`, output shape `[1, 2]`, 13 `tegrastats` samples | `reports/jetson_onnx_smoke.json` |
+| Synthetic overload comparison | Detector p95 end-to-end latency improved from `782.0ms` FIFO baseline to `8.0ms` with scheduler + shedding; classifier dropped `16` low-priority frames | `reports/phase3_overload.json` |
+| InferEdge result handoff | Sample `expected_latency_ms=42.2` produced recommended `latency_budget_ms=64.0` without importing InferEdge internals | `configs/from_inferedge.json` |
+
+### Jetson Smoke Commands
 
 ```bash
 CAPTURE_TEGRASTATS=1 scripts/smoke_jetson_dummy.sh
 ```
 
-| Item | Value |
-| --- | --- |
-| Timestamp | `2026-05-04T12:44:02Z` |
-| Device | `nano01` |
-| OS / L4T | `Ubuntu 22.04.5 LTS`, `L4T R36.4.7` |
-| Kernel | `Linux 5.15.148-tegra aarch64` |
-| Python | `3.10.12` |
-| Result | `PASS` |
-| Telemetry | `reports/jetson_smoke_dummy.json` |
-| Resource snapshots | `start`, `end` present |
-| Optional tegrastats | parsed successfully |
-
-| Task | Executed | Dropped | Mean latency | P95 latency | Max queue backlog |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| detector | 20 | 0 | 8.0ms | 8.0ms | 1 |
-| classifier | 2 | 18 | 32.0ms | 32.0ms | 2 |
-
-Result: Jetson smoke validation confirmed that the CLI executes on device,
-telemetry is generated, resource snapshots are recorded, and low-priority drops
-are visible. This is smoke validation, not benchmark evidence.
-
-### Jetson ONNX Runtime Smoke
-
-Command:
-
 ```bash
-CAPTURE_TEGRASTATS=1 scripts/smoke_jetson_onnx.sh
+PYTHON_BIN=$HOME/miniconda3/envs/yolo_env/bin/python \
+  CAPTURE_TEGRASTATS=1 \
+  scripts/smoke_jetson_onnx.sh
 ```
 
-| Item | Value |
-| --- | --- |
-| Timestamp | `2026-05-04T13:09:45Z` |
-| Device | `nano01` |
-| OS / L4T | `Ubuntu 22.04.5 LTS`, `L4T R36.4.7` |
-| Kernel | `Linux 5.15.148-tegra aarch64` |
-| Python | `3.10.12` |
-| ONNX Runtime | `1.23.2` |
-| Model | `models/identity.onnx` |
-| Worker | `onnxruntime` |
-| Provider | `CPUExecutionProvider` |
-| Result | `PASS` |
-| Telemetry | `reports/jetson_onnx_smoke.json` |
-| Optional tegrastats samples | `13` |
+Latest device records:
 
-| Task | Executed | Dropped | Mean latency | P95 latency | Output shape | Resource snapshot RSS |
-| --- | ---: | ---: | ---: | ---: | --- | --- |
-| identity | 1 | 0 | 202.05ms | 202.05ms | `[1, 2]` | `13.465MB -> 54.043MB` |
+| Smoke | Device | OS / L4T | Python | Result | Note |
+| --- | --- | --- | --- | --- | --- |
+| Dummy scheduler smoke | `nano01` | `Ubuntu 22.04.5 LTS`, `L4T R36.4.7` | `3.10.12` | `PASS` | CLI, telemetry, resource snapshots, low-priority drops |
+| ONNX Runtime smoke | `nano01` | `Ubuntu 22.04.5 LTS`, `L4T R36.4.7` | `3.10.12` | `PASS` | ONNX Runtime `1.23.2`, `CPUExecutionProvider`, output metadata recorded |
 
-Result: Jetson ONNX Runtime smoke validation confirmed that the real ONNX
-Runtime worker path executes on device and records inference latency, output
-metadata, result events, and resource snapshots. The ONNX Runtime warning about
-GPU device discovery is expected for this smoke because the worker currently
-uses `CPUExecutionProvider`; this result should not be interpreted as TensorRT
-or GPU benchmark evidence.
+The ONNX smoke validates the worker path, not TensorRT or GPU benchmark
+performance.
 
-### Synthetic Overload Scenario
-
-Command:
+### Overload Comparison
 
 ```bash
 python3 -m inferedge_orchestrator compare-overload \
@@ -167,14 +145,11 @@ python3 -m inferedge_orchestrator compare-overload \
 | FIFO baseline | 20 | 0 | 782.0ms | 20 | 0 | 0 |
 | Scheduler + load shedding | 20 | 0 | 8.0ms | 4 | 16 | 16 |
 
-Result: low-priority classifier drops increased under overload, but the
-high-priority detector stayed within the intended latency budget. The p95
-end-to-end latency improvement for detector was `774.0ms` in this deterministic
-policy validation run.
+This is the core scheduler story: low-priority classifier work is intentionally
+dropped under overload so the high-priority detector stays within latency
+budget.
 
-### InferEdge Handoff Evidence
-
-Command:
+### InferEdge Handoff
 
 ```bash
 python3 -m inferedge_orchestrator from-inferedge \
@@ -187,142 +162,18 @@ python3 -m inferedge_orchestrator from-inferedge \
   --queue-size 4
 ```
 
-Result: the helper reads InferEdge `result.json` latency signals and writes an
-Orchestrator task config with a recommended `latency_budget_ms`. With the sample
-artifact, `expected_latency_ms=42.2` produces `latency_budget_ms=64.0` using the
-default multiplier. This keeps InferEdge as the deployment validation pipeline
-and InferEdgeOrchestrator as the runtime operation control layer.
-
-## Phase 1 Scope
-
-Phase 1 proves the scheduler policy without running real models.
-
-- Task config schema
-- Dummy frame source
-- Bounded per-task queues
-- Priority and deadline-aware scheduler
-- Dummy worker
-- Load shedding policy
-- Telemetry JSON export
-- Pytest coverage for scheduler, queue, shedding, and telemetry behavior
-
-Phase 1 intentionally does not execute ONNX models. ONNX Runtime support belongs
-to Phase 2.
-
-## Phase 2 ONNX Runtime Smoke
-
-Install the ONNX extras in your local environment:
-
-```bash
-python3 -m pip install -e '.[onnx,dev]'
-```
-
-Create a tiny identity model for smoke testing:
-
-```bash
-python3 scripts/create_identity_onnx.py --output models/identity.onnx
-```
-
-Run the ONNX Runtime worker demo:
-
-```bash
-python3 -m inferedge_orchestrator run \
-  --config configs/phase2_onnx_demo.json \
-  --output reports/phase2_onnx_demo.json \
-  --frames 1
-```
-
-The `worker` field selects whether a task runs through the dummy worker or the
-ONNX Runtime worker. Image and video inputs can be routed by setting
-`run.input_source` to `image` or `video` with `run.input_path`.
-
-On Jetson, use the dedicated ONNX smoke script with a Python environment that
-already has `numpy`, `onnx`, and `onnxruntime` installed:
-
-```bash
-PYTHON_BIN=$HOME/miniconda3/envs/yolo_env/bin/python \
-  CAPTURE_TEGRASTATS=1 \
-  scripts/smoke_jetson_onnx.sh
-```
-
-## Phase 3 Overload Scenario
-
-Run the overload comparison:
-
-```bash
-python3 -m inferedge_orchestrator compare-overload \
-  --config configs/phase3_overload.json \
-  --output reports/phase3_overload.json \
-  --frames 20
-```
-
-The comparison writes a no-scheduler FIFO baseline and a scheduled policy run to
-the same JSON report. In the baseline, every task is processed in arrival order,
-so a low-priority classifier can sit in front of a high-priority detector and
-push up detector end-to-end latency. With priority scheduling and load shedding,
-classifier drops increase under overload, but detector p95 end-to-end latency is
-protected. This project is not a benchmark tool; the point is runtime stability
-under competing edge inference work.
-
-## Phase 4 Jetson Smoke Test
-
-Run the dummy-input smoke on Jetson Orin Nano:
-
-```bash
-scripts/smoke_jetson_dummy.sh
-```
-
-Telemetry includes `resource_snapshots` at `start` and `end`. Optional
-`tegrastats` output can be parsed with
-`inferedge_orchestrator.monitor.parse_tegrastats_line`.
-
-Canonical smoke artifacts:
-
-- `reports/jetson_smoke_dummy.json`
-- `reports/jetson_validation.md`
-- optional `reports/tegrastats_smoke.log`
-
-Device validation status:
-
-- Local smoke and telemetry structure: validated by tests.
-- Jetson Orin Nano physical-device run: validated on `nano01`.
-- See `docs/jetson_smoke_test.md` for the exact command and validation record.
-
-Latest Jetson smoke summary:
-
-- Timestamp: `2026-05-04T12:44:02Z`
-- Device: `Linux nano01 5.15.148-tegra aarch64`
-- OS/L4T: `Ubuntu 22.04.5 LTS`, `L4T R36.4.7`
-- Python: `3.10.12`
-- Result: `PASS`
-- Detector: `executed=20`, `dropped=0`, `p95_latency_ms=8.0`
-- Classifier: `executed=2`, `dropped=18`, `p95_latency_ms=32.0`
-- Resource snapshots: `start` and `end` entries present
-- Optional `tegrastats` sample: parsed successfully
-
-## Phase 5 InferEdge Integration
-
-InferEdge remains the deployment validation pipeline. InferEdgeOrchestrator is
-the runtime operation control layer. The projects are connected only through
-files, not direct module imports.
-
-Create an Orchestrator config from an InferEdge `result.json`:
-
-```bash
-python3 -m inferedge_orchestrator from-inferedge \
-  --result examples/inferedge_result_sample.json \
-  --output configs/from_inferedge.json \
-  --task-name detector \
-  --model-path models/detector.onnx \
-  --priority 100 \
-  --target-fps 15 \
-  --queue-size 4
-```
-
-The helper reads `expected_latency_ms` and recommends `latency_budget_ms` using a
-configurable multiplier. See `docs/inferedge_integration.md`.
+The helper reads InferEdge `result.json` latency signals and recommends an
+initial `latency_budget_ms` for Orchestrator task policy. This keeps validation
+and operation control connected by artifacts while keeping the repositories
+separate.
 
 ## Quickstart
+
+Install the local package with test dependencies:
+
+```bash
+python3 -m pip install -e '.[dev]'
+```
 
 Run the tests:
 
@@ -330,7 +181,7 @@ Run the tests:
 python3 -m pytest
 ```
 
-Run the Phase 1 demo:
+Run the scheduler demo:
 
 ```bash
 python3 -m inferedge_orchestrator run \
@@ -339,8 +190,25 @@ python3 -m inferedge_orchestrator run \
   --frames 12
 ```
 
+Run the ONNX Runtime demo:
+
+```bash
+python3 -m pip install -e '.[onnx,dev]'
+python3 scripts/create_identity_onnx.py --output models/identity.onnx
+
+python3 -m inferedge_orchestrator run \
+  --config configs/phase2_onnx_demo.json \
+  --output reports/phase2_onnx_demo.json \
+  --frames 1
+```
+
 Print a telemetry summary:
 
 ```bash
 python3 -m inferedge_orchestrator report --input reports/phase1_demo.json
 ```
+
+For more detail, see:
+
+- `docs/jetson_smoke_test.md`
+- `docs/inferedge_integration.md`
