@@ -89,19 +89,54 @@ Artifact policy:
 Current repository validation:
 
 - Local CLI smoke: ready and covered by tests.
-- Jetson Orin Nano hardware execution: pending physical-device run.
+- Jetson Orin Nano hardware execution: validated on `nano01`.
 - Required artifact after device run: `reports/jetson_smoke_dummy.json`.
 - Required validation note after device run: `reports/jetson_validation.md`.
 - Optional artifact after device run: `reports/tegrastats_smoke.log`.
 
-Fill this section after the physical device run:
+Latest physical-device validation:
 
 ```text
-Device:
-JetPack:
-Python:
-Command:
-Telemetry path:
-Result:
-Notes:
+Timestamp UTC: 2026-05-04T12:44:02Z
+Device: Linux nano01 5.15.148-tegra aarch64
+OS: Ubuntu 22.04.5 LTS
+L4T: R36.4.7
+Python: 3.10.12
+Command: CAPTURE_TEGRASTATS=1 scripts/smoke_jetson_dummy.sh
+Config: configs/phase4_jetson_smoke.json
+Frames: 20
+Telemetry path: reports/jetson_smoke_dummy.json
+Validation note: reports/jetson_validation.md
+Optional tegrastats log: reports/tegrastats_smoke.log
+Result: PASS
 ```
+
+Telemetry summary:
+
+```text
+detector: executed=20 dropped=0 mean_latency_ms=8.0 p95_latency_ms=8.0 max_queue_backlog=1
+classifier: executed=2 dropped=18 mean_latency_ms=32.0 p95_latency_ms=32.0 max_queue_backlog=2
+drop_events=18
+overload_events=0
+resource_snapshots=start,end
+process_rss_mb=13.09
+```
+
+Optional `tegrastats` validation:
+
+```text
+Samples captured: 2
+First parsed sample:
+RAM 855/7620MB
+SWAP 0/3810MB
+CPU [0%@729,0%@729,1%@729,0%@729,0%@729,0%@729]
+GR3D_FREQ 0%
+cpu@35.343C
+gpu@36.312C
+```
+
+Notes:
+
+- This validates CLI execution and telemetry generation on Jetson hardware.
+- This is still smoke validation, not a benchmark result.
+- Raw generated artifacts stay under `reports/` and are ignored by git.

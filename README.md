@@ -146,8 +146,20 @@ Canonical smoke artifacts:
 Device validation status:
 
 - Local smoke and telemetry structure: validated by tests.
-- Jetson Orin Nano physical-device run: pending hardware execution.
+- Jetson Orin Nano physical-device run: validated on `nano01`.
 - See `docs/jetson_smoke_test.md` for the exact command and validation record.
+
+Latest Jetson smoke summary:
+
+- Timestamp: `2026-05-04T12:44:02Z`
+- Device: `Linux nano01 5.15.148-tegra aarch64`
+- OS/L4T: `Ubuntu 22.04.5 LTS`, `L4T R36.4.7`
+- Python: `3.10.12`
+- Result: `PASS`
+- Detector: `executed=20`, `dropped=0`, `p95_latency_ms=8.0`
+- Classifier: `executed=2`, `dropped=18`, `p95_latency_ms=32.0`
+- Resource snapshots: `start` and `end` entries present
+- Optional `tegrastats` sample: parsed successfully
 
 ## Phase 5 InferEdge Integration
 
