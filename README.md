@@ -63,6 +63,62 @@ principles.
 In short, this repository demonstrates runtime operation control, not platform
 replacement.
 
+## Validation Results
+
+These results are split into two categories on purpose. The synthetic overload
+scenario validates the scheduler and load shedding policy in a deterministic
+setting. The Jetson smoke run validates that the orchestrator CLI and telemetry
+path run on actual edge hardware.
+
+### Synthetic Overload Scenario
+
+Command:
+
+```bash
+python3 -m inferedge_orchestrator compare-overload \
+  --config configs/phase3_overload.json \
+  --output reports/phase3_overload.json \
+  --frames 20
+```
+
+| Mode | Detector executed | Detector dropped | Detector p95 end-to-end latency | Classifier executed | Classifier dropped | Overload events |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| FIFO baseline | 20 | 0 | 782.0ms | 20 | 0 | 0 |
+| Scheduler + load shedding | 20 | 0 | 8.0ms | 4 | 16 | 16 |
+
+Result: low-priority classifier drops increased under overload, but the
+high-priority detector stayed within the intended latency budget. The p95
+end-to-end latency improvement for detector was `774.0ms` in this deterministic
+policy validation run.
+
+### Jetson Smoke Validation
+
+Command:
+
+```bash
+CAPTURE_TEGRASTATS=1 scripts/smoke_jetson_dummy.sh
+```
+
+| Item | Value |
+| --- | --- |
+| Device | `nano01` |
+| OS / L4T | `Ubuntu 22.04.5 LTS`, `L4T R36.4.7` |
+| Kernel | `Linux 5.15.148-tegra aarch64` |
+| Python | `3.10.12` |
+| Result | `PASS` |
+| Telemetry | `reports/jetson_smoke_dummy.json` |
+| Resource snapshots | `start`, `end` present |
+| Optional tegrastats | parsed successfully |
+
+| Task | Executed | Dropped | Mean latency | P95 latency | Max queue backlog |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| detector | 20 | 0 | 8.0ms | 8.0ms | 1 |
+| classifier | 2 | 18 | 32.0ms | 32.0ms | 2 |
+
+Result: Jetson smoke validation confirmed that the CLI executes on device,
+telemetry is generated, resource snapshots are recorded, and low-priority drops
+are visible. This is smoke validation, not benchmark evidence.
+
 ## Phase 1 Scope
 
 Phase 1 proves the scheduler policy without running real models.
