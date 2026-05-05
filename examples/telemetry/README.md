@@ -1,0 +1,33 @@
+# Telemetry Samples
+
+Language: English | [한국어](README.ko.md)
+
+These JSON files are small, versioned examples of InferEdgeOrchestrator runtime
+evidence. They are intended for schema review and portfolio reading without
+running the CLI first.
+
+They are not benchmark artifacts. Raw runtime reports remain ignored under
+`reports/`, while these samples are curated documentation artifacts under
+`examples/telemetry/`.
+
+## Samples
+
+| File | What it shows |
+| --- | --- |
+| `phase3_overload_sample.json` | Synthetic FIFO baseline vs scheduler/load-shedding comparison. The detector p95 end-to-end latency improves from `782.0ms` to `8.0ms`, while low-priority classifier work is dropped. |
+| `jetson_smoke_dummy_sample.json` | Telemetry schema from the Jetson dummy smoke path: task counts, drop events, result events, scheduler decisions, and resource snapshots. |
+| `jetson_onnx_smoke_sample.json` | Telemetry schema from the ONNX Runtime worker smoke path: result event metadata, output shape `[1, 2]`, and resource snapshots. |
+
+## Schema Signals
+
+The samples cover these telemetry signals:
+
+- task-level `executed` and `dropped` counts
+- mean and p95 latency
+- maximum queue backlog
+- drop events
+- overload or policy decisions
+- result events
+- resource snapshots
+
+Physical-device validation summaries live in `docs/jetson_smoke_test.md`.

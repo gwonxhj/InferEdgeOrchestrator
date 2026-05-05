@@ -1,0 +1,161 @@
+{
+  "baseline": {
+    "tasks": {
+      "classifier": {
+        "dropped": 0,
+        "executed": 20,
+        "mean_worker_latency_ms": 45.0,
+        "p95_end_to_end_latency_ms": 827.0
+      },
+      "detector": {
+        "dropped": 0,
+        "executed": 20,
+        "mean_worker_latency_ms": 8.0,
+        "p95_end_to_end_latency_ms": 782.0
+      }
+    }
+  },
+  "effect": {
+    "baseline_p95_end_to_end_latency_ms": 782.0,
+    "low_priority_drops": 16,
+    "p95_end_to_end_improvement_ms": 774.0,
+    "protected_task": "detector",
+    "scheduled_p95_end_to_end_latency_ms": 8.0
+  },
+  "scenario": {
+    "frame_interval_ms": 10.0,
+    "frames": 20,
+    "name": "phase3_overload",
+    "protected_task": "detector"
+  },
+  "scheduled": {
+    "overload_events": [
+      {
+        "dropped_frames": 1,
+        "event": "load_shedding",
+        "limited_task": "classifier",
+        "protected_task": "detector",
+        "reason": "queue_backlog_threshold_exceeded"
+      },
+      {
+        "dropped_frames": 1,
+        "event": "load_shedding",
+        "limited_task": "classifier",
+        "protected_task": "detector",
+        "reason": "queue_backlog_threshold_exceeded"
+      },
+      {
+        "dropped_frames": 1,
+        "event": "load_shedding",
+        "limited_task": "classifier",
+        "protected_task": "detector",
+        "reason": "queue_backlog_threshold_exceeded"
+      },
+      {
+        "dropped_frames": 1,
+        "event": "load_shedding",
+        "limited_task": "classifier",
+        "protected_task": "detector",
+        "reason": "queue_backlog_threshold_exceeded"
+      },
+      {
+        "dropped_frames": 1,
+        "event": "load_shedding",
+        "limited_task": "classifier",
+        "protected_task": "detector",
+        "reason": "queue_backlog_threshold_exceeded"
+      },
+      {
+        "dropped_frames": 1,
+        "event": "load_shedding",
+        "limited_task": "classifier",
+        "protected_task": "detector",
+        "reason": "queue_backlog_threshold_exceeded"
+      },
+      {
+        "dropped_frames": 1,
+        "event": "load_shedding",
+        "limited_task": "classifier",
+        "protected_task": "detector",
+        "reason": "queue_backlog_threshold_exceeded"
+      },
+      {
+        "dropped_frames": 1,
+        "event": "load_shedding",
+        "limited_task": "classifier",
+        "protected_task": "detector",
+        "reason": "queue_backlog_threshold_exceeded"
+      },
+      {
+        "dropped_frames": 1,
+        "event": "load_shedding",
+        "limited_task": "classifier",
+        "protected_task": "detector",
+        "reason": "queue_backlog_threshold_exceeded"
+      },
+      {
+        "dropped_frames": 1,
+        "event": "load_shedding",
+        "limited_task": "classifier",
+        "protected_task": "detector",
+        "reason": "queue_backlog_threshold_exceeded"
+      },
+      {
+        "dropped_frames": 1,
+        "event": "load_shedding",
+        "limited_task": "classifier",
+        "protected_task": "detector",
+        "reason": "queue_backlog_threshold_exceeded"
+      },
+      {
+        "dropped_frames": 1,
+        "event": "load_shedding",
+        "limited_task": "classifier",
+        "protected_task": "detector",
+        "reason": "queue_backlog_threshold_exceeded"
+      },
+      {
+        "dropped_frames": 1,
+        "event": "load_shedding",
+        "limited_task": "classifier",
+        "protected_task": "detector",
+        "reason": "queue_backlog_threshold_exceeded"
+      },
+      {
+        "dropped_frames": 1,
+        "event": "load_shedding",
+        "limited_task": "classifier",
+        "protected_task": "detector",
+        "reason": "queue_backlog_threshold_exceeded"
+      },
+      {
+        "dropped_frames": 1,
+        "event": "load_shedding",
+        "limited_task": "classifier",
+        "protected_task": "detector",
+        "reason": "queue_backlog_threshold_exceeded"
+      },
+      {
+        "dropped_frames": 1,
+        "event": "load_shedding",
+        "limited_task": "classifier",
+        "protected_task": "detector",
+        "reason": "queue_backlog_threshold_exceeded"
+      }
+    ],
+    "tasks": {
+      "classifier": {
+        "dropped": 16,
+        "executed": 4,
+        "mean_worker_latency_ms": 45.0,
+        "p95_end_to_end_latency_ms": 188.0
+      },
+      "detector": {
+        "dropped": 0,
+        "executed": 20,
+        "mean_worker_latency_ms": 8.0,
+        "p95_end_to_end_latency_ms": 8.0
+      }
+    }
+  }
+}

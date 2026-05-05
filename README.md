@@ -115,6 +115,9 @@ boundary.
 | Synthetic overload comparison | Detector p95 end-to-end latency improved from `782.0ms` FIFO baseline to `8.0ms` with scheduler + shedding; classifier dropped `16` low-priority frames | `reports/phase3_overload.json` |
 | InferEdge result handoff | Sample `expected_latency_ms=42.2` produced recommended `latency_budget_ms=64.0` without importing InferEdge internals | `configs/from_inferedge.json` |
 
+Versioned sample telemetry artifacts are available in
+`examples/telemetry/` ([한국어](examples/telemetry/README.ko.md)).
+
 ### Jetson Smoke Commands
 
 ```bash
@@ -217,5 +220,6 @@ python3 -m inferedge_orchestrator report --input reports/phase1_demo.json
 For more detail, see:
 
 - `PORTFOLIO.md` ([한국어](PORTFOLIO.ko.md))
+- `examples/telemetry/README.md` ([한국어](examples/telemetry/README.ko.md))
 - `docs/jetson_smoke_test.md` ([한국어](docs/jetson_smoke_test.ko.md))
 - `docs/inferedge_integration.md` ([한국어](docs/inferedge_integration.ko.md))
