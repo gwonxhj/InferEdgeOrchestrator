@@ -8,7 +8,12 @@ Language: [English](CHANGELOG.md) | 한국어
 
 ## Unreleased
 
-`v0.1.0` tag 이후 현재 `main`에 반영된 변경 사항이다.
+아직 변경 사항 없음.
+
+## v0.1.1 - 2026-05-06
+
+documentation 및 validation evidence patch release다. 이 release는 runtime
+scheduler behavior를 변경하지 않는다.
 
 ### Added
 
@@ -37,6 +42,8 @@ Language: [English](CHANGELOG.md) | 한국어
   개선이다.
 - sample telemetry와 Jetson 기록은 benchmark claim이 아니라 validation
   evidence다.
+- tag, release, project version이 일치하도록 package metadata를 `0.1.1`로
+  갱신했다.
 
 ## v0.1.0 - 2026-05-05
 

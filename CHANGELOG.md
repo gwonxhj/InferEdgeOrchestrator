@@ -8,7 +8,12 @@ helps reviewers understand the project state.
 
 ## Unreleased
 
-Changes currently on `main` after the `v0.1.0` tag.
+No changes yet.
+
+## v0.1.1 - 2026-05-06
+
+Documentation and validation evidence patch release. This release does not
+change runtime scheduler behavior.
 
 ### Added
 
@@ -37,6 +42,8 @@ Changes currently on `main` after the `v0.1.0` tag.
   `v0.1.0` runtime behavior.
 - Sample telemetry and Jetson records are validation evidence, not benchmark
   claims.
+- Package metadata was updated to `0.1.1` so the tag, release, and project
+  version stay aligned.
 
 ## v0.1.0 - 2026-05-05
 

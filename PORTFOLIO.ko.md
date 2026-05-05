@@ -4,7 +4,7 @@ Language: [English](PORTFOLIO.md) | 한국어
 
 [![CI](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml)
 
-Release: [v0.1.0](https://github.com/gwonxhj/InferEdgeOrchestrator/releases/tag/v0.1.0)
+Release: [v0.1.1](https://github.com/gwonxhj/InferEdgeOrchestrator/releases/tag/v0.1.1)
 
 ## One-Line Summary
 
@@ -81,7 +81,7 @@ low-priority 또는 stale frame을 drop한다.
 | Jetson dummy smoke | `nano01`에서 telemetry, resource snapshot, low-priority drop 생성 확인, detector `20/0`, classifier `2/18` executed/dropped |
 | Jetson ONNX Runtime smoke | Jetson에서 ONNX Runtime `1.23.2` worker가 `CPUExecutionProvider`로 identity ONNX 실행, output shape `[1, 2]`, `tegrastats` sample 13개 기록 |
 | CI | GitHub Actions가 PR과 `main` push에서 Python 3.11 기준 `python -m pytest` 실행 |
-| Release | `v0.1.0`으로 첫 portfolio-ready snapshot 고정 |
+| Release | `v0.1.1`로 docs 및 validation evidence patch snapshot 고정 |
 
 CLI를 실행하지 않아도 JSON evidence 형태를 확인할 수 있도록
 `examples/telemetry/`에 sample telemetry artifact를 제공한다.

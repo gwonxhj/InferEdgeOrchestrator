@@ -4,7 +4,7 @@ Language: English | [한국어](PORTFOLIO.ko.md)
 
 [![CI](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml)
 
-Release: [v0.1.0](https://github.com/gwonxhj/InferEdgeOrchestrator/releases/tag/v0.1.0)
+Release: [v0.1.1](https://github.com/gwonxhj/InferEdgeOrchestrator/releases/tag/v0.1.1)
 
 ## One-Line Summary
 
@@ -81,7 +81,7 @@ frames when queue pressure grows.
 | Jetson dummy smoke | `nano01` generated telemetry, resource snapshots, and low-priority drops with detector `20/0` and classifier `2/18` executed/dropped |
 | Jetson ONNX Runtime smoke | ONNX Runtime `1.23.2` worker executed identity ONNX on Jetson with `CPUExecutionProvider`, output shape `[1, 2]`, and 13 `tegrastats` samples |
 | CI | GitHub Actions runs `python -m pytest` on Python 3.11 for PRs and pushes to `main` |
-| Release | `v0.1.0` captures the first portfolio-ready snapshot |
+| Release | `v0.1.1` captures the docs and validation evidence patch snapshot |
 
 Sample telemetry artifacts are available in `examples/telemetry/` for reviewers
 who want to inspect the JSON evidence shape without running the CLI.
