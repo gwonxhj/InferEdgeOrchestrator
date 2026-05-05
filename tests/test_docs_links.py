@@ -6,6 +6,7 @@ from pathlib import Path
 
 DOC_ROOTS = (
     Path("."),
+    Path("configs"),
     Path("docs"),
     Path("examples/telemetry"),
 )

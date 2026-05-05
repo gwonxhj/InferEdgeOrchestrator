@@ -223,6 +223,7 @@ For more detail, see:
 
 - `CHANGELOG.md` ([한국어](CHANGELOG.ko.md))
 - `PORTFOLIO.md` ([한국어](PORTFOLIO.ko.md))
+- `configs/README.md` ([한국어](configs/README.ko.md))
 - `examples/telemetry/README.md` ([한국어](examples/telemetry/README.ko.md))
 - `docs/validation_evidence.md` ([한국어](docs/validation_evidence.ko.md))
 - `docs/architecture.md` ([한국어](docs/architecture.ko.md))
