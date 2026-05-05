@@ -16,6 +16,8 @@ explainable.
 
 Portfolio positioning: Triton/DeepStream 대체가 아니라 lightweight edge scheduler.
 
+Portfolio brief: [PORTFOLIO.md](PORTFOLIO.md) ([한국어](PORTFOLIO.ko.md))
+
 ## What It Does
 
 | Runtime concern | Implementation |
@@ -214,5 +216,6 @@ python3 -m inferedge_orchestrator report --input reports/phase1_demo.json
 
 For more detail, see:
 
+- `PORTFOLIO.md` ([한국어](PORTFOLIO.ko.md))
 - `docs/jetson_smoke_test.md` ([한국어](docs/jetson_smoke_test.ko.md))
 - `docs/inferedge_integration.md` ([한국어](docs/inferedge_integration.ko.md))
