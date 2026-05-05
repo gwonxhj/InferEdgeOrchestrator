@@ -219,5 +219,6 @@ python3 -m inferedge_orchestrator report --input reports/phase1_demo.json
 
 - `PORTFOLIO.ko.md` ([English](PORTFOLIO.md))
 - `examples/telemetry/README.ko.md` ([English](examples/telemetry/README.md))
+- `docs/architecture.ko.md` ([English](docs/architecture.md))
 - `docs/jetson_smoke_test.ko.md` ([English](docs/jetson_smoke_test.md))
 - `docs/inferedge_integration.ko.md` ([English](docs/inferedge_integration.md))

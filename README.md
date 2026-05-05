@@ -221,5 +221,6 @@ For more detail, see:
 
 - `PORTFOLIO.md` ([한국어](PORTFOLIO.ko.md))
 - `examples/telemetry/README.md` ([한국어](examples/telemetry/README.ko.md))
+- `docs/architecture.md` ([한국어](docs/architecture.ko.md))
 - `docs/jetson_smoke_test.md` ([한국어](docs/jetson_smoke_test.ko.md))
 - `docs/inferedge_integration.md` ([한국어](docs/inferedge_integration.ko.md))
