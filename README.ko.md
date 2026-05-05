@@ -217,6 +217,7 @@ python3 -m inferedge_orchestrator report --input reports/phase1_demo.json
 
 자세한 문서:
 
+- `CHANGELOG.ko.md` ([English](CHANGELOG.md))
 - `PORTFOLIO.ko.md` ([English](PORTFOLIO.md))
 - `examples/telemetry/README.ko.md` ([English](examples/telemetry/README.md))
 - `docs/architecture.ko.md` ([English](docs/architecture.md))

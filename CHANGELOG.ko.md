@@ -1,0 +1,91 @@
+# Changelog
+
+Language: [English](CHANGELOG.md) | 한국어
+
+이 changelog는 InferEdgeOrchestrator의 release 단위 변경 사항을 기록한다.
+구현된 behavior, validation evidence, reviewer가 프로젝트 상태를 이해하는 데
+필요한 문서 변경을 중심으로 정리한다.
+
+## Unreleased
+
+`v0.1.0` tag 이후 현재 `main`에 반영된 변경 사항이다.
+
+### Added
+
+- portfolio brief 문서 추가:
+  - `PORTFOLIO.md`
+  - `PORTFOLIO.ko.md`
+- `examples/telemetry/` 아래 versioned sample telemetry artifact 추가.
+- sample telemetry artifact compatibility를 검증하는 pytest 추가.
+- architecture 문서 추가:
+  - `docs/architecture.md`
+  - `docs/architecture.ko.md`
+- 영어/한국어 changelog 추가.
+
+### Notes
+
+- 위 항목은 `v0.1.0` runtime behavior 위에 더해진 문서 및 evidence packaging
+  개선이다.
+- sample telemetry와 Jetson 기록은 benchmark claim이 아니라 validation
+  evidence다.
+
+## v0.1.0 - 2026-05-05
+
+lightweight edge inference runtime scheduler의 첫 portfolio-ready release다.
+
+### Added
+
+- Scheduler core MVP:
+  - config 기반 task 등록
+  - `priority`, `target_fps`, `latency_budget_ms`, `queue_size`,
+    `drop_policy`, `worker` task policy field
+  - deterministic dummy frame source
+  - task별 bounded queue
+  - priority/deadline-aware scheduler
+  - dummy worker
+  - load-shedding policy
+  - telemetry JSON export
+- ONNX Runtime worker:
+  - config로 선택 가능한 `onnxruntime` worker
+  - lazy ONNX session loading
+  - `CPUExecutionProvider` smoke path
+  - output count와 output shape result metadata
+- Overload scenario tooling:
+  - FIFO baseline과 scheduler/load-shedding 비교
+  - high-priority protected task summary
+  - low-priority drop count와 overload event reporting
+- Jetson smoke support:
+  - Jetson dummy scheduler smoke script
+  - Jetson ONNX Runtime smoke script
+  - captured smoke telemetry용 `tegrastats` parser
+  - telemetry report의 resource snapshot
+- InferEdge handoff helper:
+  - file-based `result.json` latency extraction
+  - recommended `latency_budget_ms` 생성
+  - InferEdge repository 직접 import 없음
+- CLI command:
+  - `run`
+  - `report`
+  - `compare-overload`
+  - `from-inferedge`
+- pytest용 GitHub Actions CI.
+- README와 supporting docs의 영어 main 문서 및 한국어 mirror.
+
+### Validation Evidence
+
+- release baseline에서 local 및 GitHub Actions pytest validation 통과.
+- Jetson Orin Nano dummy scheduler smoke로 CLI 실행, telemetry 생성, resource
+  snapshot, low-priority drop을 검증.
+- Jetson Orin Nano ONNX Runtime smoke로 `CPUExecutionProvider` 기반 ONNX worker
+  path 검증.
+- synthetic overload comparison으로 low-priority queued work를 drop해
+  high-priority task latency를 보호하는 scheduler/load-shedding behavior 확인.
+
+### Boundaries
+
+- InferEdgeOrchestrator는 deployment 이후 runtime operation-control layer다.
+- InferEdge는 deployment validation pipeline으로 유지된다.
+- InferEdge와의 integration은 `result.json` 기반 file boundary로 제한된다.
+- 이 프로젝트는 Triton이나 DeepStream 대체제가 아니다.
+- 이 프로젝트는 benchmark tool이 아니다. latency와 telemetry는 scheduler
+  decision과 overload behavior를 설명하기 위한 evidence로 사용한다.
