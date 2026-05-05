@@ -117,6 +117,8 @@ boundary.
 
 Versioned sample telemetry artifacts are available in
 `examples/telemetry/` ([한국어](examples/telemetry/README.ko.md)).
+For the full evidence index, see
+`docs/validation_evidence.md` ([한국어](docs/validation_evidence.ko.md)).
 
 ### Jetson Smoke Commands
 
@@ -222,6 +224,7 @@ For more detail, see:
 - `CHANGELOG.md` ([한국어](CHANGELOG.ko.md))
 - `PORTFOLIO.md` ([한국어](PORTFOLIO.ko.md))
 - `examples/telemetry/README.md` ([한국어](examples/telemetry/README.ko.md))
+- `docs/validation_evidence.md` ([한국어](docs/validation_evidence.ko.md))
 - `docs/architecture.md` ([한국어](docs/architecture.ko.md))
 - `docs/jetson_smoke_test.md` ([한국어](docs/jetson_smoke_test.ko.md))
 - `docs/inferedge_integration.md` ([한국어](docs/inferedge_integration.ko.md))

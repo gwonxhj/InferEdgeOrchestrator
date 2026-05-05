@@ -21,6 +21,9 @@ Language: [English](CHANGELOG.md) | 한국어
   - `docs/architecture.md`
   - `docs/architecture.ko.md`
 - 영어/한국어 changelog 추가.
+- validation evidence index 문서 추가:
+  - `docs/validation_evidence.md`
+  - `docs/validation_evidence.ko.md`
 
 ### Notes
 
