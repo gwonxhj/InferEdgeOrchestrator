@@ -116,9 +116,9 @@ boundary.
 | InferEdge result handoff | Sample `expected_latency_ms=42.2` produced recommended `latency_budget_ms=64.0` without importing InferEdge internals | `configs/from_inferedge.json` |
 
 Versioned sample telemetry artifacts are available in
-`examples/telemetry/` ([한국어](examples/telemetry/README.ko.md)).
+[`examples/telemetry/`](examples/telemetry/README.md).
 For the full evidence index, see
-`docs/validation_evidence.md` ([한국어](docs/validation_evidence.ko.md)).
+[`docs/validation_evidence.md`](docs/validation_evidence.md).
 
 ### Jetson Smoke Commands
 
@@ -221,11 +221,11 @@ python3 -m inferedge_orchestrator report --input reports/phase1_demo.json
 
 For more detail, see:
 
-- `CHANGELOG.md` ([한국어](CHANGELOG.ko.md))
-- `PORTFOLIO.md` ([한국어](PORTFOLIO.ko.md))
-- `configs/README.md` ([한국어](configs/README.ko.md))
-- `examples/telemetry/README.md` ([한국어](examples/telemetry/README.ko.md))
-- `docs/validation_evidence.md` ([한국어](docs/validation_evidence.ko.md))
-- `docs/architecture.md` ([한국어](docs/architecture.ko.md))
-- `docs/jetson_smoke_test.md` ([한국어](docs/jetson_smoke_test.ko.md))
-- `docs/inferedge_integration.md` ([한국어](docs/inferedge_integration.ko.md))
+- [`CHANGELOG.md`](CHANGELOG.md)
+- [`PORTFOLIO.md`](PORTFOLIO.md)
+- [`configs/README.md`](configs/README.md)
+- [`examples/telemetry/README.md`](examples/telemetry/README.md)
+- [`docs/validation_evidence.md`](docs/validation_evidence.md)
+- [`docs/architecture.md`](docs/architecture.md)
+- [`docs/jetson_smoke_test.md`](docs/jetson_smoke_test.md)
+- [`docs/inferedge_integration.md`](docs/inferedge_integration.md)

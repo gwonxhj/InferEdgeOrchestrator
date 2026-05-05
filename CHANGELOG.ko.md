@@ -8,7 +8,10 @@ Language: [English](CHANGELOG.md) | 한국어
 
 ## Unreleased
 
-아직 변경 사항 없음.
+### Changed
+
+- `README.md`의 문서 진입 link를 영어 문서가 main entry가 되도록 정리했다.
+  한국어 mirror는 각 문서의 language selector에서 선택하는 흐름으로 유지한다.
 
 ## v0.1.1 - 2026-05-06
 
