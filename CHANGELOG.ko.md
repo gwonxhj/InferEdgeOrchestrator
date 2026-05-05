@@ -24,6 +24,9 @@ Language: [English](CHANGELOG.md) | 한국어
 - validation evidence index 문서 추가:
   - `docs/validation_evidence.md`
   - `docs/validation_evidence.ko.md`
+- 문서 link 및 language-pair pytest coverage 추가.
+- InferEdge handoff config sample 추적 추가:
+  - `configs/from_inferedge.json`
 
 ### Notes
 

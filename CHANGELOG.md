@@ -24,6 +24,9 @@ Changes currently on `main` after the `v0.1.0` tag.
 - Added validation evidence index documents:
   - `docs/validation_evidence.md`
   - `docs/validation_evidence.ko.md`
+- Added document link and language-pair pytest coverage.
+- Added tracked InferEdge handoff config sample:
+  - `configs/from_inferedge.json`
 
 ### Notes
 

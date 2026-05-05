@@ -1,0 +1,23 @@
+{
+  "run": {
+    "input_source": "dummy",
+    "name": "from_inferedge_result",
+    "overload_backlog_threshold": 4,
+    "source": {
+      "relationship": "InferEdge validates deployment readiness; InferEdgeOrchestrator controls runtime operation after deployment.",
+      "type": "inferedge_result_json"
+    }
+  },
+  "tasks": [
+    {
+      "drop_policy": "drop_oldest",
+      "latency_budget_ms": 64.0,
+      "model_path": "models/detector.onnx",
+      "name": "detector",
+      "priority": 100,
+      "queue_size": 4,
+      "target_fps": 15.0,
+      "worker": "onnxruntime"
+    }
+  ]
+}
