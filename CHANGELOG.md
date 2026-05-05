@@ -27,6 +27,9 @@ Changes currently on `main` after the `v0.1.0` tag.
 - Added document link and language-pair pytest coverage.
 - Added tracked InferEdge handoff config sample:
   - `configs/from_inferedge.json`
+- Added config guide documents:
+  - `configs/README.md`
+  - `configs/README.ko.md`
 
 ### Notes
 

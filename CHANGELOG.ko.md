@@ -27,6 +27,9 @@ Language: [English](CHANGELOG.md) | 한국어
 - 문서 link 및 language-pair pytest coverage 추가.
 - InferEdge handoff config sample 추적 추가:
   - `configs/from_inferedge.json`
+- config guide 문서 추가:
+  - `configs/README.md`
+  - `configs/README.ko.md`
 
 ### Notes
 

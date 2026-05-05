@@ -221,6 +221,7 @@ python3 -m inferedge_orchestrator report --input reports/phase1_demo.json
 
 - `CHANGELOG.ko.md` ([English](CHANGELOG.md))
 - `PORTFOLIO.ko.md` ([English](PORTFOLIO.md))
+- `configs/README.ko.md` ([English](configs/README.md))
 - `examples/telemetry/README.ko.md` ([English](examples/telemetry/README.md))
 - `docs/validation_evidence.ko.md` ([English](docs/validation_evidence.md))
 - `docs/architecture.ko.md` ([English](docs/architecture.md))
