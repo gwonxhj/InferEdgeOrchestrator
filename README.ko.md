@@ -115,6 +115,9 @@ control이 파일 기반 경계로 연결됨을 보여준다.
 | Synthetic overload comparison | detector p95 end-to-end latency가 FIFO baseline `782.0ms`에서 scheduler + shedding `8.0ms`로 개선, classifier low-priority frame 16개 drop | `reports/phase3_overload.json` |
 | InferEdge result handoff | sample `expected_latency_ms=42.2`에서 recommended `latency_budget_ms=64.0` 생성, InferEdge internals import 없음 | `configs/from_inferedge.json` |
 
+versioned sample telemetry artifact는 `examples/telemetry/`
+([English](examples/telemetry/README.md))에서 확인할 수 있다.
+
 ### Jetson Smoke Commands
 
 ```bash
@@ -215,5 +218,6 @@ python3 -m inferedge_orchestrator report --input reports/phase1_demo.json
 자세한 문서:
 
 - `PORTFOLIO.ko.md` ([English](PORTFOLIO.md))
+- `examples/telemetry/README.ko.md` ([English](examples/telemetry/README.md))
 - `docs/jetson_smoke_test.ko.md` ([English](docs/jetson_smoke_test.md))
 - `docs/inferedge_integration.ko.md` ([English](docs/inferedge_integration.md))

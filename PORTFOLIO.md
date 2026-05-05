@@ -83,6 +83,9 @@ frames when queue pressure grows.
 | CI | GitHub Actions runs `python -m pytest` on Python 3.11 for PRs and pushes to `main` |
 | Release | `v0.1.0` captures the first portfolio-ready snapshot |
 
+Sample telemetry artifacts are available in `examples/telemetry/` for reviewers
+who want to inspect the JSON evidence shape without running the CLI.
+
 ## Relationship With InferEdge
 
 InferEdge and InferEdgeOrchestrator cover different lifecycle stages.

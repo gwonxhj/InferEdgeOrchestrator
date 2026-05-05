@@ -1,0 +1,57 @@
+{
+  "drop_events": [],
+  "overload_events": [],
+  "policy_decisions": [],
+  "resource_snapshots": [
+    {
+      "cpu_percent": null,
+      "memory_percent": null,
+      "platform": "Linux-5.15.148-tegra-aarch64-with-glibc2.35",
+      "process_rss_mb": 13.465,
+      "stage": "start"
+    },
+    {
+      "cpu_percent": null,
+      "memory_percent": null,
+      "platform": "Linux-5.15.148-tegra-aarch64-with-glibc2.35",
+      "process_rss_mb": 54.043,
+      "stage": "end"
+    }
+  ],
+  "result_events": [
+    {
+      "frame_id": "identity-0-1",
+      "latency_ms": 202.05,
+      "output": {
+        "model_path": "models/identity.onnx",
+        "output_count": 1,
+        "output_shapes": [
+          [
+            1,
+            2
+          ]
+        ],
+        "worker": "onnxruntime"
+      },
+      "task": "identity"
+    }
+  ],
+  "run": {
+    "name": "phase2_onnx_demo"
+  },
+  "schedule_decisions": [
+    {
+      "reason": "priority_deadline",
+      "task": "identity"
+    }
+  ],
+  "tasks": {
+    "identity": {
+      "dropped": 0,
+      "executed": 1,
+      "max_queue_backlog": 1,
+      "mean_latency_ms": 202.05,
+      "p95_latency_ms": 202.05
+    }
+  }
+}

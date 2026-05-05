@@ -83,6 +83,9 @@ low-priority 또는 stale frame을 drop한다.
 | CI | GitHub Actions가 PR과 `main` push에서 Python 3.11 기준 `python -m pytest` 실행 |
 | Release | `v0.1.0`으로 첫 portfolio-ready snapshot 고정 |
 
+CLI를 실행하지 않아도 JSON evidence 형태를 확인할 수 있도록
+`examples/telemetry/`에 sample telemetry artifact를 제공한다.
+
 ## Relationship With InferEdge
 
 InferEdge와 InferEdgeOrchestrator는 서로 다른 lifecycle stage를 담당한다.

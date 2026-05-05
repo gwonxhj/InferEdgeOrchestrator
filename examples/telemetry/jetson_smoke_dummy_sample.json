@@ -1,0 +1,151 @@
+{
+  "drop_events": [
+    {
+      "frame_id": "classifier-2-6",
+      "reason": "queue_overflow_drop_newest",
+      "task": "classifier"
+    },
+    {
+      "frame_id": "classifier-3-8",
+      "reason": "queue_overflow_drop_newest",
+      "task": "classifier"
+    },
+    {
+      "frame_id": "classifier-4-10",
+      "reason": "queue_overflow_drop_newest",
+      "task": "classifier"
+    }
+  ],
+  "overload_events": [],
+  "policy_decisions": [],
+  "resource_snapshots": [
+    {
+      "cpu_percent": null,
+      "memory_percent": null,
+      "platform": "Linux-5.15.148-tegra-aarch64-with-glibc2.35",
+      "process_rss_mb": 13.09,
+      "stage": "start"
+    },
+    {
+      "cpu_percent": null,
+      "memory_percent": null,
+      "platform": "Linux-5.15.148-tegra-aarch64-with-glibc2.35",
+      "process_rss_mb": 13.09,
+      "stage": "end"
+    }
+  ],
+  "result_events": [
+    {
+      "frame_id": "detector-0-1",
+      "latency_ms": 8.0,
+      "output": {
+        "sequence": 1,
+        "worker": "dummy"
+      },
+      "task": "detector"
+    },
+    {
+      "frame_id": "detector-1-3",
+      "latency_ms": 8.0,
+      "output": {
+        "sequence": 3,
+        "worker": "dummy"
+      },
+      "task": "detector"
+    },
+    {
+      "frame_id": "detector-2-5",
+      "latency_ms": 8.0,
+      "output": {
+        "sequence": 5,
+        "worker": "dummy"
+      },
+      "task": "detector"
+    },
+    {
+      "frame_id": "detector-3-7",
+      "latency_ms": 8.0,
+      "output": {
+        "sequence": 7,
+        "worker": "dummy"
+      },
+      "task": "detector"
+    },
+    {
+      "frame_id": "detector-4-9",
+      "latency_ms": 8.0,
+      "output": {
+        "sequence": 9,
+        "worker": "dummy"
+      },
+      "task": "detector"
+    },
+    {
+      "frame_id": "classifier-0-2",
+      "latency_ms": 32.0,
+      "output": {
+        "sequence": 2,
+        "worker": "dummy"
+      },
+      "task": "classifier"
+    },
+    {
+      "frame_id": "classifier-1-4",
+      "latency_ms": 32.0,
+      "output": {
+        "sequence": 4,
+        "worker": "dummy"
+      },
+      "task": "classifier"
+    }
+  ],
+  "run": {
+    "name": "phase4_jetson_smoke"
+  },
+  "schedule_decisions": [
+    {
+      "reason": "priority_deadline",
+      "task": "detector"
+    },
+    {
+      "reason": "priority_deadline",
+      "task": "detector"
+    },
+    {
+      "reason": "priority_deadline",
+      "task": "detector"
+    },
+    {
+      "reason": "priority_deadline",
+      "task": "detector"
+    },
+    {
+      "reason": "priority_deadline",
+      "task": "detector"
+    },
+    {
+      "reason": "priority_deadline",
+      "task": "classifier"
+    },
+    {
+      "reason": "priority_deadline",
+      "task": "classifier"
+    }
+  ],
+  "tasks": {
+    "classifier": {
+      "dropped": 3,
+      "executed": 2,
+      "max_queue_backlog": 2,
+      "mean_latency_ms": 32.0,
+      "p95_latency_ms": 32.0
+    },
+    "detector": {
+      "dropped": 0,
+      "executed": 5,
+      "max_queue_backlog": 1,
+      "mean_latency_ms": 8.0,
+      "p95_latency_ms": 8.0
+    }
+  }
+}
