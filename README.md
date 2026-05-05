@@ -1,5 +1,7 @@
 # InferEdgeOrchestrator
 
+Language: English | [한국어](README.ko.md)
+
 InferEdgeOrchestrator is a lightweight runtime scheduler for constrained edge
 devices. It controls multiple inference tasks after deployment, using
 per-task priority, latency budgets, bounded queues, load shedding, and telemetry
@@ -210,5 +212,5 @@ python3 -m inferedge_orchestrator report --input reports/phase1_demo.json
 
 For more detail, see:
 
-- `docs/jetson_smoke_test.md`
-- `docs/inferedge_integration.md`
+- `docs/jetson_smoke_test.md` ([한국어](docs/jetson_smoke_test.ko.md))
+- `docs/inferedge_integration.md` ([한국어](docs/inferedge_integration.ko.md))

@@ -1,5 +1,7 @@
 # InferEdge File-Based Integration
 
+Language: English | [한국어](inferedge_integration.ko.md)
+
 InferEdge and InferEdgeOrchestrator intentionally stay separate.
 
 - InferEdge validates whether a model is deployable.
