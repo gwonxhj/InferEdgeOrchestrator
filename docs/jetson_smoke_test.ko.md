@@ -1,9 +1,9 @@
 # Jetson Orin Nano Smoke Test
 
-Language: English | [한국어](jetson_smoke_test.ko.md)
+Language: [English](jetson_smoke_test.md) | 한국어
 
-This smoke test verifies that InferEdgeOrchestrator can run on a Jetson Orin
-Nano and produce telemetry JSON. It is not a benchmark run.
+이 smoke test는 InferEdgeOrchestrator가 Jetson Orin Nano에서 실행되고
+telemetry JSON을 생성할 수 있는지 확인한다. 이 결과는 benchmark가 아니다.
 
 ## Setup
 
@@ -13,11 +13,11 @@ python3 -m venv .venv
 python3 -m pip install -e '.[dev]'
 ```
 
-For ONNX Runtime smoke on Jetson, install the platform-appropriate ONNX Runtime
-package separately, then use the Phase 2 demo config.
+Jetson에서 ONNX Runtime smoke를 실행하려면 platform에 맞는 ONNX Runtime
+package를 별도로 설치한 뒤 Phase 2 demo config를 사용한다.
 
-On `nano01`, the existing `yolo_env` environment was used for ONNX Runtime
-smoke validation:
+`nano01`에서는 기존 `yolo_env` 환경을 ONNX Runtime smoke validation에
+사용했다.
 
 ```bash
 PYTHON_BIN=$HOME/miniconda3/envs/yolo_env/bin/python \
@@ -27,22 +27,22 @@ PYTHON_BIN=$HOME/miniconda3/envs/yolo_env/bin/python \
 
 ## Dummy Input Smoke
 
-Recommended one-command smoke:
+권장 one-command smoke:
 
 ```bash
 scripts/smoke_jetson_dummy.sh
 ```
 
-The script performs:
+script가 수행하는 작업:
 
 - package import check
 - dummy-input CLI run
-- telemetry JSON creation
-- telemetry summary print
+- telemetry JSON 생성
+- telemetry summary 출력
 - `resource_snapshots` validation
-- validation note generation
+- validation note 생성
 
-Manual equivalent:
+수동 실행 equivalent:
 
 ```bash
 python3 -m inferedge_orchestrator run \
@@ -54,30 +54,30 @@ python3 -m inferedge_orchestrator report \
   --input reports/jetson_smoke_dummy.json
 ```
 
-Expected minimum result:
+최소 기대 결과:
 
-- CLI exits with code 0.
-- `reports/jetson_smoke_dummy.json` is created.
-- telemetry contains task execution/drop counts.
-- telemetry contains `resource_snapshots` with `start` and `end` entries.
-- `reports/jetson_validation.md` is created.
+- CLI가 exit code 0으로 종료된다.
+- `reports/jetson_smoke_dummy.json`이 생성된다.
+- telemetry에 task execution/drop count가 포함된다.
+- telemetry에 `start`, `end` `resource_snapshots`가 포함된다.
+- `reports/jetson_validation.md`가 생성된다.
 
 ## Optional tegrastats Capture
 
-Option A, let the smoke script capture it:
+Option A, smoke script가 직접 capture:
 
 ```bash
 CAPTURE_TEGRASTATS=1 scripts/smoke_jetson_dummy.sh
 ```
 
-Option B, capture in a second terminal on Jetson:
+Option B, Jetson의 두 번째 terminal에서 capture:
 
 ```bash
 tegrastats --interval 1000 | tee reports/tegrastats_smoke.log
 ```
 
-The parser in `inferedge_orchestrator.monitor.parse_tegrastats_line` can extract
-RAM, SWAP, CPU, GPU, and temperature fields from typical tegrastats lines.
+`inferedge_orchestrator.monitor.parse_tegrastats_line` parser는 일반적인
+tegrastats line에서 RAM, SWAP, CPU, GPU, temperature field를 추출할 수 있다.
 
 ## Artifact Rules
 
@@ -92,21 +92,21 @@ Canonical smoke artifacts:
 
 Artifact policy:
 
-- Raw smoke artifacts are generated under `reports/`.
-- Raw JSON/log/validation artifacts are ignored by git by default.
-- After the physical Jetson run, summarize the relevant result in README or this
-  document instead of committing large raw logs.
-- Keep the run clearly labeled as smoke validation, not benchmark evidence.
+- raw smoke artifact는 `reports/` 아래에 생성된다.
+- raw JSON/log/validation artifact는 기본적으로 git에서 ignore한다.
+- physical Jetson run 이후에는 큰 raw log를 commit하지 않고 README 또는 이
+  문서에 핵심 결과를 요약한다.
+- run은 benchmark evidence가 아니라 smoke validation으로 명확히 표시한다.
 
 ## Device Validation Record
 
 Current repository validation:
 
 - Local CLI smoke: ready and covered by tests.
-- Jetson Orin Nano hardware execution: validated on `nano01`.
-- Required artifact after device run: `reports/jetson_smoke_dummy.json`.
-- Required validation note after device run: `reports/jetson_validation.md`.
-- Optional artifact after device run: `reports/tegrastats_smoke.log`.
+- Jetson Orin Nano hardware execution: `nano01`에서 validated.
+- device run 이후 required artifact: `reports/jetson_smoke_dummy.json`.
+- device run 이후 required validation note: `reports/jetson_validation.md`.
+- device run 이후 optional artifact: `reports/tegrastats_smoke.log`.
 
 Latest physical-device validation:
 
@@ -151,19 +151,19 @@ gpu@36.312C
 
 Notes:
 
-- This validates CLI execution and telemetry generation on Jetson hardware.
-- This is still smoke validation, not a benchmark result.
-- Raw generated artifacts stay under `reports/` and are ignored by git.
+- Jetson hardware에서 CLI 실행과 telemetry 생성을 검증한다.
+- 이 결과는 여전히 smoke validation이며 benchmark 결과가 아니다.
+- raw generated artifact는 `reports/` 아래에 남고 git에서는 ignore된다.
 
 ## ONNX Runtime Worker Smoke
 
 Current ONNX Runtime worker validation:
 
-- Jetson Orin Nano hardware execution: validated on `nano01`.
+- Jetson Orin Nano hardware execution: `nano01`에서 validated.
 - Python environment: `$HOME/miniconda3/envs/yolo_env/bin/python`.
-- Required artifact after device run: `reports/jetson_onnx_smoke.json`.
-- Required validation note after device run: `reports/jetson_onnx_validation.md`.
-- Optional artifact after device run: `reports/tegrastats_onnx_smoke.log`.
+- device run 이후 required artifact: `reports/jetson_onnx_smoke.json`.
+- device run 이후 required validation note: `reports/jetson_onnx_validation.md`.
+- device run 이후 optional artifact: `reports/tegrastats_onnx_smoke.log`.
 
 Latest ONNX Runtime physical-device validation:
 
@@ -209,8 +209,8 @@ gpu@35.812C
 
 Notes:
 
-- This validates the ONNX Runtime worker path on Jetson hardware.
-- The current worker uses `CPUExecutionProvider`.
-- ONNX Runtime printed a GPU discovery warning during smoke, but the run passed
-  because GPU execution is not required for this worker path.
-- This is not TensorRT or GPU benchmark evidence.
+- Jetson hardware에서 ONNX Runtime worker path를 검증한다.
+- 현재 worker는 `CPUExecutionProvider`를 사용한다.
+- smoke 중 ONNX Runtime이 GPU discovery warning을 출력했지만, GPU execution이
+  이 worker path의 필수 조건이 아니기 때문에 run은 통과로 본다.
+- 이 결과는 TensorRT 또는 GPU benchmark evidence가 아니다.
