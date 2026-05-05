@@ -2,6 +2,8 @@
 
 Language: [English](README.md) | 한국어
 
+[![CI](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml)
+
 InferEdgeOrchestrator는 제한된 Edge 디바이스를 위한 lightweight runtime
 scheduler이다. 배포 이후 여러 inference task가 동시에 들어오는 상황에서
 task별 priority, latency budget, bounded queue, load shedding, telemetry를
