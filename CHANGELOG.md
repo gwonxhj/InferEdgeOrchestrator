@@ -21,6 +21,9 @@ Changes currently on `main` after the `v0.1.0` tag.
   - `docs/architecture.md`
   - `docs/architecture.ko.md`
 - Added this changelog in English and Korean.
+- Added validation evidence index documents:
+  - `docs/validation_evidence.md`
+  - `docs/validation_evidence.ko.md`
 
 ### Notes
 

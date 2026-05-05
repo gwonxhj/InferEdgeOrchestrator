@@ -117,6 +117,8 @@ control이 파일 기반 경계로 연결됨을 보여준다.
 
 versioned sample telemetry artifact는 `examples/telemetry/`
 ([English](examples/telemetry/README.md))에서 확인할 수 있다.
+전체 evidence index는 `docs/validation_evidence.ko.md`
+([English](docs/validation_evidence.md))에서 확인할 수 있다.
 
 ### Jetson Smoke Commands
 
@@ -220,6 +222,7 @@ python3 -m inferedge_orchestrator report --input reports/phase1_demo.json
 - `CHANGELOG.ko.md` ([English](CHANGELOG.md))
 - `PORTFOLIO.ko.md` ([English](PORTFOLIO.md))
 - `examples/telemetry/README.ko.md` ([English](examples/telemetry/README.md))
+- `docs/validation_evidence.ko.md` ([English](docs/validation_evidence.md))
 - `docs/architecture.ko.md` ([English](docs/architecture.md))
 - `docs/jetson_smoke_test.ko.md` ([English](docs/jetson_smoke_test.md))
 - `docs/inferedge_integration.ko.md` ([English](docs/inferedge_integration.md))

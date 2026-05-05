@@ -1,0 +1,213 @@
+# Validation Evidence
+
+Language: English | [한국어](validation_evidence.ko.md)
+
+This document is the evidence index for InferEdgeOrchestrator. It collects the
+runtime validation records that show the scheduler, load-shedding policy, ONNX
+Runtime worker path, Jetson smoke path, and InferEdge file-based handoff working
+as intended.
+
+These records are lifecycle evidence, not benchmark claims. The goal is to show
+that the runtime control paths execute, that overload policy decisions are
+observable, and that generated telemetry can explain what happened.
+
+## Evidence Summary
+
+| Evidence | What it validates | Status | Tracked artifact |
+| --- | --- | --- | --- |
+| Jetson dummy smoke | CLI run, scheduler loop, bounded queues, telemetry JSON, resource snapshots, low-priority drops on Jetson Orin Nano | PASS | [`examples/telemetry/jetson_smoke_dummy_sample.json`](../examples/telemetry/jetson_smoke_dummy_sample.json) |
+| Jetson ONNX Runtime smoke | ONNX Runtime worker path on Jetson Orin Nano with `CPUExecutionProvider`, output metadata, resource snapshots, `tegrastats` capture summary | PASS | [`examples/telemetry/jetson_onnx_smoke_sample.json`](../examples/telemetry/jetson_onnx_smoke_sample.json) |
+| Synthetic overload comparison | FIFO baseline vs scheduler/load-shedding policy under controlled overload | PASS | [`examples/telemetry/phase3_overload_sample.json`](../examples/telemetry/phase3_overload_sample.json) |
+| InferEdge result handoff | File-based conversion from InferEdge `result.json` latency signal to Orchestrator config | PASS | [`examples/inferedge_result_sample.json`](../examples/inferedge_result_sample.json), [`configs/from_inferedge.json`](../configs/from_inferedge.json) |
+| CI tests | Unit tests and sample artifact compatibility checks on Python 3.11 | PASS | [GitHub Actions CI](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml) |
+
+Raw smoke reports are generated under `reports/` during local or Jetson runs and
+are intentionally ignored by git. The JSON files under `examples/telemetry/` are
+small, versioned samples derived from those validation paths so reviewers can
+inspect the evidence shape without running the device workflows first.
+
+## Jetson Dummy Smoke
+
+Purpose:
+
+- Validate that the orchestrator CLI runs on Jetson Orin Nano.
+- Validate dummy-input scheduling, bounded queues, telemetry generation, and
+  resource snapshots.
+- Show low-priority work being dropped while the high-priority detector remains
+  active.
+
+Command:
+
+```bash
+CAPTURE_TEGRASTATS=1 scripts/smoke_jetson_dummy.sh
+```
+
+Latest physical-device record:
+
+| Field | Value |
+| --- | --- |
+| Device | `nano01` |
+| OS / L4T | `Ubuntu 22.04.5 LTS`, `L4T R36.4.7` |
+| Python | `3.10.12` |
+| Config | `configs/phase4_jetson_smoke.json` |
+| Frames | `20` |
+| Raw telemetry path | `reports/jetson_smoke_dummy.json` |
+| Raw validation note | `reports/jetson_validation.md` |
+| Result | `PASS` |
+
+Latest raw telemetry summary:
+
+| Task | Executed | Dropped | Mean latency | P95 latency | Max backlog |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `detector` | 20 | 0 | 8.0ms | 8.0ms | 1 |
+| `classifier` | 2 | 18 | 32.0ms | 32.0ms | 2 |
+
+Tracked sample:
+
+- [`examples/telemetry/jetson_smoke_dummy_sample.json`](../examples/telemetry/jetson_smoke_dummy_sample.json)
+
+The tracked sample is intentionally smaller than the raw device run but keeps
+the same telemetry shape: task counters, drop events, result events, scheduler
+decisions, and resource snapshots.
+
+## Jetson ONNX Runtime Smoke
+
+Purpose:
+
+- Validate that the `onnxruntime` worker path runs on Jetson Orin Nano.
+- Record ONNX output metadata in telemetry.
+- Confirm resource snapshots and optional `tegrastats` capture are compatible
+  with the smoke workflow.
+
+Command:
+
+```bash
+PYTHON_BIN=$HOME/miniconda3/envs/yolo_env/bin/python \
+  CAPTURE_TEGRASTATS=1 \
+  scripts/smoke_jetson_onnx.sh
+```
+
+Latest physical-device record:
+
+| Field | Value |
+| --- | --- |
+| Device | `nano01` |
+| OS / L4T | `Ubuntu 22.04.5 LTS`, `L4T R36.4.7` |
+| Python | `3.10.12` |
+| ONNX Runtime | `1.23.2` |
+| Provider | `CPUExecutionProvider` |
+| Config | `configs/phase2_onnx_demo.json` |
+| Model | `models/identity.onnx` |
+| Raw telemetry path | `reports/jetson_onnx_smoke.json` |
+| Result | `PASS` |
+
+Latest raw telemetry summary:
+
+| Task | Executed | Dropped | Mean latency | P95 latency | Output shape |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `identity` | 1 | 0 | 202.05ms | 202.05ms | `[1, 2]` |
+
+Tracked sample:
+
+- [`examples/telemetry/jetson_onnx_smoke_sample.json`](../examples/telemetry/jetson_onnx_smoke_sample.json)
+
+This smoke validates the ONNX Runtime worker path. It is not TensorRT evidence,
+GPU execution evidence, or a Jetson performance benchmark.
+
+## Synthetic Overload Comparison
+
+Purpose:
+
+- Reproduce a multi-task overload scenario in a deterministic way.
+- Compare FIFO baseline behavior with scheduler and load-shedding behavior.
+- Show that low-priority work can be dropped to protect high-priority task
+  latency.
+
+Command:
+
+```bash
+python3 -m inferedge_orchestrator compare-overload \
+  --config configs/phase3_overload.json \
+  --output reports/phase3_overload.json \
+  --frames 20
+```
+
+Result summary:
+
+| Mode | Detector executed | Detector dropped | Detector p95 end-to-end latency | Classifier executed | Classifier dropped | Overload events |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| FIFO baseline | 20 | 0 | 782.0ms | 20 | 0 | 0 |
+| Scheduler + load shedding | 20 | 0 | 8.0ms | 4 | 16 | 16 |
+
+Tracked sample:
+
+- [`examples/telemetry/phase3_overload_sample.json`](../examples/telemetry/phase3_overload_sample.json)
+
+The synthetic numbers demonstrate policy behavior under a controlled workload.
+They should not be read as production latency measurements.
+
+## InferEdge Result Handoff
+
+Purpose:
+
+- Keep the InferEdge ecosystem boundary explicit.
+- Use InferEdge `result.json` latency signals to generate an initial
+  Orchestrator task config.
+- Avoid direct imports from InferEdge repositories.
+
+Command:
+
+```bash
+python3 -m inferedge_orchestrator from-inferedge \
+  --result examples/inferedge_result_sample.json \
+  --output configs/from_inferedge.json \
+  --task-name detector \
+  --model-path models/detector.onnx \
+  --priority 100 \
+  --target-fps 15 \
+  --queue-size 4
+```
+
+Result summary:
+
+| Input signal | Generated config field | Value |
+| --- | --- | ---: |
+| `expected_latency_ms` | source latency signal | 42.2 |
+| `budget_multiplier` | default multiplier | 1.5 |
+| `latency_budget_ms` | recommended task budget | 64.0 |
+
+Tracked artifacts:
+
+- [`examples/inferedge_result_sample.json`](../examples/inferedge_result_sample.json)
+- [`configs/from_inferedge.json`](../configs/from_inferedge.json)
+- [`docs/inferedge_integration.md`](inferedge_integration.md)
+
+This evidence supports the lifecycle boundary:
+
+```text
+InferEdge = deployment validation pipeline
+InferEdgeOrchestrator = runtime operation control layer
+```
+
+## Sample Telemetry Artifact Index
+
+| File | Evidence path | Main signals |
+| --- | --- | --- |
+| [`examples/telemetry/phase3_overload_sample.json`](../examples/telemetry/phase3_overload_sample.json) | Synthetic overload comparison | protected task, baseline p95, scheduled p95, low-priority drops, overload events |
+| [`examples/telemetry/jetson_smoke_dummy_sample.json`](../examples/telemetry/jetson_smoke_dummy_sample.json) | Jetson dummy smoke | executed/dropped counts, drop events, schedule decisions, result events, resource snapshots |
+| [`examples/telemetry/jetson_onnx_smoke_sample.json`](../examples/telemetry/jetson_onnx_smoke_sample.json) | Jetson ONNX Runtime smoke | ONNX worker output metadata, output shapes, result events, resource snapshots |
+
+For sample-specific schema notes, see
+[`examples/telemetry/README.md`](../examples/telemetry/README.md).
+
+## Evidence Boundaries
+
+- Smoke validation proves runtime paths execute; it does not claim stable device
+  performance.
+- Synthetic overload comparison proves scheduler policy behavior; it is not a
+  production benchmark.
+- Jetson ONNX Runtime smoke currently uses `CPUExecutionProvider`; it is not
+  TensorRT or GPU benchmark evidence.
+- Raw generated reports stay under `reports/` and are not committed.
+- Versioned sample JSON files are curated documentation artifacts for review and
+  schema inspection.

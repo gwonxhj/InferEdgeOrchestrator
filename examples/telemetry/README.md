@@ -30,4 +30,8 @@ The samples cover these telemetry signals:
 - result events
 - resource snapshots
 
-Physical-device validation summaries live in `docs/jetson_smoke_test.md`.
+For the complete validation evidence index, see
+[`docs/validation_evidence.md`](../../docs/validation_evidence.md).
+
+Physical-device validation details live in
+[`docs/jetson_smoke_test.md`](../../docs/jetson_smoke_test.md).

@@ -30,4 +30,8 @@ sample은 다음 telemetry signal을 포함한다.
 - result events
 - resource snapshots
 
-실제 physical-device validation summary는 `docs/jetson_smoke_test.md`에 있다.
+전체 validation evidence index는
+[`docs/validation_evidence.ko.md`](../../docs/validation_evidence.ko.md)에 있다.
+
+실제 physical-device validation detail은
+[`docs/jetson_smoke_test.ko.md`](../../docs/jetson_smoke_test.ko.md)에 있다.
