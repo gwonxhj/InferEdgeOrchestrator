@@ -8,7 +8,11 @@ helps reviewers understand the project state.
 
 ## Unreleased
 
-No changes yet.
+### Changed
+
+- Updated `README.md` document entry links so English documentation is the
+  primary entry point; Korean mirrors remain available from each document's
+  language selector.
 
 ## v0.1.1 - 2026-05-06
 
