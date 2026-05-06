@@ -179,8 +179,8 @@ Worker behavior currently enforces:
 Validation rules still to add:
 
 - Fallback from TensorRT/GPU to CPU must be explicit in config and telemetry.
-- Multi-task TensorRT contention behavior must be validated separately from this
-  single-worker identity smoke.
+- Broader TensorRT contention evidence should use more realistic model diversity
+  after the initial two-task identity-engine smoke.
 
 ## Jetson TensorRT Inference Smoke
 
@@ -223,6 +223,32 @@ been validated under multi-task TensorRT contention.
 
 To create the small local engine used by this smoke path, see
 [`docs/tensorrt_engine_build.md`](tensorrt_engine_build.md).
+
+## Jetson TensorRT Contention Smoke
+
+The contention smoke script is:
+
+```bash
+ENGINE_PATH=models/detector.plan scripts/smoke_jetson_tensorrt_contention.sh
+```
+
+It runs two TensorRT tasks through `OrchestratorRuntime`:
+
+| Task | Priority | Expected role |
+| --- | --- | --- |
+| `detector_trt` | 100 | protected high-priority task |
+| `classifier_trt` | 10 | low-priority task limited by load shedding |
+
+The smoke validates:
+
+- TensorRT backend metadata appears in all runtime result events.
+- `overload_events` are recorded.
+- policy decisions include `limited_task="classifier_trt"`.
+- `classifier_trt` drops frames while `detector_trt` still executes.
+
+This is TensorRT-backed scheduler/load-shedding evidence. It is intentionally
+not a throughput benchmark and it currently uses the same tiny identity engine
+for both tasks to keep the artifact local, small, and reproducible.
 
 ## Telemetry Plan
 

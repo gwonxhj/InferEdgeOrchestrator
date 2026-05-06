@@ -44,6 +44,8 @@ Language: [English](CHANGELOG.md) | 한국어
   metadata 반환을 추가했다.
 - Jetson TensorRT runtime telemetry smoke validation을 추가해
   `result_events[].output`에 TensorRT backend metadata가 남는지 확인한다.
+- high/low priority TensorRT task로 TensorRT-backed scheduler/load-shedding
+  behavior를 검증하는 Jetson TensorRT contention smoke config와 script를 추가했다.
 
 ### Changed
 

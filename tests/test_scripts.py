@@ -26,3 +26,22 @@ def test_jetson_tensorrt_smoke_script_contract() -> None:
     assert "host/device buffer allocation" in text
     assert "tensor address binding" in text
     assert "TensorRT inference execution" in text
+
+
+def test_jetson_tensorrt_contention_script_contract() -> None:
+    script = Path("scripts/smoke_jetson_tensorrt_contention.sh")
+    text = script.read_text(encoding="utf-8")
+    mode = script.stat().st_mode
+
+    assert mode & stat.S_IXUSR, "TensorRT contention script should be executable"
+    assert "configs/jetson_tensorrt_contention.json" in text
+    assert "ENGINE_PATH" in text
+    assert "TELEMETRY_PATH" in text
+    assert "VALIDATION_PATH" in text
+    assert "CAPTURE_TEGRASTATS" in text
+    assert "PASS_TENSORRT_CONTENTION" in text
+    assert "detector_trt" in text
+    assert "classifier_trt" in text
+    assert "overload_events" in text
+    assert "limited_task" in text
+    assert "backend" in text
