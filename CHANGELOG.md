@@ -61,6 +61,8 @@ helps reviewers understand the project state.
 - Added `scripts/create_tensorrt_diverse_onnx.py` to generate deterministic
   detector-like and classifier-like ONNX source models for future Jetson
   TensorRT diversity smoke runs.
+- Added `scripts/build_jetson_tensorrt_diverse_engines.sh` to build the
+  generated ONNX pair into local FP16 TensorRT engines on Jetson.
 
 ### Changed
 

@@ -49,6 +49,24 @@ def test_jetson_tensorrt_contention_script_contract() -> None:
     assert "backend" in text
 
 
+def test_jetson_tensorrt_diverse_engine_build_script_contract() -> None:
+    script = Path("scripts/build_jetson_tensorrt_diverse_engines.sh")
+    text = script.read_text(encoding="utf-8")
+    mode = script.stat().st_mode
+
+    assert mode & stat.S_IXUSR, "TensorRT diverse build script should be executable"
+    assert "scripts/create_tensorrt_diverse_onnx.py" in text
+    assert "models/generated" in text
+    assert "detector_tiny.onnx" in text
+    assert "classifier_tiny.onnx" in text
+    assert "detector_tiny_fp16.plan" in text
+    assert "classifier_tiny_fp16.plan" in text
+    assert "/usr/src/tensorrt/bin/trtexec" in text
+    assert "--skipInference" in text
+    assert "PASS_TENSORRT_DIVERSE_ENGINE_BUILD" in text
+    assert "does not claim scheduler behavior or TensorRT throughput" in text
+
+
 def test_tensorrt_diverse_onnx_generator_contract(tmp_path) -> None:
     output_dir = tmp_path / "generated"
 

@@ -72,6 +72,19 @@ Generator contract:
 - Classifier ONNX: `models/generated/classifier_tiny.onnx`
 - `models/generated/` 아래 생성 ONNX와 향후 TensorRT engine은 git에서 ignore한다.
 
+Jetson build contract:
+
+- Script: `scripts/build_jetson_tensorrt_diverse_engines.sh`
+- Build target: Jetson-local FP16 TensorRT engine.
+- Detector engine: `models/generated/detector_tiny_fp16.plan`
+- Classifier engine: `models/generated/classifier_tiny_fp16.plan`
+- Build log: `reports/trtexec_detector_tiny_fp16_build.log`,
+  `reports/trtexec_classifier_tiny_fp16_build.log`
+- Validation note: `reports/jetson_tensorrt_diverse_engine_build.md`
+- Success marker: `PASS_TENSORRT_DIVERSE_ENGINE_BUILD`
+- 이 단계는 build-only step이다. Scheduler behavior 또는 TensorRT throughput을
+  주장하지 않는다.
+
 Synthetic을 먼저 선택하는 이유:
 
 - License clarity: 생성된 source model은 repository-owned test fixture이므로
