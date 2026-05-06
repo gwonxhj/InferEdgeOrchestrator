@@ -48,6 +48,9 @@ Language: [English](CHANGELOG.md) | 한국어
   behavior를 검증하는 Jetson TensorRT contention smoke config와 script를 추가했다.
 - curated TensorRT contention sample telemetry artifact를 추가했다:
   `examples/telemetry/jetson_tensorrt_contention_sample.json`.
+- v0.1.x TensorRT model-diversity 결정을 문서화했다. Contention evidence는 shared
+  identity engine으로 유지하고, 별도 detector/classifier engine은 이후 milestone로
+  미룬다.
 
 ### Changed
 

@@ -247,6 +247,41 @@ ENGINE_PATH=models/detector.plan scripts/smoke_jetson_tensorrt_contention.sh
 아니며, 현재는 artifact를 작고 재현 가능하게 유지하기 위해 두 task 모두 같은 작은
 identity engine을 사용한다.
 
+## Model Diversity Decision
+
+v0.1.x line의 결정: TensorRT contention evidence는 shared tiny identity engine으로
+유지한다. v0.1.x에서는 별도 detector/classifier TensorRT engine을 추가하지 않는다.
+
+판단 근거:
+
+- 현재 목표는 priority scheduling, bounded queue, load shedding, overload event,
+  TensorRT backend telemetry 같은 runtime operation control을 증명하는 것이다.
+- shared identity engine은 TensorRT execution path를 실제로 통과하면서도 repository를
+  가볍고 재현 가능하게 유지한다.
+- 지금 detector/classifier engine을 추가하면 model 확보, conversion, engine build,
+  artifact size, license 문제가 생긴다. 이 문제는 InferEdge Forge 또는 이후
+  device-validation milestone에 더 가깝다.
+- realistic model diversity를 지금 넣으면 portfolio message가 TensorRT benchmark로
+  흐를 위험이 있으며, 이는 명시적 non-goal이다.
+
+재검토 조건:
+
+- TensorRT worker, telemetry schema, contention smoke가 patch release 이상 안정적으로
+  유지된 뒤 별도 detector/classifier engine을 검토한다.
+- engine 추가 전 device-local engine build instruction, artifact exclusion rule,
+  evidence boundary를 먼저 명확히 한다.
+- 첫 diversified-engine run은 별도 release plan이 없는 한 v0.2-level evidence로
+  다룬다.
+
+향후 diversified scenario의 acceptance criteria:
+
+- 서로 다른 local TensorRT engine 2개 이상을 문서화된 source model에서 Jetson에서
+  build한다.
+- engine binary와 큰 model file은 commit하지 않는다.
+- telemetry는 latency 숫자만이 아니라 high-priority protection과 low-priority
+  limiting을 계속 증명한다.
+- 문서는 결과가 throughput benchmark가 아니라 operation-control evidence임을 명시한다.
+
 ## Telemetry Plan
 
 현재 telemetry top-level shape는 유지한다. TensorRT/GPU 지원은 scheduler summary를

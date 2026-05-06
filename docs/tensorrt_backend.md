@@ -250,6 +250,43 @@ This is TensorRT-backed scheduler/load-shedding evidence. It is intentionally
 not a throughput benchmark and it currently uses the same tiny identity engine
 for both tasks to keep the artifact local, small, and reproducible.
 
+## Model Diversity Decision
+
+Decision for the v0.1.x line: keep the TensorRT contention evidence on the
+shared tiny identity engine. Do not add separate detector/classifier TensorRT
+engines in v0.1.x.
+
+Rationale:
+
+- The current goal is to prove runtime operation control: priority scheduling,
+  bounded queues, load shedding, overload events, and TensorRT backend telemetry.
+- The shared identity engine already exercises the TensorRT execution path while
+  keeping the repository lightweight and reproducible.
+- Adding detector/classifier engines now would introduce model acquisition,
+  conversion, engine-build, artifact-size, and licensing questions that belong
+  closer to InferEdge Forge or a later device-validation milestone.
+- Realistic model diversity risks shifting the portfolio message toward a
+  TensorRT benchmark, which is explicitly a non-goal.
+
+When to revisit:
+
+- Use separate detector/classifier engines only after the TensorRT worker,
+  telemetry schema, and contention smoke remain stable across a patch release.
+- Require device-local engine build instructions, artifact exclusion rules,
+  and clear evidence boundaries before adding those engines.
+- Treat the first diversified-engine run as v0.2-level evidence unless a
+  release plan explicitly says otherwise.
+
+Acceptance criteria for a future diversified scenario:
+
+- Two or more distinct local TensorRT engines are built on Jetson from
+  documented source models.
+- No engine binaries or large model files are committed.
+- Telemetry still demonstrates high-priority protection and low-priority
+  limiting, not just latency numbers.
+- Documentation states that the result is operation-control evidence, not a
+  throughput benchmark.
+
 ## Telemetry Plan
 
 The current telemetry top-level shape should remain stable. TensorRT/GPU support

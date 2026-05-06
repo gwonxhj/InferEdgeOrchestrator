@@ -314,7 +314,8 @@ For sample-specific schema notes, see
   does not prove multi-task TensorRT scheduling behavior yet.
 - Jetson TensorRT contention smoke proves initial TensorRT-backed
   scheduler/load-shedding behavior with a tiny shared identity engine; it does
-  not prove production model throughput.
+  not prove production model throughput or diversified detector/classifier
+  engine behavior.
 - Raw generated reports stay under `reports/` and are not committed.
 - Versioned sample JSON files are curated documentation artifacts for review and
   schema inspection.
