@@ -21,6 +21,9 @@ helps reviewers understand the project state.
   - `worker_options`
 - Validated InferEdge handoff generated configs before writing and added
   `--engine-path` for reserved TensorRT schema output.
+- Added a TensorRT worker guard stub that checks TensorRT Python bindings and
+  configured engine file existence before failing with a clear not-implemented
+  message for engine deserialization/inference.
 
 ### Changed
 

@@ -21,6 +21,9 @@ Language: [English](CHANGELOG.md) | 한국어
   - `worker_options`
 - InferEdge handoff 생성 config를 파일로 쓰기 전에 validation하도록 하고,
   예약된 TensorRT schema 출력을 위해 `--engine-path`를 추가했다.
+- TensorRT Python binding과 설정된 engine file 존재 여부를 확인한 뒤 engine
+  deserialization/inference 미구현 메시지로 명확히 실패하는 TensorRT worker guard
+  stub을 추가했다.
 
 ### Changed
 
