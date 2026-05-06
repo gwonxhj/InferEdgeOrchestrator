@@ -2,11 +2,12 @@
 
 Language: English | [한국어](tensorrt_backend.ko.md)
 
-Status: schema, worker guard, and Jetson guard-smoke draft. The config schema,
-TensorRT worker stub, and `scripts/smoke_jetson_tensorrt.sh` are present, but
-this document does not claim that TensorRT engine deserialization, inference
-execution, GPU provider execution, or multi-task TensorRT scheduling evidence is
-implemented yet.
+Status: schema, worker guard, and Jetson guard-smoke validation. The config
+schema, TensorRT worker stub, and `scripts/smoke_jetson_tensorrt.sh` are
+present. Jetson guard smoke reached `PASS_GUARD_STUB` with a local
+`models/identity_fp16.plan` engine, but this document does not claim that
+TensorRT engine deserialization, inference execution, GPU provider execution,
+or multi-task TensorRT scheduling evidence is implemented yet.
 
 InferEdgeOrchestrator already proves the scheduler, bounded queue, load
 shedding, telemetry, ONNX Runtime worker path, and Jetson smoke path. The

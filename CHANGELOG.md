@@ -30,12 +30,16 @@ helps reviewers understand the project state.
 - Added a small ONNX to TensorRT engine build procedure for Jetson:
   - `docs/tensorrt_engine_build.md`
   - `docs/tensorrt_engine_build.ko.md`
+- Recorded Jetson TensorRT guard-smoke evidence for local identity ONNX to FP16
+  engine creation and `PASS_GUARD_STUB` worker-boundary validation.
 
 ### Changed
 
 - Updated `README.md` document entry links so English documentation is the
   primary entry point; Korean mirrors remain available from each document's
   language selector.
+- Updated the TensorRT engine build procedure to use `trtexec --skipInference`
+  on the surveyed Jetson TensorRT 10.3.0 environment.
 
 ## v0.1.1 - 2026-05-06
 
