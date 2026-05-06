@@ -70,6 +70,9 @@ helps reviewers understand the project state.
   execution.
 - Recorded Jetson worker-guard evidence for the generated TensorRT diversity
   engine pair.
+- Added `configs/jetson_tensorrt_diverse_contention.json` as the reserved
+  scheduler/load-shedding contention config for the distinct generated TensorRT
+  engines.
 
 ### Changed
 

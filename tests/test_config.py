@@ -162,3 +162,34 @@ def test_jetson_tensorrt_contention_config_matches_reserved_schema() -> None:
     assert [task.worker for task in config.tasks] == ["tensorrt", "tensorrt"]
     assert [task.priority for task in config.tasks] == [100, 10]
     assert all(task.engine_path == "models/detector.plan" for task in config.tasks)
+
+
+def test_jetson_tensorrt_diverse_contention_config_matches_reserved_schema() -> None:
+    config_path = Path("configs/jetson_tensorrt_diverse_contention.json")
+    config = OrchestratorConfig.from_dict(
+        json.loads(config_path.read_text(encoding="utf-8"))
+    )
+
+    assert config.name == "jetson_tensorrt_diverse_contention_smoke"
+    assert config.overload_backlog_threshold == 2
+    assert [task.name for task in config.tasks] == ["detector_trt", "classifier_trt"]
+    assert [task.worker for task in config.tasks] == ["tensorrt", "tensorrt"]
+    assert [task.priority for task in config.tasks] == [100, 10]
+    assert [task.engine_path for task in config.tasks] == [
+        "models/generated/detector_tiny_fp16.plan",
+        "models/generated/classifier_tiny_fp16.plan",
+    ]
+    assert [task.model_path for task in config.tasks] == [
+        "models/generated/detector_tiny.onnx",
+        "models/generated/classifier_tiny.onnx",
+    ]
+    assert config.tasks[0].worker_options is not None
+    assert config.tasks[1].worker_options is not None
+    assert config.tasks[0].worker_options["profile_name"] == "detector_tiny_fp16"
+    assert config.tasks[1].worker_options["profile_name"] == "classifier_tiny_fp16"
+    assert config.tasks[0].worker_options["input_bindings"] == {
+        "detector_input": [1, 3, 16, 16]
+    }
+    assert config.tasks[1].worker_options["output_bindings"] == {
+        "classifier_logits": [1, 4]
+    }
