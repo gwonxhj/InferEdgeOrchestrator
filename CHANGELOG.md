@@ -8,6 +8,12 @@ helps reviewers understand the project state.
 
 ## Unreleased
 
+### Added
+
+- Added TensorRT/GPU backend design and config schema planning documents:
+  - `docs/tensorrt_backend.md`
+  - `docs/tensorrt_backend.ko.md`
+
 ### Changed
 
 - Updated `README.md` document entry links so English documentation is the
