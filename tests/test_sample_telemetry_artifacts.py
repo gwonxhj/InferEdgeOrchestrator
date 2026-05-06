@@ -49,3 +49,26 @@ def test_jetson_onnx_sample_records_worker_output_metadata() -> None:
         "start",
         "end",
     }
+
+
+def test_jetson_tensorrt_contention_sample_records_policy_and_backend_metadata() -> None:
+    sample = _load_sample("jetson_tensorrt_contention_sample.json")
+
+    assert sample["run"]["name"] == "jetson_tensorrt_contention_smoke"  # type: ignore[index]
+    assert sample["tasks"]["detector_trt"]["executed"] == 6  # type: ignore[index]
+    assert sample["tasks"]["detector_trt"]["dropped"] == 0  # type: ignore[index]
+    assert sample["tasks"]["classifier_trt"]["executed"] == 1  # type: ignore[index]
+    assert sample["tasks"]["classifier_trt"]["dropped"] == 5  # type: ignore[index]
+    assert len(sample["overload_events"]) == 5  # type: ignore[arg-type]
+    assert all(  # type: ignore[index]
+        event["limited_task"] == "classifier_trt"
+        for event in sample["overload_events"]  # type: ignore[index]
+    )
+    assert len(sample["result_events"]) == 7  # type: ignore[arg-type]
+    assert {  # type: ignore[index]
+        event["output"]["backend"] for event in sample["result_events"]  # type: ignore[index]
+    } == {"tensorrt"}
+    first_event = sample["result_events"][0]  # type: ignore[index]
+    assert first_event["output"]["worker"] == "tensorrt"
+    assert first_event["output"]["output_shapes"] == {"output": [1, 2]}
+    assert first_event["output"]["output_preview"] == {"output": [0.0, 0.0]}

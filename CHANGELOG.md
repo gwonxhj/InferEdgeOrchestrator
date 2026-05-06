@@ -47,6 +47,8 @@ helps reviewers understand the project state.
 - Added Jetson TensorRT contention smoke config and script to validate
   TensorRT-backed scheduler/load-shedding behavior with high- and low-priority
   TensorRT tasks.
+- Added a curated TensorRT contention sample telemetry artifact:
+  `examples/telemetry/jetson_tensorrt_contention_sample.json`.
 
 ### Changed
 

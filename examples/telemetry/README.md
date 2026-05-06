@@ -17,6 +17,7 @@ They are not benchmark artifacts. Raw runtime reports remain ignored under
 | `phase3_overload_sample.json` | Synthetic FIFO baseline vs scheduler/load-shedding comparison. The detector p95 end-to-end latency improves from `782.0ms` to `8.0ms`, while low-priority classifier work is dropped. |
 | `jetson_smoke_dummy_sample.json` | Telemetry schema from the Jetson dummy smoke path: task counts, drop events, result events, scheduler decisions, and resource snapshots. |
 | `jetson_onnx_smoke_sample.json` | Telemetry schema from the ONNX Runtime worker smoke path: result event metadata, output shape `[1, 2]`, and resource snapshots. |
+| `jetson_tensorrt_contention_sample.json` | TensorRT-backed scheduler/load-shedding evidence from Jetson: `detector_trt` is protected, `classifier_trt` is shed, and result events keep TensorRT backend metadata. |
 
 ## Schema Signals
 

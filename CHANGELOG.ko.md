@@ -46,6 +46,8 @@ Language: [English](CHANGELOG.md) | 한국어
   `result_events[].output`에 TensorRT backend metadata가 남는지 확인한다.
 - high/low priority TensorRT task로 TensorRT-backed scheduler/load-shedding
   behavior를 검증하는 Jetson TensorRT contention smoke config와 script를 추가했다.
+- curated TensorRT contention sample telemetry artifact를 추가했다:
+  `examples/telemetry/jetson_tensorrt_contention_sample.json`.
 
 ### Changed
 
