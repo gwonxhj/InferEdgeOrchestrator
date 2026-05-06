@@ -182,6 +182,9 @@ ENGINE_PATH=models/detector.plan scripts/smoke_jetson_tensorrt.sh
 이 결과는 TensorRT inference evidence가 아니다. Jetson 환경과 worker guard path가
 다음 구현 단계로 넘어갈 준비가 되었는지만 증명한다.
 
+이 smoke path에 사용할 작은 local engine 생성 절차는
+[`docs/tensorrt_engine_build.ko.md`](tensorrt_engine_build.ko.md)에 기록한다.
+
 ## Telemetry Plan
 
 현재 telemetry top-level shape는 유지한다. TensorRT/GPU 지원은 scheduler summary를

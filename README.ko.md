@@ -227,3 +227,5 @@ python3 -m inferedge_orchestrator report --input reports/phase1_demo.json
 - `docs/architecture.ko.md` ([English](docs/architecture.md))
 - `docs/jetson_smoke_test.ko.md` ([English](docs/jetson_smoke_test.md))
 - `docs/inferedge_integration.ko.md` ([English](docs/inferedge_integration.md))
+- `docs/tensorrt_backend.ko.md` ([English](docs/tensorrt_backend.md))
+- `docs/tensorrt_engine_build.ko.md` ([English](docs/tensorrt_engine_build.md))

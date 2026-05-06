@@ -27,6 +27,9 @@ Language: [English](CHANGELOG.md) | 한국어
 - Jetson TensorRT guard smoke 초안을 추가했다.
   - `configs/jetson_tensorrt_smoke.json`
   - `scripts/smoke_jetson_tensorrt.sh`
+- Jetson에서 작은 ONNX model을 TensorRT engine으로 생성하는 절차 문서를 추가했다.
+  - `docs/tensorrt_engine_build.md`
+  - `docs/tensorrt_engine_build.ko.md`
 
 ### Changed
 
