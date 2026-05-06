@@ -8,6 +8,12 @@ Language: [English](CHANGELOG.md) | 한국어
 
 ## Unreleased
 
+### Added
+
+- TensorRT/GPU backend 설계 및 config schema 계획 문서를 추가했다.
+  - `docs/tensorrt_backend.md`
+  - `docs/tensorrt_backend.ko.md`
+
 ### Changed
 
 - `README.md`의 문서 진입 link를 영어 문서가 main entry가 되도록 정리했다.

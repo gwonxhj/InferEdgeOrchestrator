@@ -130,6 +130,10 @@ class Worker(Protocol):
 고정된 worker interface 덕분에 향후 TensorRT worker를 추가하더라도 scheduler,
 queue, telemetry contract를 바꾸지 않아도 된다.
 
+TensorRT/GPU backend 방향은 설계 및 schema 계획으로
+[`docs/tensorrt_backend.ko.md`](tensorrt_backend.ko.md)에 분리해 기록한다. Jetson
+실행이 검증되기 전까지는 현재 구현된 worker 목록과 의도적으로 분리한다.
+
 ## Telemetry Schema Overview
 
 telemetry JSON은 runtime behavior를 설명하는 핵심 evidence artifact다.

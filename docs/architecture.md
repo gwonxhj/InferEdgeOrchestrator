@@ -131,6 +131,10 @@ Supported workers:
 The fixed worker interface leaves room for a future TensorRT worker without
 changing the scheduler, queue, or telemetry contracts.
 
+The TensorRT/GPU backend direction is documented as a design and schema plan in
+[`docs/tensorrt_backend.md`](tensorrt_backend.md). That document is intentionally
+separate from the implemented worker list until Jetson execution is validated.
+
 ## Telemetry Schema Overview
 
 Telemetry JSON is the main evidence artifact for runtime behavior.
