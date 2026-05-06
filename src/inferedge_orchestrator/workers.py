@@ -104,18 +104,50 @@ class OnnxRuntimeWorker:
         return feed
 
 
+class TensorRtWorker:
+    def __init__(self) -> None:
+        self._engine_metadata: dict[str, object] = {}
+
+    def run(self, task: TaskConfig, frame: FrameEnvelope) -> WorkerResult:
+        self._engine_for(task)
+        raise NotImplementedError(
+            "tensorrt worker loaded the requested runtime prerequisites, but "
+            "engine deserialization and inference execution are not implemented yet"
+        )
+
+    def _engine_for(self, task: TaskConfig) -> object:
+        if not task.engine_path:
+            raise ValueError(f"{task.name}: tensorrt worker requires engine_path")
+        engine_path = Path(task.engine_path)
+        if not engine_path.exists():
+            raise FileNotFoundError(
+                f"{task.name}: TensorRT engine_path does not exist: {engine_path}"
+            )
+        resolved_engine_path = str(engine_path)
+        if resolved_engine_path not in self._engine_metadata:
+            try:
+                import tensorrt as trt
+            except ImportError as exc:
+                raise RuntimeError(
+                    "tensorrt worker requires the optional TensorRT Python bindings. "
+                    "Install TensorRT on the target Jetson or run with a different worker."
+                ) from exc
+            self._engine_metadata[resolved_engine_path] = {
+                "engine_path": resolved_engine_path,
+                "tensorrt_version": trt.__version__,
+            }
+        return self._engine_metadata[resolved_engine_path]
+
+
 class WorkerPool:
     def __init__(self, *, sleep_dummy: bool = False) -> None:
         self._workers: dict[str, Worker] = {
             "dummy": DummyWorker(sleep=sleep_dummy),
             "onnxruntime": OnnxRuntimeWorker(),
+            "tensorrt": TensorRtWorker(),
         }
 
     def run(self, task: TaskConfig, frame: FrameEnvelope) -> WorkerResult:
-        if task.worker not in self._workers:
-            raise NotImplementedError(
-                f"{task.worker!r} worker is configured but not implemented yet"
-            )
         return self._workers[task.worker].run(task, frame)
 
 

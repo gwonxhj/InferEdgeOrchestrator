@@ -127,13 +127,17 @@ Supported workers:
   used for scheduler tests and overload-policy validation.
 - `onnxruntime`: loads ONNX models lazily, runs them with
   `CPUExecutionProvider`, and records output count and output shapes.
+- `tensorrt`: performs early TensorRT worker guard checks for `engine_path`,
+  TensorRT Python bindings, and engine file existence. Engine deserialization
+  and inference execution are intentionally not implemented yet.
 
-The fixed worker interface leaves room for a future TensorRT worker without
-changing the scheduler, queue, or telemetry contracts.
+The fixed worker interface lets the TensorRT path evolve without changing the
+scheduler, queue, or telemetry contracts.
 
-The TensorRT/GPU backend direction is documented as a design and schema plan in
-[`docs/tensorrt_backend.md`](tensorrt_backend.md). That document is intentionally
-separate from the implemented worker list until Jetson execution is validated.
+The TensorRT/GPU backend direction and current stub boundary are documented in
+[`docs/tensorrt_backend.md`](tensorrt_backend.md). Jetson engine execution is
+still separate from the implemented worker guard path until device smoke
+validation is completed.
 
 ## Telemetry Schema Overview
 

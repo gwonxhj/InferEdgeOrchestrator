@@ -2,8 +2,10 @@
 
 Language: English | [한국어](tensorrt_backend.ko.md)
 
-Status: design and schema plan. This document does not claim that a TensorRT
-worker, GPU provider path, or TensorRT engine execution is implemented yet.
+Status: schema and worker-guard plan. The config schema and TensorRT worker
+stub are present, but this document does not claim that TensorRT engine
+deserialization, inference execution, GPU provider execution, or multi-task
+TensorRT scheduling evidence is implemented yet.
 
 InferEdgeOrchestrator already proves the scheduler, bounded queue, load
 shedding, telemetry, ONNX Runtime worker path, and Jetson smoke path. The
@@ -56,9 +58,10 @@ task, and returning latency/result metadata.
 
 ## Config Schema Status
 
-The config schema now accepts a future `tensorrt` worker selection and preserves
-backward compatibility for existing `dummy` and `onnxruntime` configs. This is a
-schema contract only; TensorRT worker execution is still not implemented.
+The config schema accepts a `tensorrt` worker selection and preserves backward
+compatibility for existing `dummy` and `onnxruntime` configs. The worker layer
+also includes an early TensorRT guard stub, but TensorRT engine deserialization
+and inference execution are still not implemented.
 
 Task fields:
 
@@ -113,9 +116,10 @@ Schema-valid example:
 }
 ```
 
-This example validates as config schema, but runtime execution with
-`worker="tensorrt"` still raises a clear not-implemented error until the
-TensorRT worker is added.
+This example validates as config schema. Runtime execution with
+`worker="tensorrt"` currently checks TensorRT prerequisites and then raises a
+clear not-implemented error until engine deserialization and inference execution
+are added.
 
 ## Current Validation Rules
 
@@ -129,11 +133,18 @@ Config validation currently enforces:
 - `worker_options.providers` must be a list of non-empty strings when provided.
 - Generated engine files are local artifacts and should not be committed.
 
-Validation rules still to add with the real worker:
+Worker guard behavior currently enforces:
 
-- `worker="tensorrt"` should fail clearly when TensorRT Python bindings are not
+- `worker="tensorrt"` fails clearly when TensorRT Python bindings are not
   installed.
+- `worker="tensorrt"` fails clearly when the configured `engine_path` file does
+  not exist.
+
+Validation rules still to add with real TensorRT execution:
+
 - Fallback from TensorRT/GPU to CPU must be explicit in config and telemetry.
+- Engine deserialization and inference execution must report backend metadata in
+  result events.
 
 ## Telemetry Plan
 
