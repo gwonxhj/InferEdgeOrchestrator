@@ -39,6 +39,8 @@ Language: [English](CHANGELOG.md) | 한국어
   구현하지 않았다.
 - `TensorRtWorker`에 TensorRT name-based input/output tensor metadata inspection을
   추가했다. Buffer binding과 inference execution은 의도적으로 아직 구현하지 않았다.
+- `TensorRtWorker`에 TensorRT host/device buffer allocation과 name-based tensor
+  address binding을 추가했다. Inference execution은 의도적으로 아직 구현하지 않았다.
 
 ### Changed
 
@@ -54,6 +56,9 @@ Language: [English](CHANGELOG.md) | 한국어
 - TensorRT smoke 기대값과 문서를 갱신해 `PASS_GUARD_STUB`가 tensor metadata
   inspection까지 성공했고 input/output buffer binding과 inference execution만 남은
   boundary를 의미하게 했다.
+- TensorRT smoke 기대값과 문서를 갱신해 `PASS_GUARD_STUB`가 input/output buffer
+  allocation과 tensor address binding까지 성공했고 TensorRT inference execution만
+  남은 boundary를 의미하게 했다.
 
 ## v0.1.1 - 2026-05-06
 

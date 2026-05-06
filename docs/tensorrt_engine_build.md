@@ -42,12 +42,14 @@ This procedure was run on the surveyed Jetson Orin Nano target:
 The guard smoke reached the current expected worker boundary:
 
 ```text
-NotImplementedError: tensorrt worker inspected engine tensor metadata, but
-input/output buffer binding and inference execution are not implemented yet
+NotImplementedError: tensorrt worker bound input/output buffers, but inference
+execution is not implemented yet
 ```
 
 This validates TensorRT dependency availability, engine creation, config
-validation, and the worker guard path. It is not TensorRT inference evidence.
+validation, tensor metadata inspection, host/device buffer allocation, tensor
+address binding, and the worker guard path. It is not TensorRT inference
+evidence.
 
 ## Artifact Policy
 
@@ -184,9 +186,9 @@ Expected current result:
 - `reports/jetson_tensorrt_guard_validation.md` is written.
 - Worker guard result is `PASS_GUARD_STUB`.
 - The worker still stops at the intentional not-implemented boundary for
-  input/output buffer binding and inference execution after engine
-  deserialization, execution context creation, and tensor metadata inspection
-  succeed.
+  TensorRT inference execution after engine deserialization, execution context
+  creation, tensor metadata inspection, host/device buffer allocation, and
+  tensor address binding succeed.
 
 If the script fails before `PASS_GUARD_STUB`, inspect the validation report and
 dependency inventory first. Common causes are a missing TensorRT Python binding,
@@ -197,7 +199,7 @@ Jetson.
 
 This procedure creates the local engine artifact needed for the next code step:
 
-1. bind the identity model input/output buffers
+1. execute the identity engine with the bound input/output buffers
 2. return worker result metadata without changing scheduler contracts
 3. run the same smoke path again and record actual Jetson execution evidence
 
