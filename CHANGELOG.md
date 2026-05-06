@@ -49,6 +49,9 @@ helps reviewers understand the project state.
   TensorRT tasks.
 - Added a curated TensorRT contention sample telemetry artifact:
   `examples/telemetry/jetson_tensorrt_contention_sample.json`.
+- Documented the v0.1.x TensorRT model-diversity decision: keep contention
+  evidence on the shared identity engine and defer distinct detector/classifier
+  engines to a later milestone.
 
 ### Changed
 

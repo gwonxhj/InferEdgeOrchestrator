@@ -314,7 +314,7 @@ sample-specific schema note는
   TensorRT scheduling behavior는 아직 증명하지 않는다.
 - Jetson TensorRT contention smoke는 작은 shared identity engine으로 초기
   TensorRT-backed scheduler/load-shedding behavior를 증명한다. Production model
-  throughput을 증명하지 않는다.
+  throughput 또는 diversified detector/classifier engine behavior를 증명하지 않는다.
 - raw generated report는 `reports/` 아래에 남기며 commit하지 않는다.
 - versioned sample JSON은 review와 schema inspection을 위한 curated
   documentation artifact다.
