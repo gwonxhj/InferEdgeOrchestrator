@@ -18,7 +18,7 @@ observable, and that generated telemetry can explain what happened.
 | Jetson dummy smoke | CLI run, scheduler loop, bounded queues, telemetry JSON, resource snapshots, low-priority drops on Jetson Orin Nano | PASS | [`examples/telemetry/jetson_smoke_dummy_sample.json`](../examples/telemetry/jetson_smoke_dummy_sample.json) |
 | Jetson ONNX Runtime smoke | ONNX Runtime worker path on Jetson Orin Nano with `CPUExecutionProvider`, output metadata, resource snapshots, `tegrastats` capture summary | PASS | [`examples/telemetry/jetson_onnx_smoke_sample.json`](../examples/telemetry/jetson_onnx_smoke_sample.json) |
 | Jetson TensorRT inference smoke | Local identity ONNX to TensorRT engine creation and one TensorRT identity-frame execution on Jetson Orin Nano | PASS | [`docs/tensorrt_engine_build.md`](tensorrt_engine_build.md) |
-| Jetson TensorRT contention smoke | Two TensorRT tasks through scheduler/load-shedding with low-priority drops and TensorRT backend telemetry | PASS | [`docs/tensorrt_backend.md`](tensorrt_backend.md) |
+| Jetson TensorRT contention smoke | Two TensorRT tasks through scheduler/load-shedding with low-priority drops and TensorRT backend telemetry | PASS | [`examples/telemetry/jetson_tensorrt_contention_sample.json`](../examples/telemetry/jetson_tensorrt_contention_sample.json) |
 | Synthetic overload comparison | FIFO baseline vs scheduler/load-shedding policy under controlled overload | PASS | [`examples/telemetry/phase3_overload_sample.json`](../examples/telemetry/phase3_overload_sample.json) |
 | InferEdge result handoff | File-based conversion from InferEdge `result.json` latency signal to Orchestrator config | PASS | [`examples/inferedge_result_sample.json`](../examples/inferedge_result_sample.json), [`configs/from_inferedge.json`](../configs/from_inferedge.json) |
 | CI tests | Unit tests and sample artifact compatibility checks on Python 3.11 | PASS | [GitHub Actions CI](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml) |
@@ -210,6 +210,10 @@ Expected result:
 
 This is TensorRT-backed scheduler/load-shedding evidence. It is not a TensorRT
 throughput benchmark.
+
+Tracked sample:
+
+- [`examples/telemetry/jetson_tensorrt_contention_sample.json`](../examples/telemetry/jetson_tensorrt_contention_sample.json)
 
 ## Synthetic Overload Comparison
 

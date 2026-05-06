@@ -1,0 +1,408 @@
+{
+  "drop_events": [
+    {
+      "frame_id": "classifier_trt-0-2",
+      "reason": "load_shedding_backlog_threshold_exceeded",
+      "task": "classifier_trt"
+    },
+    {
+      "frame_id": "classifier_trt-1-4",
+      "reason": "load_shedding_backlog_threshold_exceeded",
+      "task": "classifier_trt"
+    },
+    {
+      "frame_id": "classifier_trt-2-6",
+      "reason": "load_shedding_backlog_threshold_exceeded",
+      "task": "classifier_trt"
+    },
+    {
+      "frame_id": "classifier_trt-3-8",
+      "reason": "load_shedding_backlog_threshold_exceeded",
+      "task": "classifier_trt"
+    },
+    {
+      "frame_id": "classifier_trt-4-10",
+      "reason": "load_shedding_backlog_threshold_exceeded",
+      "task": "classifier_trt"
+    }
+  ],
+  "overload_events": [
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    },
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    },
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    },
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    },
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    }
+  ],
+  "policy_decisions": [
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    },
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    },
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    },
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    },
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    }
+  ],
+  "resource_snapshots": [
+    {
+      "cpu_percent": 0.0,
+      "memory_percent": 0.167,
+      "platform": "Linux-5.15.148-tegra-aarch64-with-glibc2.35",
+      "process_rss_mb": 12.719,
+      "stage": "start"
+    },
+    {
+      "cpu_percent": 0.0,
+      "memory_percent": 3.062,
+      "platform": "Linux-5.15.148-tegra-aarch64-with-glibc2.35",
+      "process_rss_mb": 233.293,
+      "stage": "end"
+    }
+  ],
+  "result_events": [
+    {
+      "frame_id": "detector_trt-0-1",
+      "latency_ms": 350.595,
+      "output": {
+        "backend": "tensorrt",
+        "engine_path": "models/identity_fp16.plan",
+        "engine_size_bytes": 8340,
+        "input_shapes": {
+          "input": [
+            1,
+            2
+          ]
+        },
+        "output_count": 1,
+        "output_dtypes": {
+          "output": "FLOAT"
+        },
+        "output_preview": {
+          "output": [
+            0.0,
+            0.0
+          ]
+        },
+        "output_shapes": {
+          "output": [
+            1,
+            2
+          ]
+        },
+        "tensorrt_version": "10.3.0",
+        "worker": "tensorrt"
+      },
+      "task": "detector_trt"
+    },
+    {
+      "frame_id": "detector_trt-1-3",
+      "latency_ms": 0.486,
+      "output": {
+        "backend": "tensorrt",
+        "engine_path": "models/identity_fp16.plan",
+        "engine_size_bytes": 8340,
+        "input_shapes": {
+          "input": [
+            1,
+            2
+          ]
+        },
+        "output_count": 1,
+        "output_dtypes": {
+          "output": "FLOAT"
+        },
+        "output_preview": {
+          "output": [
+            0.0,
+            0.0
+          ]
+        },
+        "output_shapes": {
+          "output": [
+            1,
+            2
+          ]
+        },
+        "tensorrt_version": "10.3.0",
+        "worker": "tensorrt"
+      },
+      "task": "detector_trt"
+    },
+    {
+      "frame_id": "detector_trt-2-5",
+      "latency_ms": 0.487,
+      "output": {
+        "backend": "tensorrt",
+        "engine_path": "models/identity_fp16.plan",
+        "engine_size_bytes": 8340,
+        "input_shapes": {
+          "input": [
+            1,
+            2
+          ]
+        },
+        "output_count": 1,
+        "output_dtypes": {
+          "output": "FLOAT"
+        },
+        "output_preview": {
+          "output": [
+            0.0,
+            0.0
+          ]
+        },
+        "output_shapes": {
+          "output": [
+            1,
+            2
+          ]
+        },
+        "tensorrt_version": "10.3.0",
+        "worker": "tensorrt"
+      },
+      "task": "detector_trt"
+    },
+    {
+      "frame_id": "detector_trt-3-7",
+      "latency_ms": 0.489,
+      "output": {
+        "backend": "tensorrt",
+        "engine_path": "models/identity_fp16.plan",
+        "engine_size_bytes": 8340,
+        "input_shapes": {
+          "input": [
+            1,
+            2
+          ]
+        },
+        "output_count": 1,
+        "output_dtypes": {
+          "output": "FLOAT"
+        },
+        "output_preview": {
+          "output": [
+            0.0,
+            0.0
+          ]
+        },
+        "output_shapes": {
+          "output": [
+            1,
+            2
+          ]
+        },
+        "tensorrt_version": "10.3.0",
+        "worker": "tensorrt"
+      },
+      "task": "detector_trt"
+    },
+    {
+      "frame_id": "detector_trt-4-9",
+      "latency_ms": 0.486,
+      "output": {
+        "backend": "tensorrt",
+        "engine_path": "models/identity_fp16.plan",
+        "engine_size_bytes": 8340,
+        "input_shapes": {
+          "input": [
+            1,
+            2
+          ]
+        },
+        "output_count": 1,
+        "output_dtypes": {
+          "output": "FLOAT"
+        },
+        "output_preview": {
+          "output": [
+            0.0,
+            0.0
+          ]
+        },
+        "output_shapes": {
+          "output": [
+            1,
+            2
+          ]
+        },
+        "tensorrt_version": "10.3.0",
+        "worker": "tensorrt"
+      },
+      "task": "detector_trt"
+    },
+    {
+      "frame_id": "detector_trt-5-11",
+      "latency_ms": 0.41,
+      "output": {
+        "backend": "tensorrt",
+        "engine_path": "models/identity_fp16.plan",
+        "engine_size_bytes": 8340,
+        "input_shapes": {
+          "input": [
+            1,
+            2
+          ]
+        },
+        "output_count": 1,
+        "output_dtypes": {
+          "output": "FLOAT"
+        },
+        "output_preview": {
+          "output": [
+            0.0,
+            0.0
+          ]
+        },
+        "output_shapes": {
+          "output": [
+            1,
+            2
+          ]
+        },
+        "tensorrt_version": "10.3.0",
+        "worker": "tensorrt"
+      },
+      "task": "detector_trt"
+    },
+    {
+      "frame_id": "classifier_trt-5-12",
+      "latency_ms": 0.552,
+      "output": {
+        "backend": "tensorrt",
+        "engine_path": "models/identity_fp16.plan",
+        "engine_size_bytes": 8340,
+        "input_shapes": {
+          "input": [
+            1,
+            2
+          ]
+        },
+        "output_count": 1,
+        "output_dtypes": {
+          "output": "FLOAT"
+        },
+        "output_preview": {
+          "output": [
+            0.0,
+            0.0
+          ]
+        },
+        "output_shapes": {
+          "output": [
+            1,
+            2
+          ]
+        },
+        "tensorrt_version": "10.3.0",
+        "worker": "tensorrt"
+      },
+      "task": "classifier_trt"
+    }
+  ],
+  "run": {
+    "name": "jetson_tensorrt_contention_smoke"
+  },
+  "schedule_decisions": [
+    {
+      "reason": "priority_deadline",
+      "task": "detector_trt"
+    },
+    {
+      "reason": "priority_deadline",
+      "task": "detector_trt"
+    },
+    {
+      "reason": "priority_deadline",
+      "task": "detector_trt"
+    },
+    {
+      "reason": "priority_deadline",
+      "task": "detector_trt"
+    },
+    {
+      "reason": "priority_deadline",
+      "task": "detector_trt"
+    },
+    {
+      "reason": "priority_deadline",
+      "task": "detector_trt"
+    },
+    {
+      "reason": "priority_deadline",
+      "task": "classifier_trt"
+    }
+  ],
+  "tasks": {
+    "classifier_trt": {
+      "dropped": 5,
+      "executed": 1,
+      "max_queue_backlog": 2,
+      "mean_latency_ms": 0.552,
+      "p95_latency_ms": 0.552
+    },
+    "detector_trt": {
+      "dropped": 0,
+      "executed": 6,
+      "max_queue_backlog": 1,
+      "mean_latency_ms": 59.242,
+      "p95_latency_ms": 350.595
+    }
+  }
+}
