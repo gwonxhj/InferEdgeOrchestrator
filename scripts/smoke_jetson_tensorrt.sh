@@ -138,7 +138,7 @@ WORKER_STATUS=$?
 set -e
 
 EXPECTED_RESULT="FAIL_UNEXPECTED"
-if [[ "$WORKER_STATUS" -ne 0 ]] && grep -q "deserialized the configured engine, but inference execution is not implemented yet" <<<"$WORKER_OUTPUT"; then
+if [[ "$WORKER_STATUS" -ne 0 ]] && grep -q "created an execution context, but input/output binding and inference execution are not implemented yet" <<<"$WORKER_OUTPUT"; then
   EXPECTED_RESULT="PASS_GUARD_STUB"
 fi
 
@@ -164,9 +164,9 @@ cat >"$VALIDATION_PATH" <<EOF
 
 - This is a TensorRT worker guard smoke draft, not a TensorRT inference run.
 - The current worker checks TensorRT Python bindings, engine file existence,
-  and TensorRT engine deserialization.
+  TensorRT engine deserialization, and execution context creation.
 - Passing this script means the guard path reached the expected
-  not-implemented boundary for inference execution.
+  not-implemented boundary for input/output binding and inference execution.
 - Do not commit raw reports or TensorRT engine binaries.
 
 ## Worker Output

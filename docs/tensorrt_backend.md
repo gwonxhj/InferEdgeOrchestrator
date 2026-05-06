@@ -2,12 +2,13 @@
 
 Language: English | [한국어](tensorrt_backend.ko.md)
 
-Status: schema, TensorRT engine deserialization, and Jetson guard-smoke
-validation. The config schema, TensorRT worker deserialization path, and
-`scripts/smoke_jetson_tensorrt.sh` are present. Jetson guard smoke reached
-`PASS_GUARD_STUB` with a local `models/identity_fp16.plan` engine, but this
-document does not claim that TensorRT inference execution, GPU provider
-execution, or multi-task TensorRT scheduling evidence is implemented yet.
+Status: schema, TensorRT engine deserialization, execution context creation,
+and Jetson guard-smoke validation. The config schema, TensorRT worker
+deserialization/context path, and `scripts/smoke_jetson_tensorrt.sh` are
+present. Jetson guard smoke reached `PASS_GUARD_STUB` with a local
+`models/identity_fp16.plan` engine, but this document does not claim that
+TensorRT input/output binding, inference execution, GPU provider execution, or
+multi-task TensorRT scheduling evidence is implemented yet.
 
 InferEdgeOrchestrator already proves the scheduler, bounded queue, load
 shedding, telemetry, ONNX Runtime worker path, and Jetson smoke path. The
@@ -62,8 +63,9 @@ task, and returning latency/result metadata.
 
 The config schema accepts a `tensorrt` worker selection and preserves backward
 compatibility for existing `dummy` and `onnxruntime` configs. The worker layer
-can deserialize a configured TensorRT engine and cache it, but TensorRT
-inference execution is still not implemented.
+can deserialize a configured TensorRT engine, create an execution context, and
+cache both by engine path, but TensorRT input/output binding and inference
+execution are still not implemented.
 
 Task fields:
 
@@ -120,8 +122,9 @@ Schema-valid example:
 
 This example validates as config schema. Runtime execution with
 `worker="tensorrt"` currently checks TensorRT prerequisites, deserializes the
-configured engine, and then raises a clear not-implemented error until inference
-execution is added.
+configured engine, creates an execution context, and then raises a clear
+not-implemented error until input/output binding and inference execution are
+added.
 
 ## Current Validation Rules
 
@@ -143,10 +146,14 @@ Worker guard behavior currently enforces:
   not exist.
 - `worker="tensorrt"` fails clearly when TensorRT cannot deserialize the
   configured engine.
-- `worker="tensorrt"` caches deserialized engines by engine path.
+- `worker="tensorrt"` fails clearly when TensorRT cannot create an execution
+  context.
+- `worker="tensorrt"` caches deserialized engines and execution contexts by
+  engine path.
 - `scripts/smoke_jetson_tensorrt.sh` can be run on Jetson to confirm dependency
-  inventory capture, config validation, TensorRT engine deserialization, and the
-  current expected not-implemented boundary for inference execution.
+  inventory capture, config validation, TensorRT engine deserialization,
+  execution context creation, and the current expected not-implemented boundary
+  for input/output binding and inference execution.
 
 Validation rules still to add with real TensorRT execution:
 
@@ -181,13 +188,14 @@ Expected current behavior:
 
 - TensorRT Python import must succeed.
 - `ENGINE_PATH` must point to a local engine file.
-- The worker must reach the current clear not-implemented boundary for inference
-  execution after engine deserialization succeeds.
+- The worker must reach the current clear not-implemented boundary for
+  input/output binding and inference execution after engine deserialization and
+  execution context creation succeed.
 - The script writes local reports under ignored `reports/`.
 
 This is not TensorRT inference evidence. It proves that the Jetson environment,
-engine artifact, and deserialization path are ready for the next implementation
-step.
+engine artifact, deserialization path, and execution context path are ready for
+the next implementation step.
 
 To create the small local engine used by this smoke path, see
 [`docs/tensorrt_engine_build.md`](tensorrt_engine_build.md).
