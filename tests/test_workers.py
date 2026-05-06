@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 import types
 
+import numpy as np
 import pytest
 
 from inferedge_orchestrator.config import TaskConfig
@@ -25,13 +26,14 @@ def _tensorrt_task(engine_path: str) -> TaskConfig:
     )
 
 
-def _frame() -> FrameEnvelope:
+def _frame(payload: dict[str, object] | None = None) -> FrameEnvelope:
     return FrameEnvelope(
         frame_id="detector_trt-1",
         task_name="detector_trt",
         sequence=1,
         created_at_ms=0.0,
         deadline_at_ms=80.0,
+        payload=payload,
     )
 
 
@@ -45,13 +47,32 @@ class _FakeTensorDType:
 
 
 class _FakeTensorContext:
-    def __init__(self, *, bind_success: bool = True) -> None:
+    def __init__(
+        self,
+        *,
+        bind_success: bool = True,
+        execute_success: bool = True,
+        registry: dict[int, object] | None = None,
+    ) -> None:
         self.bind_success = bind_success
+        self.execute_success = execute_success
+        self.registry = {} if registry is None else registry
         self.addresses: dict[str, int] = {}
+        self.executions = 0
 
     def set_tensor_address(self, name: str, address: int) -> bool:
         self.addresses[name] = address
         return self.bind_success
+
+    def execute_async_v3(self, stream_handle: int) -> bool:
+        self.executions += 1
+        if not self.execute_success:
+            return False
+        input_device = self.registry.get(self.addresses.get("input", -1))
+        output_device = self.registry.get(self.addresses.get("output", -1))
+        if input_device is not None and output_device is not None:
+            output_device.data = np.array(input_device.data, copy=True)
+        return True
 
 
 class _FakeTensorEngine:
@@ -105,16 +126,28 @@ def _install_fake_tensorrt(
     )
 
 
-def _install_fake_pycuda(monkeypatch: pytest.MonkeyPatch) -> list[int]:
+def _install_fake_pycuda(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    registry: dict[int, object] | None = None,
+) -> list[int]:
     allocations: list[int] = []
+    devices = {} if registry is None else registry
 
     class FakeDeviceAllocation:
         def __init__(self, nbytes: int, address: int) -> None:
             self.nbytes = nbytes
             self.address = address
+            self.data = None
 
         def __int__(self) -> int:
             return self.address
+
+    class FakeStream:
+        handle = 123
+
+        def synchronize(self) -> None:
+            pass
 
     pycuda = types.ModuleType("pycuda")
     autoinit = types.ModuleType("pycuda.autoinit")
@@ -122,9 +155,23 @@ def _install_fake_pycuda(monkeypatch: pytest.MonkeyPatch) -> list[int]:
 
     def mem_alloc(nbytes: int) -> FakeDeviceAllocation:
         allocations.append(nbytes)
-        return FakeDeviceAllocation(nbytes, 1000 + len(allocations))
+        allocation = FakeDeviceAllocation(nbytes, 1000 + len(allocations))
+        devices[int(allocation)] = allocation
+        return allocation
+
+    def memcpy_htod_async(device: FakeDeviceAllocation, host: object, stream: FakeStream) -> None:
+        device.data = np.array(host, copy=True)
+
+    def memcpy_dtoh_async(host: object, device: FakeDeviceAllocation, stream: FakeStream) -> None:
+        if device.data is None:
+            host.fill(0)
+        else:
+            host[...] = device.data
 
     driver.mem_alloc = mem_alloc  # type: ignore[attr-defined]
+    driver.memcpy_htod_async = memcpy_htod_async  # type: ignore[attr-defined]
+    driver.memcpy_dtoh_async = memcpy_dtoh_async  # type: ignore[attr-defined]
+    driver.Stream = FakeStream  # type: ignore[attr-defined]
     pycuda.autoinit = autoinit  # type: ignore[attr-defined]
     pycuda.driver = driver  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "pycuda", pycuda)
@@ -158,8 +205,10 @@ def test_tensorrt_worker_stub_fails_after_import_guard(tmp_path, monkeypatch) ->
     _install_fake_tensorrt(monkeypatch, engine=_FakeTensorEngine())
     _install_fake_pycuda(monkeypatch)
 
-    with pytest.raises(NotImplementedError, match="bound input/output buffers"):
-        WorkerPool().run(task, _frame())
+    result = WorkerPool().run(task, _frame())
+
+    assert result.output["worker"] == "tensorrt"
+    assert result.output["output_shapes"] == {"output": [1, 2]}
 
 
 def test_tensorrt_worker_reports_deserialization_failure(tmp_path, monkeypatch) -> None:
@@ -186,6 +235,7 @@ def test_tensorrt_worker_reports_deserialization_failure(tmp_path, monkeypatch) 
         "tensorrt",
         types.SimpleNamespace(__version__="10.3.0", Logger=FakeLogger, Runtime=FakeRuntime),
     )
+    _install_fake_pycuda(monkeypatch)
 
     with pytest.raises(RuntimeError, match="failed to deserialize engine"):
         TensorRtWorker().run(task, _frame())
@@ -196,7 +246,8 @@ def test_tensorrt_worker_caches_deserialized_engines(tmp_path, monkeypatch) -> N
     engine_path.write_bytes(b"serialized engine")
     task = _tensorrt_task(str(engine_path))
     calls = {"deserialize": 0, "context": 0}
-    context = _FakeTensorContext()
+    registry: dict[int, object] = {}
+    context = _FakeTensorContext(registry=registry)
 
     class FakeTensorEngine(_FakeTensorEngine):
         def create_execution_context(self) -> object:
@@ -222,15 +273,15 @@ def test_tensorrt_worker_caches_deserialized_engines(tmp_path, monkeypatch) -> N
         "tensorrt",
         types.SimpleNamespace(__version__="10.3.0", Logger=FakeLogger, Runtime=FakeRuntime),
     )
-    allocations = _install_fake_pycuda(monkeypatch)
+    allocations = _install_fake_pycuda(monkeypatch, registry=registry)
 
     worker = TensorRtWorker()
     for _ in range(2):
-        with pytest.raises(NotImplementedError, match="inference execution"):
-            worker.run(task, _frame())
+        worker.run(task, _frame())
 
     assert calls["deserialize"] == 1
     assert calls["context"] == 1
+    assert context.executions == 2
     assert allocations == [8, 8]
     assert context.addresses == {"input": 1001, "output": 1002}
 
@@ -264,6 +315,7 @@ def test_tensorrt_worker_reports_context_creation_failure(
         "tensorrt",
         types.SimpleNamespace(__version__="10.3.0", Logger=FakeLogger, Runtime=FakeRuntime),
     )
+    _install_fake_pycuda(monkeypatch)
 
     with pytest.raises(RuntimeError, match="failed to create execution context"):
         TensorRtWorker().run(task, _frame())
@@ -277,8 +329,7 @@ def test_tensorrt_worker_records_io_tensor_metadata(tmp_path, monkeypatch) -> No
     _install_fake_pycuda(monkeypatch)
 
     worker = TensorRtWorker()
-    with pytest.raises(NotImplementedError, match="inference execution"):
-        worker.run(task, _frame())
+    worker.run(task, _frame())
 
     metadata = worker._engine_metadata[str(engine_path)]
     assert metadata["io_tensors"] == [
@@ -314,6 +365,64 @@ def test_tensorrt_worker_records_io_tensor_metadata(tmp_path, monkeypatch) -> No
             "nbytes": 8,
         },
     ]
+
+
+def test_tensorrt_worker_executes_and_returns_output_metadata(
+    tmp_path, monkeypatch
+) -> None:
+    engine_path = tmp_path / "detector.plan"
+    engine_path.write_bytes(b"serialized engine")
+    task = _tensorrt_task(str(engine_path))
+    registry: dict[int, object] = {}
+    context = _FakeTensorContext(registry=registry)
+    _install_fake_tensorrt(monkeypatch, engine=_FakeTensorEngine(context=context))
+    _install_fake_pycuda(monkeypatch, registry=registry)
+
+    result = TensorRtWorker().run(
+        task,
+        _frame(payload={"tensorrt_inputs": {"input": [[3.0, 7.0]]}}),
+    )
+
+    assert result.task_name == "detector_trt"
+    assert result.frame_id == "detector_trt-1"
+    assert result.latency_ms >= 0.0
+    assert result.output["worker"] == "tensorrt"
+    assert result.output["backend"] == "tensorrt"
+    assert result.output["engine_path"] == str(engine_path)
+    assert result.output["input_shapes"] == {"input": [1, 2]}
+    assert result.output["output_shapes"] == {"output": [1, 2]}
+    assert result.output["output_dtypes"] == {"output": "FLOAT"}
+    assert result.output["output_count"] == 1
+    assert result.output["output_preview"] == {"output": [3.0, 7.0]}
+    assert context.executions == 1
+
+
+def test_tensorrt_worker_reports_input_shape_mismatch(
+    tmp_path, monkeypatch
+) -> None:
+    engine_path = tmp_path / "detector.plan"
+    engine_path.write_bytes(b"serialized engine")
+    task = _tensorrt_task(str(engine_path))
+    _install_fake_tensorrt(monkeypatch, engine=_FakeTensorEngine())
+    _install_fake_pycuda(monkeypatch)
+
+    with pytest.raises(ValueError, match="shape mismatch"):
+        TensorRtWorker().run(
+            task,
+            _frame(payload={"tensorrt_inputs": {"input": [[1.0, 2.0, 3.0]]}}),
+        )
+
+
+def test_tensorrt_worker_reports_execution_failure(tmp_path, monkeypatch) -> None:
+    engine_path = tmp_path / "detector.plan"
+    engine_path.write_bytes(b"serialized engine")
+    task = _tensorrt_task(str(engine_path))
+    context = _FakeTensorContext(execute_success=False)
+    _install_fake_tensorrt(monkeypatch, engine=_FakeTensorEngine(context=context))
+    _install_fake_pycuda(monkeypatch)
+
+    with pytest.raises(RuntimeError, match="inference execution failed"):
+        TensorRtWorker().run(task, _frame())
 
 
 def test_tensorrt_worker_reports_missing_pycuda(tmp_path, monkeypatch) -> None:
@@ -382,6 +491,7 @@ def test_tensorrt_worker_requires_input_and_output_tensors(
         "tensorrt",
         types.SimpleNamespace(__version__="10.3.0", Logger=FakeLogger, Runtime=FakeRuntime),
     )
+    _install_fake_pycuda(monkeypatch)
 
     with pytest.raises(RuntimeError, match="no input tensors"):
         TensorRtWorker().run(task, _frame())

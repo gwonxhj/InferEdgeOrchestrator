@@ -21,26 +21,27 @@ Language: [English](CHANGELOG.md) | 한국어
   - `worker_options`
 - InferEdge handoff 생성 config를 파일로 쓰기 전에 validation하도록 하고,
   예약된 TensorRT schema 출력을 위해 `--engine-path`를 추가했다.
-- TensorRT Python binding과 설정된 engine file 존재 여부를 확인한 뒤 engine
-  deserialization/inference 미구현 메시지로 명확히 실패하는 TensorRT worker guard
-  stub을 추가했다.
+- TensorRT Python binding과 설정된 engine file 존재 여부를 확인하는 초기 TensorRT
+  worker guard path를 추가했다.
 - Jetson TensorRT guard smoke 초안을 추가했다.
   - `configs/jetson_tensorrt_smoke.json`
   - `scripts/smoke_jetson_tensorrt.sh`
 - Jetson에서 작은 ONNX model을 TensorRT engine으로 생성하는 절차 문서를 추가했다.
   - `docs/tensorrt_engine_build.md`
   - `docs/tensorrt_engine_build.ko.md`
-- Jetson TensorRT guard-smoke evidence를 기록했다. local identity ONNX에서 FP16
-  engine을 생성하고 `PASS_GUARD_STUB` worker-boundary validation을 확인했다.
+- Jetson TensorRT smoke evidence를 기록했다. local identity ONNX에서 FP16 engine을
+  생성하고 worker validation을 확인했다.
 - `TensorRtWorker`에 TensorRT engine deserialization 및 engine-path cache를
-  구현했다. Inference execution은 의도적으로 아직 구현하지 않았다.
+  구현했다.
 - `TensorRtWorker`에 TensorRT execution context creation 및 engine-path context
-  cache를 구현했다. Input/output binding과 inference execution은 의도적으로 아직
-  구현하지 않았다.
+  cache를 구현했다.
 - `TensorRtWorker`에 TensorRT name-based input/output tensor metadata inspection을
-  추가했다. Buffer binding과 inference execution은 의도적으로 아직 구현하지 않았다.
+  추가했다.
 - `TensorRtWorker`에 TensorRT host/device buffer allocation과 name-based tensor
-  address binding을 추가했다. Inference execution은 의도적으로 아직 구현하지 않았다.
+  address binding을 추가했다.
+- `TensorRtWorker`에 `execute_async_v3` 기반 TensorRT inference execution,
+  host/device copy, optional `frame.payload["tensorrt_inputs"]`, backend result
+  metadata 반환을 추가했다.
 
 ### Changed
 
@@ -59,6 +60,8 @@ Language: [English](CHANGELOG.md) | 한국어
 - TensorRT smoke 기대값과 문서를 갱신해 `PASS_GUARD_STUB`가 input/output buffer
   allocation과 tensor address binding까지 성공했고 TensorRT inference execution만
   남은 boundary를 의미하게 했다.
+- TensorRT smoke 기대값과 문서를 갱신해 Jetson identity engine이 실제 TensorRT
+  worker 실행 1회 후 `PASS_TENSORRT_INFERENCE`를 보고하도록 했다.
 
 ## v0.1.1 - 2026-05-06
 

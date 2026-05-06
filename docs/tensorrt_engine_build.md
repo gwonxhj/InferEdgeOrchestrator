@@ -4,8 +4,8 @@ Language: English | [한국어](tensorrt_engine_build.ko.md)
 
 Status: procedure document. This page explains how to create a small local
 TensorRT engine on Jetson from the repository's identity ONNX smoke model. It
-does not claim TensorRT inference execution, GPU provider validation, or
-multi-task TensorRT scheduling evidence.
+also records the TensorRT worker identity inference smoke. It does not claim
+ONNX Runtime GPU provider validation or multi-task TensorRT scheduling evidence.
 
 ## Purpose
 
@@ -18,12 +18,12 @@ The goal is narrow:
 - create a small ONNX model with the existing smoke helper
 - serialize it into a TensorRT engine on Jetson
 - keep the generated ONNX, engine, and raw build logs out of git
-- confirm that the guard smoke script can reach the current TensorRT worker
-  not-implemented boundary with a real engine file present
+- confirm that the smoke script can execute the identity engine with the current
+  TensorRT worker
 
 This is still setup for backend development, not a benchmark.
 
-## Validated Guard Smoke: 2026-05-06
+## Validated Inference Smoke: 2026-05-06
 
 This procedure was run on the surveyed Jetson Orin Nano target:
 
@@ -37,19 +37,24 @@ This procedure was run on the surveyed Jetson Orin Nano target:
 | `trtexec` | TensorRT `v100300` at `/usr/src/tensorrt/bin/trtexec` |
 | ONNX model | `models/identity.onnx`, 104 bytes |
 | TensorRT engine | `models/identity_fp16.plan`, 8.2 KiB |
-| Guard smoke result | `PASS_GUARD_STUB` |
+| Inference smoke result | `PASS_TENSORRT_INFERENCE` |
 
-The guard smoke reached the current expected worker boundary:
+The inference smoke executed one identity-model frame and returned TensorRT
+worker metadata:
 
 ```text
-NotImplementedError: tensorrt worker bound input/output buffers, but inference
-execution is not implemented yet
+"output_preview": {
+  "output": [
+    3.0,
+    7.0
+  ]
+}
 ```
 
 This validates TensorRT dependency availability, engine creation, config
 validation, tensor metadata inspection, host/device buffer allocation, tensor
-address binding, and the worker guard path. It is not TensorRT inference
-evidence.
+address binding, TensorRT inference execution, and worker result metadata. It is
+not a TensorRT benchmark or multi-task scheduler evidence.
 
 ## Artifact Policy
 
@@ -60,7 +65,7 @@ Generated artifacts are local-only:
 | ONNX smoke model | `models/identity.onnx` | Do not commit. |
 | TensorRT engine | `models/identity_fp16.plan` | Do not commit. |
 | `trtexec` log | `reports/trtexec_identity_build.log` | Do not commit raw logs. |
-| Guard smoke report | `reports/jetson_tensorrt_guard_validation.md` | Do not commit raw reports. |
+| Inference smoke report | `reports/jetson_tensorrt_guard_validation.md` | Do not commit raw reports. |
 
 TensorRT engines are device, TensorRT version, CUDA version, and shape/profile
 sensitive. Treat them as rebuildable local artifacts.
@@ -169,9 +174,9 @@ tail -40 "$BUILD_LOG"
 The important result is that a non-empty engine file exists. Do not interpret
 `trtexec` timing lines as InferEdgeOrchestrator performance evidence.
 
-## Step 5: Run The Guard Smoke Script
+## Step 5: Run The Inference Smoke Script
 
-After the engine exists, run the current TensorRT worker guard smoke:
+After the engine exists, run the current TensorRT worker inference smoke:
 
 ```bash
 ENGINE_PATH="$ENGINE_PATH" \
@@ -184,24 +189,23 @@ Expected current result:
 
 - `reports/jetson_tensorrt_dependency.txt` is written.
 - `reports/jetson_tensorrt_guard_validation.md` is written.
-- Worker guard result is `PASS_GUARD_STUB`.
-- The worker still stops at the intentional not-implemented boundary for
-  TensorRT inference execution after engine deserialization, execution context
-  creation, tensor metadata inspection, host/device buffer allocation, and
-  tensor address binding succeed.
+- Worker smoke result is `PASS_TENSORRT_INFERENCE`.
+- The worker executes one identity-model frame and returns TensorRT backend
+  metadata including `output_preview`.
 
-If the script fails before `PASS_GUARD_STUB`, inspect the validation report and
-dependency inventory first. Common causes are a missing TensorRT Python binding,
-wrong `ENGINE_PATH`, or a `trtexec` binary path that differs from the surveyed
-Jetson.
+If the script fails before `PASS_TENSORRT_INFERENCE`, inspect the validation
+report and dependency inventory first. Common causes are a missing TensorRT
+Python binding, missing PyCUDA, wrong `ENGINE_PATH`, or a `trtexec` binary path
+that differs from the surveyed Jetson.
 
 ## What This Enables Next
 
-This procedure creates the local engine artifact needed for the next code step:
+This procedure creates and validates the local engine artifact needed for later
+multi-task TensorRT work:
 
-1. execute the identity engine with the bound input/output buffers
-2. return worker result metadata without changing scheduler contracts
-3. run the same smoke path again and record actual Jetson execution evidence
+1. keep worker result metadata stable without changing scheduler contracts
+2. record TensorRT backend metadata in end-to-end telemetry paths
+3. validate scheduler/load-shedding behavior under multi-task TensorRT contention
 
 Keep the project framing stable: TensorRT support is backend coverage for
 runtime operation control, not a conversion pipeline or benchmark suite.

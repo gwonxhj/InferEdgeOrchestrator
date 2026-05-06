@@ -123,10 +123,39 @@ class TensorRtWorker:
         self._engine_metadata: dict[str, dict[str, object]] = {}
 
     def run(self, task: TaskConfig, frame: FrameEnvelope) -> WorkerResult:
-        self._buffers_for(task)
-        raise NotImplementedError(
-            "tensorrt worker bound input/output buffers, but inference execution "
-            "is not implemented yet"
+        started = time.perf_counter()
+        engine_path = self._resolved_engine_path(task)
+        context = self._context_for(task)
+        buffers = self._buffers_for(task)
+        self._execute(task, frame, context, buffers)
+        latency_ms = (time.perf_counter() - started) * 1000.0
+        metadata = self._engine_metadata[engine_path]
+        output_buffers = [buffer for buffer in buffers if buffer.mode == "OUTPUT"]
+        input_buffers = [buffer for buffer in buffers if buffer.mode == "INPUT"]
+        return WorkerResult(
+            task_name=task.name,
+            frame_id=frame.frame_id,
+            latency_ms=latency_ms,
+            output={
+                "worker": "tensorrt",
+                "backend": "tensorrt",
+                "engine_path": engine_path,
+                "tensorrt_version": metadata["tensorrt_version"],
+                "engine_size_bytes": metadata["engine_size_bytes"],
+                "input_shapes": {
+                    buffer.name: list(buffer.shape) for buffer in input_buffers
+                },
+                "output_shapes": {
+                    buffer.name: list(buffer.shape) for buffer in output_buffers
+                },
+                "output_dtypes": {
+                    buffer.name: buffer.dtype for buffer in output_buffers
+                },
+                "output_count": len(output_buffers),
+                "output_preview": {
+                    buffer.name: _preview_array(buffer.host) for buffer in output_buffers
+                },
+            },
         )
 
     def _buffers_for(self, task: TaskConfig) -> list[TensorRtBuffer]:
@@ -174,6 +203,7 @@ class TensorRtWorker:
         resolved_engine_path = self._resolved_engine_path(task)
         if resolved_engine_path not in self._engines:
             trt = self._import_tensorrt()
+            self._cuda_driver()
             engine_path = Path(resolved_engine_path)
             engine_bytes = engine_path.read_bytes()
             logger = trt.Logger(getattr(trt.Logger, "WARNING", 1))
@@ -247,14 +277,7 @@ class TensorRtWorker:
                 "tensorrt worker requires numpy for TensorRT buffer allocation."
             ) from exc
 
-        try:
-            import pycuda.autoinit  # noqa: F401
-            import pycuda.driver as cuda
-        except ImportError as exc:
-            raise RuntimeError(
-                "tensorrt worker requires PyCUDA for TensorRT buffer allocation. "
-                "Install PyCUDA on the target Jetson or run with a different worker."
-            ) from exc
+        cuda = self._cuda_driver()
 
         if not hasattr(context, "set_tensor_address"):
             raise RuntimeError(
@@ -289,6 +312,76 @@ class TensorRtWorker:
                 )
             )
         return buffers
+
+    def _execute(
+        self,
+        task: TaskConfig,
+        frame: FrameEnvelope,
+        context: object,
+        buffers: list[TensorRtBuffer],
+    ) -> None:
+        try:
+            import numpy as np
+        except ModuleNotFoundError as exc:
+            raise RuntimeError(
+                "tensorrt worker requires numpy for TensorRT inference execution."
+            ) from exc
+
+        cuda = self._cuda_driver()
+        if not hasattr(context, "execute_async_v3"):
+            raise RuntimeError(
+                "tensorrt worker requires TensorRT context.execute_async_v3."
+            )
+
+        stream = cuda.Stream()
+        self._populate_inputs(task, frame, buffers, np)
+        for buffer in buffers:
+            if buffer.mode == "INPUT":
+                cuda.memcpy_htod_async(buffer.device, buffer.host, stream)
+
+        if not context.execute_async_v3(stream.handle):
+            raise RuntimeError(f"{task.name}: TensorRT inference execution failed")
+
+        for buffer in buffers:
+            if buffer.mode == "OUTPUT":
+                cuda.memcpy_dtoh_async(buffer.host, buffer.device, stream)
+        stream.synchronize()
+
+    def _populate_inputs(
+        self,
+        task: TaskConfig,
+        frame: FrameEnvelope,
+        buffers: list[TensorRtBuffer],
+        np: object,
+    ) -> None:
+        payload = frame.payload if isinstance(frame.payload, dict) else {}
+        explicit_inputs = payload.get("tensorrt_inputs")
+        explicit_map = explicit_inputs if isinstance(explicit_inputs, dict) else {}
+        for buffer in buffers:
+            if buffer.mode != "INPUT":
+                continue
+            if buffer.name in explicit_map:
+                value = np.asarray(explicit_map[buffer.name], dtype=buffer.host.dtype)
+                if tuple(value.shape) != buffer.shape:
+                    raise ValueError(
+                        f"{task.name}: TensorRT input {buffer.name} shape mismatch: "
+                        f"expected {list(buffer.shape)}, got {list(value.shape)}"
+                    )
+                buffer.host[...] = value
+            else:
+                buffer.host.fill(0)
+
+    def _cuda_driver(self) -> object:
+        try:
+            import pycuda.autoinit  # noqa: F401
+            import pycuda.driver as cuda
+        except ImportError as exc:
+            raise RuntimeError(
+                "tensorrt worker requires PyCUDA for TensorRT buffer allocation "
+                "and inference execution. Install PyCUDA on the target Jetson or "
+                "run with a different worker."
+            ) from exc
+        return cuda
 
     def _import_tensorrt(self) -> object:
         try:
@@ -340,3 +433,11 @@ def _numpy_dtype_for(dtype: str, np: object) -> object:
         return dtype_map[dtype]
     except KeyError as exc:
         raise RuntimeError(f"unsupported TensorRT tensor dtype: {dtype}") from exc
+
+
+def _preview_array(value: object, *, limit: int = 8) -> list[object]:
+    try:
+        flat = value.reshape(-1)
+        return flat[:limit].tolist()
+    except AttributeError:
+        return []
