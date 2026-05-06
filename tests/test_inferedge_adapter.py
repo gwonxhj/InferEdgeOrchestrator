@@ -44,6 +44,38 @@ def test_build_config_from_inferedge_result_is_valid_orchestrator_config() -> No
     assert config["run"]["source"]["type"] == "inferedge_result_json"
 
 
+def test_build_config_from_inferedge_result_supports_tensorrt_schema() -> None:
+    config = build_config_from_inferedge_result(
+        {"expected_latency_ms": 40},
+        task_name="detector",
+        model_path="models/detector.onnx",
+        engine_path="models/detector.plan",
+        priority=100,
+        target_fps=15,
+        queue_size=4,
+        worker="tensorrt",
+        worker_options={"allow_engine_build": False},
+    )
+
+    parsed = OrchestratorConfig.from_dict(config)
+    assert parsed.tasks[0].worker == "tensorrt"
+    assert parsed.tasks[0].engine_path == "models/detector.plan"
+    assert config["tasks"][0]["worker_options"] == {"allow_engine_build": False}
+
+
+def test_build_config_from_inferedge_result_rejects_invalid_tensorrt_schema() -> None:
+    with pytest.raises(ValueError, match="requires engine_path"):
+        build_config_from_inferedge_result(
+            {"expected_latency_ms": 40},
+            task_name="detector",
+            model_path="models/detector.onnx",
+            priority=100,
+            target_fps=15,
+            queue_size=4,
+            worker="tensorrt",
+        )
+
+
 def test_write_config_from_inferedge_result(tmp_path) -> None:
     result_path = tmp_path / "result.json"
     output_path = tmp_path / "orchestrator.json"

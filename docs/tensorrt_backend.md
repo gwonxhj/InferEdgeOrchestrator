@@ -54,21 +54,22 @@ continue to choose tasks by priority and deadline. The worker should only be
 responsible for loading a backend-specific runtime, executing the selected
 task, and returning latency/result metadata.
 
-## Config Schema Plan
+## Config Schema Status
 
-The current supported workers are `dummy` and `onnxruntime`. Future TensorRT/GPU
-support should be added with backward-compatible optional fields.
+The config schema now accepts a future `tensorrt` worker selection and preserves
+backward compatibility for existing `dummy` and `onnxruntime` configs. This is a
+schema contract only; TensorRT worker execution is still not implemented.
 
-Planned task fields:
+Task fields:
 
 | Field | Status | Purpose |
 | --- | --- | --- |
-| `worker` | Existing, extend enum | Add future value `tensorrt` while keeping `dummy` and `onnxruntime` valid. |
+| `worker` | Existing, enum extended | Accepts `dummy`, `onnxruntime`, and `tensorrt`. |
 | `model_path` | Existing | Keep as the source model/reference path. Do not overload it as a generated TensorRT engine path. |
-| `engine_path` | Planned optional field | Device-local TensorRT engine path. Required when `worker` is `tensorrt`. |
-| `worker_options` | Planned optional mapping | Backend-specific options that should not become global task-policy fields. |
+| `engine_path` | Optional field | Device-local TensorRT engine path. Required when `worker` is `tensorrt`. |
+| `worker_options` | Optional mapping | Backend-specific options that should not become global task-policy fields. |
 
-Planned `worker_options` keys:
+Recognized `worker_options` keys:
 
 | Key | Purpose |
 | --- | --- |
@@ -81,7 +82,7 @@ Planned `worker_options` keys:
 | `output_bindings` | Optional output binding metadata for result metadata validation. |
 | `providers` | Optional ONNX Runtime provider list for GPU-provider experiments, for example `TensorrtExecutionProvider`, `CUDAExecutionProvider`, `CPUExecutionProvider`. |
 
-Design-only example:
+Schema-valid example:
 
 ```json
 {
@@ -112,21 +113,27 @@ Design-only example:
 }
 ```
 
-This example is not valid against the current implementation. It is the target
-schema shape for a later config/schema PR.
+This example validates as config schema, but runtime execution with
+`worker="tensorrt"` still raises a clear not-implemented error until the
+TensorRT worker is added.
 
-## Validation Rules To Add Later
+## Current Validation Rules
 
-When implementation starts, config validation should enforce:
+Config validation currently enforces:
 
 - `dummy` and `onnxruntime` configs remain backward-compatible.
 - `worker="tensorrt"` requires `engine_path`.
+- `engine_path` must not be empty when provided.
+- `worker_options` must be a mapping when provided.
+- `worker_options.allow_engine_build` must be a boolean when provided.
+- `worker_options.providers` must be a list of non-empty strings when provided.
+- Generated engine files are local artifacts and should not be committed.
+
+Validation rules still to add with the real worker:
+
 - `worker="tensorrt"` should fail clearly when TensorRT Python bindings are not
   installed.
-- `allow_engine_build` defaults to `false`; implicit engine generation should
-  not happen during normal scheduler tests.
 - Fallback from TensorRT/GPU to CPU must be explicit in config and telemetry.
-- Generated engine files are local artifacts and should not be committed.
 
 ## Telemetry Plan
 

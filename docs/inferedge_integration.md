@@ -36,6 +36,11 @@ ceil(expected_latency_ms * budget_multiplier)
 
 The default `budget_multiplier` is `1.5`.
 
+The generated config is validated before it is written. When using the reserved
+TensorRT schema path, pass `--worker tensorrt` together with `--engine-path` so
+the helper does not emit a config that would fail Orchestrator validation.
+TensorRT execution is still not implemented by this helper.
+
 ## Boundary Rule
 
 Do not import InferEdge internals from this project. Keep the relationship

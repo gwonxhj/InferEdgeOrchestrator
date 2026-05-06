@@ -15,6 +15,12 @@ Language: [English](CHANGELOG.md) | 한국어
   - `docs/tensorrt_backend.ko.md`
 - 계획 중인 TensorRT/GPU backend path를 위한 2026-05-06 Jetson dependency
   survey 결과를 기록했다.
+- 예약된 TensorRT field에 대한 config schema 지원을 추가했다.
+  - `worker="tensorrt"`
+  - `engine_path`
+  - `worker_options`
+- InferEdge handoff 생성 config를 파일로 쓰기 전에 validation하도록 하고,
+  예약된 TensorRT schema 출력을 위해 `--engine-path`를 추가했다.
 
 ### Changed
 

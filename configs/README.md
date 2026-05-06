@@ -26,9 +26,9 @@ Tracked evidence samples live under
   without loading model files.
 - `onnxruntime` worker configs require optional ONNX dependencies and a model
   file.
-- TensorRT/GPU backend support is planned but not implemented yet. The schema
-  direction is documented in
-  [`docs/tensorrt_backend.md`](../docs/tensorrt_backend.md).
+- TensorRT/GPU backend execution is not implemented yet, but the config schema
+  now reserves `worker="tensorrt"`, `engine_path`, and `worker_options` for that
+  path. See [`docs/tensorrt_backend.md`](../docs/tensorrt_backend.md).
 - `reports/` outputs are intentionally ignored. Commit curated samples under
   `examples/telemetry/` when reviewer-facing evidence is needed.
 - `from_inferedge.json` can be regenerated from
