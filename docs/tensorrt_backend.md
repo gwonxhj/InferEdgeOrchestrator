@@ -2,10 +2,11 @@
 
 Language: English | [한국어](tensorrt_backend.ko.md)
 
-Status: schema and worker-guard plan. The config schema and TensorRT worker
-stub are present, but this document does not claim that TensorRT engine
-deserialization, inference execution, GPU provider execution, or multi-task
-TensorRT scheduling evidence is implemented yet.
+Status: schema, worker guard, and Jetson guard-smoke draft. The config schema,
+TensorRT worker stub, and `scripts/smoke_jetson_tensorrt.sh` are present, but
+this document does not claim that TensorRT engine deserialization, inference
+execution, GPU provider execution, or multi-task TensorRT scheduling evidence is
+implemented yet.
 
 InferEdgeOrchestrator already proves the scheduler, bounded queue, load
 shedding, telemetry, ONNX Runtime worker path, and Jetson smoke path. The
@@ -139,12 +140,50 @@ Worker guard behavior currently enforces:
   installed.
 - `worker="tensorrt"` fails clearly when the configured `engine_path` file does
   not exist.
+- `scripts/smoke_jetson_tensorrt.sh` can be run on Jetson to confirm dependency
+  inventory capture, config validation, and the current expected not-implemented
+  boundary after TensorRT import and engine-file guards pass.
 
 Validation rules still to add with real TensorRT execution:
 
 - Fallback from TensorRT/GPU to CPU must be explicit in config and telemetry.
 - Engine deserialization and inference execution must report backend metadata in
   result events.
+
+## Jetson TensorRT Guard Smoke Draft
+
+The guard smoke script is:
+
+```bash
+ENGINE_PATH=models/detector.plan scripts/smoke_jetson_tensorrt.sh
+```
+
+Useful environment variables:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `PYTHON_BIN` | `~/miniconda3/envs/yolo_env/bin/python`, then `.venv/bin/python`, then `python3` | Python interpreter used for TensorRT import and worker guard checks. |
+| `CONFIG` | `configs/jetson_tensorrt_smoke.json` | TensorRT guard smoke config. |
+| `ENGINE_PATH` | `models/detector.plan` | Device-local TensorRT engine path passed into the config at runtime. |
+| `REPORT_DIR` | `reports` | Ignored output directory for local Jetson artifacts. |
+| `VALIDATION_PATH` | `reports/jetson_tensorrt_guard_validation.md` | Human-readable guard-smoke record. |
+| `DEPENDENCY_PATH` | `reports/jetson_tensorrt_dependency.txt` | Host, L4T, Python, TensorRT, `trtexec`, `nvcc`, and `tegrastats` inventory. |
+| `CAPTURE_TEGRASTATS` | `0` | Set to `1` to capture optional `tegrastats` output. |
+| `TEGRSTATS_PATH` | `reports/tegrastats_tensorrt_guard.log` | Optional raw `tegrastats` capture path. |
+| `TEGRSTATS_INTERVAL_MS` | `1000` | Optional `tegrastats` capture interval. |
+| `TRTEXEC_BIN` | `/usr/src/tensorrt/bin/trtexec` | Explicit Jetson TensorRT CLI path. |
+| `NVCC_BIN` | `/usr/local/cuda/bin/nvcc` | Explicit Jetson CUDA compiler path for version evidence. |
+
+Expected current behavior:
+
+- TensorRT Python import must succeed.
+- `ENGINE_PATH` must point to a local engine file.
+- The worker must reach the current clear not-implemented boundary for engine
+  deserialization and inference execution.
+- The script writes local reports under ignored `reports/`.
+
+This is not TensorRT inference evidence. It only proves that the Jetson
+environment and worker guard path are ready for the next implementation step.
 
 ## Telemetry Plan
 

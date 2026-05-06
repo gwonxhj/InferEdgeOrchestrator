@@ -24,6 +24,9 @@ helps reviewers understand the project state.
 - Added a TensorRT worker guard stub that checks TensorRT Python bindings and
   configured engine file existence before failing with a clear not-implemented
   message for engine deserialization/inference.
+- Added a Jetson TensorRT guard smoke draft:
+  - `configs/jetson_tensorrt_smoke.json`
+  - `scripts/smoke_jetson_tensorrt.sh`
 
 ### Changed
 

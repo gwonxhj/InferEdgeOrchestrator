@@ -24,6 +24,9 @@ Language: [English](CHANGELOG.md) | 한국어
 - TensorRT Python binding과 설정된 engine file 존재 여부를 확인한 뒤 engine
   deserialization/inference 미구현 메시지로 명확히 실패하는 TensorRT worker guard
   stub을 추가했다.
+- Jetson TensorRT guard smoke 초안을 추가했다.
+  - `configs/jetson_tensorrt_smoke.json`
+  - `scripts/smoke_jetson_tensorrt.sh`
 
 ### Changed
 
