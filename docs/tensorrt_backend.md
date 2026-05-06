@@ -185,6 +185,9 @@ Expected current behavior:
 This is not TensorRT inference evidence. It only proves that the Jetson
 environment and worker guard path are ready for the next implementation step.
 
+To create the small local engine used by this smoke path, see
+[`docs/tensorrt_engine_build.md`](tensorrt_engine_build.md).
+
 ## Telemetry Plan
 
 The current telemetry top-level shape should remain stable. TensorRT/GPU support

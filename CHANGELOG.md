@@ -27,6 +27,9 @@ helps reviewers understand the project state.
 - Added a Jetson TensorRT guard smoke draft:
   - `configs/jetson_tensorrt_smoke.json`
   - `scripts/smoke_jetson_tensorrt.sh`
+- Added a small ONNX to TensorRT engine build procedure for Jetson:
+  - `docs/tensorrt_engine_build.md`
+  - `docs/tensorrt_engine_build.ko.md`
 
 ### Changed
 
