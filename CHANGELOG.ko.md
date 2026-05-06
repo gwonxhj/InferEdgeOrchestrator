@@ -56,6 +56,9 @@ Language: [English](CHANGELOG.md) | 한국어
   추가했다.
 - v0.2 TensorRT diversity scenario의 source-model 후보로 repository script가
   생성하는 detector-like tiny CNN과 classifier-like tiny MLP/CNN을 선정했다.
+- 향후 Jetson TensorRT diversity smoke run을 위한 deterministic detector-like 및
+  classifier-like ONNX source model 생성 script
+  `scripts/create_tensorrt_diverse_onnx.py`를 추가했다.
 
 ### Changed
 

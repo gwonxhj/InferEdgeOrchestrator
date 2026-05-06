@@ -11,3 +11,6 @@ reports/jetson_onnx_validation.md
 models/*.onnx
 models/*.plan
 models/*.engine
+models/**/*.onnx
+models/**/*.plan
+models/**/*.engine
