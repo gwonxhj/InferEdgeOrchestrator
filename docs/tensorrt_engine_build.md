@@ -238,3 +238,34 @@ The script writes `PASS_TENSORRT_DIVERSE_ENGINE_BUILD` only after both ONNX
 files and both non-empty FP16 TensorRT engines exist. This is still a build
 contract for a future contention smoke, not scheduler evidence and not a
 TensorRT throughput claim.
+
+## Validated Diverse Engine Build: 2026-05-06
+
+This build-only procedure was run on the surveyed Jetson Orin Nano target:
+
+| Field | Value |
+| --- | --- |
+| Device | `nano01` |
+| Kernel | `Linux 5.15.148-tegra aarch64` |
+| Python | `3.10.12` from `~/miniconda3/envs/yolo_env/bin/python` |
+| TensorRT Python | `10.3.0` |
+| TensorRT CLI | `/usr/src/tensorrt/bin/trtexec` |
+| CUDA compiler | `Build cuda_12.6.r12.6/compiler.34714021_0` |
+| Detector ONNX | `models/generated/detector_tiny.onnx` |
+| Detector engine | `models/generated/detector_tiny_fp16.plan`, 44,428 bytes |
+| Classifier ONNX | `models/generated/classifier_tiny.onnx` |
+| Classifier engine | `models/generated/classifier_tiny_fp16.plan`, 17,764 bytes |
+| Result | `PASS_TENSORRT_DIVERSE_ENGINE_BUILD` |
+
+Raw build logs stayed local:
+
+| Log | Local path | Note |
+| --- | --- | --- |
+| Detector build log | `reports/trtexec_detector_tiny_fp16_build.log` | Not committed. |
+| Classifier build log | `reports/trtexec_classifier_tiny_fp16_build.log` | Not committed. |
+| Build validation note | `reports/jetson_tensorrt_diverse_engine_build.md` | Not committed. |
+
+The TensorRT CLI reported successful build-only runs with `--skipInference` for
+both generated ONNX models. This confirms that the two planned diverse engines
+can be generated on the target Jetson, but it still does not prove worker
+execution, scheduler behavior, or throughput.

@@ -236,3 +236,33 @@ Default outputs:
 script는 두 ONNX file과 non-empty FP16 TensorRT engine 2개가 모두 존재할 때만
 `PASS_TENSORRT_DIVERSE_ENGINE_BUILD`를 기록한다. 이는 future contention smoke를 위한
 build contract이며, scheduler evidence 또는 TensorRT throughput claim이 아니다.
+
+## Validated Diverse Engine Build: 2026-05-06
+
+이 build-only 절차는 survey된 Jetson Orin Nano target에서 실행했다.
+
+| Field | Value |
+| --- | --- |
+| Device | `nano01` |
+| Kernel | `Linux 5.15.148-tegra aarch64` |
+| Python | `~/miniconda3/envs/yolo_env/bin/python`의 `3.10.12` |
+| TensorRT Python | `10.3.0` |
+| TensorRT CLI | `/usr/src/tensorrt/bin/trtexec` |
+| CUDA compiler | `Build cuda_12.6.r12.6/compiler.34714021_0` |
+| Detector ONNX | `models/generated/detector_tiny.onnx` |
+| Detector engine | `models/generated/detector_tiny_fp16.plan`, 44,428 bytes |
+| Classifier ONNX | `models/generated/classifier_tiny.onnx` |
+| Classifier engine | `models/generated/classifier_tiny_fp16.plan`, 17,764 bytes |
+| Result | `PASS_TENSORRT_DIVERSE_ENGINE_BUILD` |
+
+Raw build log는 local에만 남겼다.
+
+| Log | Local path | Note |
+| --- | --- | --- |
+| Detector build log | `reports/trtexec_detector_tiny_fp16_build.log` | commit하지 않는다. |
+| Classifier build log | `reports/trtexec_classifier_tiny_fp16_build.log` | commit하지 않는다. |
+| Build validation note | `reports/jetson_tensorrt_diverse_engine_build.md` | commit하지 않는다. |
+
+TensorRT CLI는 두 generated ONNX model 모두에 대해 `--skipInference` build-only run
+성공을 보고했다. 이는 계획한 diverse engine 2개를 target Jetson에서 생성할 수 있음을
+확인하지만, worker execution, scheduler behavior, throughput을 증명하지 않는다.

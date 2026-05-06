@@ -91,6 +91,8 @@ Jetson build contract:
 - Success marker: `PASS_TENSORRT_DIVERSE_ENGINE_BUILD`
 - This is a build-only step. It does not claim scheduler behavior or TensorRT
   throughput.
+- Jetson result: confirmed on `nano01` on 2026-05-06. The detector-like FP16
+  engine was 44,428 bytes and the classifier-like FP16 engine was 17,764 bytes.
 
 Why synthetic first:
 
