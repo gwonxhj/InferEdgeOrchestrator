@@ -3,9 +3,9 @@
 Language: [English](tensorrt_engine_build.md) | 한국어
 
 상태: 절차 문서다. 이 문서는 repository의 identity ONNX smoke model에서 Jetson
-local TensorRT engine을 생성하는 방법을 설명한다. TensorRT inference execution,
-GPU provider validation, multi-task TensorRT scheduling evidence가 완료되었다고
-주장하지 않는다.
+local TensorRT engine을 생성하는 방법과 TensorRT worker identity inference smoke
+결과를 설명한다. ONNX Runtime GPU provider validation이나 multi-task TensorRT
+scheduling evidence가 완료되었다고 주장하지 않는다.
 
 ## Purpose
 
@@ -19,12 +19,12 @@ GPU provider validation, multi-task TensorRT scheduling evidence가 완료되었
 - 기존 smoke helper로 작은 ONNX model을 생성한다.
 - Jetson에서 TensorRT engine으로 serialize한다.
 - 생성된 ONNX, engine, raw build log를 git에 넣지 않는다.
-- 실제 engine file이 있는 상태에서 guard smoke script가 현재 TensorRT worker의
-  not-implemented boundary까지 도달하는지 확인한다.
+- 실제 engine file이 있는 상태에서 smoke script가 현재 TensorRT worker로 identity
+  engine을 실행하는지 확인한다.
 
 이 단계도 benchmark가 아니라 backend 개발 준비 절차다.
 
-## Validated Guard Smoke: 2026-05-06
+## Validated Inference Smoke: 2026-05-06
 
 이 절차는 survey된 Jetson Orin Nano target에서 실행되었다.
 
@@ -38,18 +38,24 @@ GPU provider validation, multi-task TensorRT scheduling evidence가 완료되었
 | `trtexec` | `/usr/src/tensorrt/bin/trtexec`의 TensorRT `v100300` |
 | ONNX model | `models/identity.onnx`, 104 bytes |
 | TensorRT engine | `models/identity_fp16.plan`, 8.2 KiB |
-| Guard smoke result | `PASS_GUARD_STUB` |
+| Inference smoke result | `PASS_TENSORRT_INFERENCE` |
 
-guard smoke는 현재 기대하는 worker boundary에 도달했다.
+inference smoke는 identity-model frame 1개를 실행하고 TensorRT worker metadata를
+반환했다.
 
 ```text
-NotImplementedError: tensorrt worker bound input/output buffers, but inference
-execution is not implemented yet
+"output_preview": {
+  "output": [
+    3.0,
+    7.0
+  ]
+}
 ```
 
 이 결과는 TensorRT dependency availability, engine creation, config validation,
 tensor metadata inspection, host/device buffer allocation, tensor address binding,
-worker guard path를 검증한다. TensorRT inference evidence는 아니다.
+TensorRT inference execution, worker result metadata를 검증한다. TensorRT benchmark나
+multi-task scheduler evidence는 아니다.
 
 ## Artifact Policy
 
@@ -60,7 +66,7 @@ worker guard path를 검증한다. TensorRT inference evidence는 아니다.
 | ONNX smoke model | `models/identity.onnx` | commit하지 않는다. |
 | TensorRT engine | `models/identity_fp16.plan` | commit하지 않는다. |
 | `trtexec` log | `reports/trtexec_identity_build.log` | raw log를 commit하지 않는다. |
-| Guard smoke report | `reports/jetson_tensorrt_guard_validation.md` | raw report를 commit하지 않는다. |
+| Inference smoke report | `reports/jetson_tensorrt_guard_validation.md` | raw report를 commit하지 않는다. |
 
 TensorRT engine은 device, TensorRT version, CUDA version, shape/profile에
 민감하다. 재생성 가능한 local artifact로 취급한다.
@@ -168,9 +174,9 @@ tail -40 "$BUILD_LOG"
 중요한 결과는 non-empty engine file이 존재한다는 점이다. `trtexec` timing line을
 InferEdgeOrchestrator performance evidence로 해석하지 않는다.
 
-## Step 5: Run The Guard Smoke Script
+## Step 5: Run The Inference Smoke Script
 
-engine이 생성된 뒤 현재 TensorRT worker guard smoke를 실행한다.
+engine이 생성된 뒤 현재 TensorRT worker inference smoke를 실행한다.
 
 ```bash
 ENGINE_PATH="$ENGINE_PATH" \
@@ -183,22 +189,22 @@ ENGINE_PATH="$ENGINE_PATH" \
 
 - `reports/jetson_tensorrt_dependency.txt`가 생성된다.
 - `reports/jetson_tensorrt_guard_validation.md`가 생성된다.
-- worker guard result는 `PASS_GUARD_STUB`이다.
-- worker는 engine deserialization, execution context creation, tensor metadata
-  inspection, host/device buffer allocation, tensor address binding까지 마친 뒤
-  TensorRT inference execution에 대한 의도적인 not-implemented boundary에서 멈춘다.
+- worker smoke result는 `PASS_TENSORRT_INFERENCE`이다.
+- worker는 identity-model frame 1개를 실행하고 `output_preview`를 포함한 TensorRT
+  backend metadata를 반환한다.
 
-script가 `PASS_GUARD_STUB` 이전에 실패하면 validation report와 dependency
-inventory를 먼저 확인한다. 흔한 원인은 TensorRT Python binding 누락, 잘못된
-`ENGINE_PATH`, survey된 Jetson과 다른 `trtexec` binary path다.
+script가 `PASS_TENSORRT_INFERENCE` 이전에 실패하면 validation report와 dependency
+inventory를 먼저 확인한다. 흔한 원인은 TensorRT Python binding 누락, PyCUDA 누락,
+잘못된 `ENGINE_PATH`, survey된 Jetson과 다른 `trtexec` binary path다.
 
 ## What This Enables Next
 
-이 절차는 다음 code step에 필요한 local engine artifact를 만든다.
+이 절차는 이후 multi-task TensorRT 작업에 필요한 local engine artifact를 만들고
+검증한다.
 
-1. bind된 input/output buffer로 identity engine 실행
-2. scheduler contract를 바꾸지 않고 worker result metadata 반환
-3. 같은 smoke path를 다시 실행해 실제 Jetson execution evidence 기록
+1. scheduler contract를 바꾸지 않고 worker result metadata 안정화
+2. end-to-end telemetry path에 TensorRT backend metadata 기록
+3. multi-task TensorRT contention 상황에서 scheduler/load-shedding behavior 검증
 
 프로젝트 framing은 유지한다. TensorRT 지원은 runtime operation control을 위한
 backend coverage이며 conversion pipeline이나 benchmark suite가 아니다.

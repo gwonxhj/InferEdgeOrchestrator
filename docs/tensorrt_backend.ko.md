@@ -4,11 +4,12 @@ Language: [English](tensorrt_backend.md) | 한국어
 
 상태: schema, TensorRT engine deserialization, execution context creation,
 tensor metadata inspection, host/device buffer allocation, tensor address
-binding, Jetson guard-smoke validation 문서다. config schema, TensorRT worker
-deserialization/context/metadata/buffer path, `scripts/smoke_jetson_tensorrt.sh`가
-존재하며, Jetson guard smoke는 local `models/identity_fp16.plan` engine으로
-`PASS_GUARD_STUB`에 도달했다. 단, TensorRT inference execution, GPU provider
-execution, multi-task TensorRT scheduling evidence가 구현되었다고 주장하지 않는다.
+binding, TensorRT inference execution, Jetson inference-smoke validation 문서다.
+config schema, TensorRT worker deserialization/context/metadata/buffer/execution
+path, `scripts/smoke_jetson_tensorrt.sh`가 존재하며, Jetson inference smoke는
+local `models/identity_fp16.plan` engine으로 `PASS_TENSORRT_INFERENCE`에
+도달했다. 단, ONNX Runtime GPU provider execution이나 multi-task TensorRT
+scheduling evidence가 구현되었다고 주장하지 않는다.
 
 InferEdgeOrchestrator는 이미 scheduler, bounded queue, load shedding,
 telemetry, ONNX Runtime worker path, Jetson smoke path를 검증했다. 향후
@@ -64,8 +65,8 @@ config schema는 `tensorrt` worker 선택을 허용하며, 기존 `dummy`, `onnx
 config와의 backward compatibility를 유지한다. worker layer는 설정된 TensorRT
 engine을 deserialize하고 execution context를 생성하며 name-based input/output
 tensor metadata를 기록하고 input/output buffer를 할당 및 bind하며 runtime object를
-engine path 기준으로 cache할 수 있지만, TensorRT inference execution은 아직
-구현되지 않았다.
+engine path 기준으로 cache할 수 있다. 또한 TensorRT `execute_async_v3`로 실행하고
+device output을 host buffer로 복사한 뒤 backend result metadata를 반환한다.
 
 task field는 다음과 같다.
 
@@ -120,11 +121,10 @@ schema-valid 예시는 다음과 같다.
 }
 ```
 
-이 예시는 config schema로 유효하다. 단, `worker="tensorrt"` runtime execution은
-현재 TensorRT prerequisite을 확인하고 설정된 engine을 deserialize하고 execution
-context를 생성하고 input/output tensor metadata를 기록한 뒤, host/device buffer를
-할당하고 tensor address를 bind한다. 이후 inference execution이 추가되기 전까지
-명확한 not-implemented 오류로 실패한다.
+이 예시는 config schema로 유효하다. `worker="tensorrt"` runtime execution은
+TensorRT prerequisite을 확인하고 설정된 engine을 deserialize하고 execution context를
+생성하고 input/output tensor metadata를 기록한 뒤, host/device buffer를 할당하고
+tensor address를 bind한다. 이후 선택된 frame을 TensorRT로 실행한다.
 
 ## Current Validation Rules
 
@@ -138,7 +138,7 @@ context를 생성하고 input/output tensor metadata를 기록한 뒤, host/devi
 - `worker_options.providers`는 제공되면 비어 있지 않은 string list여야 한다.
 - 생성된 engine file은 local artifact이며 commit하지 않는다.
 
-현재 worker guard behavior는 다음을 강제한다.
+현재 worker behavior는 다음을 강제한다.
 
 - `worker="tensorrt"`는 TensorRT Python binding이 없을 때 명확한 오류로
   실패해야 한다.
@@ -152,24 +152,34 @@ context를 생성하고 input/output tensor metadata를 기록한 뒤, host/devi
   tensor를 노출하지 않으면 명확한 오류로 실패해야 한다.
 - `worker="tensorrt"`는 TensorRT host/device buffer allocation에 필요한 PyCUDA가
   없으면 명확한 오류로 실패해야 한다.
+- `worker="tensorrt"`는 TensorRT execution resource가 같은 CUDA context를 사용하도록
+  TensorRT engine deserialization 전에 PyCUDA CUDA context를 초기화한다.
 - `worker="tensorrt"`는 `context.set_tensor_address`로 tensor address를 bind하지
   못하면 명확한 오류로 실패해야 한다.
-- `worker="tensorrt"`는 deserialized engine과 execution context를 engine path
-  기준으로 cache한다.
+- `worker="tensorrt"`는 `context.execute_async_v3`가 없거나 실패를 반환하면
+  명확한 오류로 실패해야 한다.
+- `worker="tensorrt"`는 optional `frame.payload["tensorrt_inputs"]` 값을 받아
+  host-to-device copy 전에 shape를 검증한다.
+- `worker="tensorrt"`는 deserialized engine, execution context, bound buffer를
+  engine path 기준으로 cache한다.
+- `worker="tensorrt"`는 engine path, TensorRT version, input/output shape,
+  output dtype, output count, 작은 output preview를 포함한 backend result metadata를
+  반환한다.
 - `scripts/smoke_jetson_tensorrt.sh`는 Jetson에서 dependency inventory capture,
   config validation, TensorRT engine deserialization, execution context creation,
   tensor metadata inspection, host/device buffer allocation, tensor address
-  binding, TensorRT inference execution에 대한 현재 기대 not-implemented boundary
-  도달 여부를 확인할 수 있다.
+  binding, TensorRT inference execution, worker result metadata 출력을 확인할 수
+  있다.
 
-실제 TensorRT execution 추가 시 더해야 할 validation rule:
+추가로 더해야 할 validation rule:
 
 - TensorRT/GPU에서 CPU로 fallback할 경우 config와 telemetry에 명시되어야 한다.
-- Inference execution은 result event에 backend metadata를 기록해야 한다.
+- Multi-task TensorRT contention behavior는 이 single-worker identity smoke와
+  분리해 검증해야 한다.
 
-## Jetson TensorRT Guard Smoke Draft
+## Jetson TensorRT Inference Smoke
 
-guard smoke script는 다음과 같다.
+inference smoke script는 다음과 같다.
 
 ```bash
 ENGINE_PATH=models/detector.plan scripts/smoke_jetson_tensorrt.sh
@@ -179,11 +189,11 @@ ENGINE_PATH=models/detector.plan scripts/smoke_jetson_tensorrt.sh
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `PYTHON_BIN` | `~/miniconda3/envs/yolo_env/bin/python`, 이후 `.venv/bin/python`, 이후 `python3` | TensorRT import와 worker guard check에 사용할 Python interpreter. |
-| `CONFIG` | `configs/jetson_tensorrt_smoke.json` | TensorRT guard smoke config. |
+| `PYTHON_BIN` | `~/miniconda3/envs/yolo_env/bin/python`, 이후 `.venv/bin/python`, 이후 `python3` | TensorRT import와 worker smoke check에 사용할 Python interpreter. |
+| `CONFIG` | `configs/jetson_tensorrt_smoke.json` | TensorRT inference smoke config. |
 | `ENGINE_PATH` | `models/detector.plan` | runtime에 config로 주입할 device-local TensorRT engine path. |
 | `REPORT_DIR` | `reports` | local Jetson artifact를 기록할 ignored output directory. |
-| `VALIDATION_PATH` | `reports/jetson_tensorrt_guard_validation.md` | 사람이 읽을 guard-smoke record. |
+| `VALIDATION_PATH` | `reports/jetson_tensorrt_guard_validation.md` | 사람이 읽을 TensorRT smoke record. |
 | `DEPENDENCY_PATH` | `reports/jetson_tensorrt_dependency.txt` | host, L4T, Python, TensorRT, `trtexec`, `nvcc`, `tegrastats` inventory. |
 | `CAPTURE_TEGRASTATS` | `0` | `1`로 설정하면 optional `tegrastats` output을 capture한다. |
 | `TEGRSTATS_PATH` | `reports/tegrastats_tensorrt_guard.log` | optional raw `tegrastats` capture path. |
@@ -195,14 +205,13 @@ ENGINE_PATH=models/detector.plan scripts/smoke_jetson_tensorrt.sh
 
 - TensorRT Python import가 성공해야 한다.
 - `ENGINE_PATH`는 local engine file을 가리켜야 한다.
-- worker는 engine deserialization, execution context creation, tensor metadata
-  inspection, host/device buffer allocation, tensor address binding 성공 후 TensorRT
-  inference execution에 대한 현재의 명확한 not-implemented boundary에 도달해야 한다.
+- worker는 identity-model frame 1개를 실행하고 TensorRT backend result metadata를
+  반환해야 한다.
 - script는 ignored `reports/` 아래에 local report를 작성한다.
 
-이 결과는 TensorRT inference evidence가 아니다. Jetson 환경, engine artifact,
-deserialization path, execution context path, tensor metadata path,
-buffer-binding path가 다음 구현 단계로 넘어갈 준비가 되었는지만 증명한다.
+이 결과는 작은 identity model에 대한 TensorRT worker execution evidence다. 다만
+benchmark가 아니며, multi-task TensorRT contention 상황에서 scheduler/load-shedding
+behavior가 검증되었다는 증거도 아니다.
 
 이 smoke path에 사용할 작은 local engine 생성 절차는
 [`docs/tensorrt_engine_build.ko.md`](tensorrt_engine_build.ko.md)에 기록한다.

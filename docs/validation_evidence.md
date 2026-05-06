@@ -17,7 +17,7 @@ observable, and that generated telemetry can explain what happened.
 | --- | --- | --- | --- |
 | Jetson dummy smoke | CLI run, scheduler loop, bounded queues, telemetry JSON, resource snapshots, low-priority drops on Jetson Orin Nano | PASS | [`examples/telemetry/jetson_smoke_dummy_sample.json`](../examples/telemetry/jetson_smoke_dummy_sample.json) |
 | Jetson ONNX Runtime smoke | ONNX Runtime worker path on Jetson Orin Nano with `CPUExecutionProvider`, output metadata, resource snapshots, `tegrastats` capture summary | PASS | [`examples/telemetry/jetson_onnx_smoke_sample.json`](../examples/telemetry/jetson_onnx_smoke_sample.json) |
-| Jetson TensorRT guard smoke | Local identity ONNX to TensorRT engine creation and TensorRT worker guard-boundary validation on Jetson Orin Nano | PASS | [`docs/tensorrt_engine_build.md`](tensorrt_engine_build.md) |
+| Jetson TensorRT inference smoke | Local identity ONNX to TensorRT engine creation and one TensorRT identity-frame execution on Jetson Orin Nano | PASS | [`docs/tensorrt_engine_build.md`](tensorrt_engine_build.md) |
 | Synthetic overload comparison | FIFO baseline vs scheduler/load-shedding policy under controlled overload | PASS | [`examples/telemetry/phase3_overload_sample.json`](../examples/telemetry/phase3_overload_sample.json) |
 | InferEdge result handoff | File-based conversion from InferEdge `result.json` latency signal to Orchestrator config | PASS | [`examples/inferedge_result_sample.json`](../examples/inferedge_result_sample.json), [`configs/from_inferedge.json`](../configs/from_inferedge.json) |
 | CI tests | Unit tests and sample artifact compatibility checks on Python 3.11 | PASS | [GitHub Actions CI](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml) |
@@ -115,16 +115,16 @@ Tracked sample:
 This smoke validates the ONNX Runtime worker path. It is not TensorRT evidence,
 GPU execution evidence, or a Jetson performance benchmark.
 
-## Jetson TensorRT Guard Smoke
+## Jetson TensorRT Inference Smoke
 
 Purpose:
 
 - Validate that a tiny identity ONNX model can be serialized into a local
   TensorRT engine on Jetson Orin Nano.
-- Validate TensorRT Python binding availability and TensorRT worker engine-file
-  guard behavior.
-- Confirm that the current worker reaches the expected not-implemented boundary
-  before real engine deserialization and inference execution are added.
+- Validate TensorRT Python binding availability, PyCUDA buffer copy support, and
+  TensorRT worker execution behavior.
+- Confirm that the current worker can execute the identity engine and return
+  backend result metadata.
 
 Commands:
 
@@ -163,10 +163,10 @@ Latest physical-device record:
 | TensorRT engine | `models/identity_fp16.plan`, 8.2 KiB |
 | Raw build log | `reports/trtexec_identity_build.log` |
 | Raw validation note | `reports/jetson_tensorrt_guard_validation.md` |
-| Result | `PASS_GUARD_STUB` |
+| Result | `PASS_TENSORRT_INFERENCE` |
 
-This validates TensorRT setup and the worker guard path. It is not TensorRT
-inference execution, GPU provider validation, scheduler behavior under TensorRT
+This validates TensorRT setup and a single TensorRT worker inference path. It is
+not ONNX Runtime GPU provider validation, scheduler behavior under TensorRT
 contention, or a performance benchmark.
 
 ## Synthetic Overload Comparison
@@ -263,8 +263,9 @@ For sample-specific schema notes, see
   production benchmark.
 - Jetson ONNX Runtime smoke currently uses `CPUExecutionProvider`; it is not
   TensorRT or GPU benchmark evidence.
-- Jetson TensorRT guard smoke proves engine creation and worker guard-boundary
-  behavior only; it does not prove TensorRT inference execution yet.
+- Jetson TensorRT inference smoke proves engine creation and a single TensorRT
+  worker identity inference path only; it does not prove multi-task TensorRT
+  scheduling behavior yet.
 - Raw generated reports stay under `reports/` and are not committed.
 - Versioned sample JSON files are curated documentation artifacts for review and
   schema inspection.

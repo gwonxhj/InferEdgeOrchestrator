@@ -131,8 +131,9 @@ Supported workers:
   configured engine, creates an execution context, and caches both by engine
   path. It also records TensorRT name-based input/output tensor metadata,
   allocates host/device buffers, binds TensorRT tensor addresses, and caches the
-  buffers by engine path. Inference execution is intentionally not implemented
-  yet.
+  buffers by engine path. It executes through TensorRT `execute_async_v3`,
+  copies device outputs back to host buffers, and returns backend result
+  metadata.
 
 The fixed worker interface lets the TensorRT path evolve without changing the
 scheduler, queue, or telemetry contracts.

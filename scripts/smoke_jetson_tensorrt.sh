@@ -129,17 +129,32 @@ frame = FrameEnvelope(
     sequence=1,
     created_at_ms=0.0,
     deadline_at_ms=task.latency_budget_ms,
-    payload={"source": "tensorrt_guard_smoke"},
+    payload={
+        "source": "tensorrt_inference_smoke",
+        "tensorrt_inputs": {"input": [[3.0, 7.0]]},
+    },
 )
-WorkerPool().run(task, frame)
+result = WorkerPool().run(task, frame)
+print(
+    json.dumps(
+        {
+            "task_name": result.task_name,
+            "frame_id": result.frame_id,
+            "latency_ms": result.latency_ms,
+            "output": result.output,
+        },
+        indent=2,
+        sort_keys=True,
+    )
+)
 PY
 )"
 WORKER_STATUS=$?
 set -e
 
 EXPECTED_RESULT="FAIL_UNEXPECTED"
-if [[ "$WORKER_STATUS" -ne 0 ]] && grep -q "bound input/output buffers, but inference execution is not implemented yet" <<<"$WORKER_OUTPUT"; then
-  EXPECTED_RESULT="PASS_GUARD_STUB"
+if [[ "$WORKER_STATUS" -eq 0 ]] && grep -q '"worker": "tensorrt"' <<<"$WORKER_OUTPUT" && grep -q '"output_preview"' <<<"$WORKER_OUTPUT"; then
+  EXPECTED_RESULT="PASS_TENSORRT_INFERENCE"
 fi
 
 TIMESTAMP_UTC="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
@@ -148,7 +163,7 @@ TRT_VERSION="$("$PYTHON_BIN" -c 'import tensorrt as trt; print(trt.__version__)'
 DEVICE="$(uname -a)"
 
 cat >"$VALIDATION_PATH" <<EOF
-# Jetson TensorRT Guard Smoke
+# Jetson TensorRT Inference Smoke
 
 - Timestamp UTC: ${TIMESTAMP_UTC}
 - Device: ${DEVICE}
@@ -158,16 +173,16 @@ cat >"$VALIDATION_PATH" <<EOF
 - Engine: ${ENGINE_PATH}
 - Dependency inventory: ${DEPENDENCY_PATH}
 - Optional tegrastats: ${TEGRSTATS_PATH}
-- Worker guard result: ${EXPECTED_RESULT}
+- Worker smoke result: ${EXPECTED_RESULT}
 
 ## Notes
 
-- This is a TensorRT worker guard smoke draft, not a TensorRT inference run.
 - The current worker checks TensorRT Python bindings, engine file existence,
   TensorRT engine deserialization, execution context creation, tensor metadata
-  inspection, host/device buffer allocation, and tensor address binding.
-- Passing this script means the guard path reached the expected
-  not-implemented boundary for TensorRT inference execution.
+  inspection, host/device buffer allocation, tensor address binding, and
+  TensorRT inference execution.
+- Passing this script means the TensorRT worker executed one identity-model
+  smoke frame and returned worker result metadata.
 - Do not commit raw reports or TensorRT engine binaries.
 
 ## Worker Output
@@ -180,8 +195,8 @@ EOF
 echo "[trt-smoke] dependency inventory: ${DEPENDENCY_PATH}"
 echo "[trt-smoke] validation record: ${VALIDATION_PATH}"
 
-if [[ "$EXPECTED_RESULT" != "PASS_GUARD_STUB" ]]; then
-  echo "[trt-smoke] unexpected worker guard result"
+if [[ "$EXPECTED_RESULT" != "PASS_TENSORRT_INFERENCE" ]]; then
+  echo "[trt-smoke] unexpected worker inference result"
   echo "$WORKER_OUTPUT"
   exit 1
 fi

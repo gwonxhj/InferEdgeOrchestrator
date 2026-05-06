@@ -112,7 +112,7 @@ control이 파일 기반 경계로 연결됨을 보여준다.
 | --- | --- | --- |
 | Jetson dummy smoke | `nano01`에서 telemetry, resource snapshot, low-priority drop 확인: detector `20/0`, classifier `2/18` executed/dropped | `reports/jetson_smoke_dummy.json` |
 | Jetson ONNX Runtime smoke | Jetson에서 `onnxruntime` worker가 identity ONNX를 `CPUExecutionProvider`로 실행, output shape `[1, 2]`, `tegrastats` sample 13개 | `reports/jetson_onnx_smoke.json` |
-| Jetson TensorRT guard smoke | Jetson에서 identity ONNX로 `models/identity_fp16.plan`을 생성하고 TensorRT worker guard boundary 도달 확인: `PASS_GUARD_STUB` | `reports/jetson_tensorrt_guard_validation.md` |
+| Jetson TensorRT inference smoke | Jetson에서 identity ONNX로 `models/identity_fp16.plan`을 생성하고 TensorRT identity frame 1개 실행 확인: `PASS_TENSORRT_INFERENCE` | `reports/jetson_tensorrt_guard_validation.md` |
 | Synthetic overload comparison | detector p95 end-to-end latency가 FIFO baseline `782.0ms`에서 scheduler + shedding `8.0ms`로 개선, classifier low-priority frame 16개 drop | `reports/phase3_overload.json` |
 | InferEdge result handoff | sample `expected_latency_ms=42.2`에서 recommended `latency_budget_ms=64.0` 생성, InferEdge internals import 없음 | `configs/from_inferedge.json` |
 

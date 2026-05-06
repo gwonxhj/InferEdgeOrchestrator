@@ -21,28 +21,27 @@ helps reviewers understand the project state.
   - `worker_options`
 - Validated InferEdge handoff generated configs before writing and added
   `--engine-path` for reserved TensorRT schema output.
-- Added a TensorRT worker guard stub that checks TensorRT Python bindings and
-  configured engine file existence before failing with a clear not-implemented
-  message for engine deserialization/inference.
+- Added the initial TensorRT worker guard path for TensorRT Python bindings and
+  configured engine file existence.
 - Added a Jetson TensorRT guard smoke draft:
   - `configs/jetson_tensorrt_smoke.json`
   - `scripts/smoke_jetson_tensorrt.sh`
 - Added a small ONNX to TensorRT engine build procedure for Jetson:
   - `docs/tensorrt_engine_build.md`
   - `docs/tensorrt_engine_build.ko.md`
-- Recorded Jetson TensorRT guard-smoke evidence for local identity ONNX to FP16
-  engine creation and `PASS_GUARD_STUB` worker-boundary validation.
+- Recorded Jetson TensorRT smoke evidence for local identity ONNX to FP16 engine
+  creation and worker validation.
 - Implemented TensorRT engine deserialization and engine-path caching in
-  `TensorRtWorker`; inference execution remains intentionally not implemented.
+  `TensorRtWorker`.
 - Implemented TensorRT execution context creation and engine-path context
-  caching in `TensorRtWorker`; input/output binding and inference execution
-  remain intentionally not implemented.
+  caching in `TensorRtWorker`.
 - Added TensorRT name-based input/output tensor metadata inspection to
-  `TensorRtWorker`; buffer binding and inference execution remain intentionally
-  not implemented.
+  `TensorRtWorker`.
 - Added TensorRT host/device buffer allocation and name-based tensor address
-  binding to `TensorRtWorker`; inference execution remains intentionally not
-  implemented.
+  binding to `TensorRtWorker`.
+- Added TensorRT inference execution with `execute_async_v3`, host/device copy,
+  optional `frame.payload["tensorrt_inputs"]`, and backend result metadata in
+  `TensorRtWorker`.
 
 ### Changed
 
@@ -63,6 +62,8 @@ helps reviewers understand the project state.
 - Updated TensorRT smoke expectations and docs so `PASS_GUARD_STUB` now means
   input/output buffer allocation and tensor address binding also succeeded,
   while TensorRT inference execution remains the boundary.
+- Updated TensorRT smoke expectations and docs so the Jetson identity engine
+  now reports `PASS_TENSORRT_INFERENCE` after one real TensorRT worker execution.
 
 ## v0.1.1 - 2026-05-06
 
