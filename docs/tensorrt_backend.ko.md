@@ -167,6 +167,61 @@ uname -a
 `nvidia-smi`를 사용하지 않는다. smoke evidence에는 `tegrastats`,
 `/etc/nv_tegra_release`, 기존 telemetry resource snapshot을 우선 사용한다.
 
+### Survey Result: 2026-05-06
+
+대상 장치:
+
+| Item | Result |
+| --- | --- |
+| Host | `nano01` |
+| Address | `192.168.45.63` |
+| OS | Ubuntu 22.04.5 LTS |
+| Kernel | `Linux 5.15.148-tegra aarch64` |
+| L4T | `36.4.7` (`R36`, revision `4.7`) |
+| Device | Jetson Orin Nano Developer Kit, 25W mode |
+
+runtime inventory:
+
+| Dependency | Result | Note |
+| --- | --- | --- |
+| CUDA | `12.6.68` runtime, `12.6.11` SDK metadata | `/usr/local/cuda/version.json` 존재. |
+| `nvcc` | `12.6.68` | `/usr/local/cuda/bin/nvcc`에서 사용 가능. non-interactive SSH `PATH`에는 없음. |
+| cuDNN | `9.3.0.75` | `libcudnn9-cuda-12` 및 dev package 설치됨. |
+| TensorRT | `10.3.0.30` package, Python import는 `10.3.0` 보고 | `python3-libnvinfer` 설치됨. |
+| TensorRT ONNX parser | 설치됨 | `libnvonnxparsers10` 및 dev package 설치됨. |
+| `trtexec` | `/usr/src/tensorrt/bin/trtexec`에서 사용 가능 | non-interactive SSH `PATH`에는 없음. |
+| `tegrastats` | `/usr/bin/tegrastats`에서 사용 가능 | one-line smoke capture 성공. |
+| GPU device node | 존재 | `/dev/nvhost-gpu`, `/dev/nvhost-ctrl-gpu`, `/dev/nvmap` 확인. |
+| `jetson_release` | 사용 가능 | `jetson-stats 4.3.2` 보고. JetPack label은 missing이지만 L4T/library 정보는 확인 가능. |
+
+Python environment inventory:
+
+| Environment | Python | TensorRT | ONNX Runtime | PyCUDA | Notes |
+| --- | --- | --- | --- | --- | --- |
+| System Python | `/usr/bin/python3`, `3.10.12` | `10.3.0` import 성공 | 설치 안 됨 | 설치 안 됨 | TensorRT import 확인에는 충분하지만 현재 ONNX Runtime provider 작업에는 부족함. |
+| `yolo_env` | `/home/risenano01/miniconda3/envs/yolo_env/bin/python`, `3.10.12` | `10.3.0` import 성공 | `1.23.2`, providers: `AzureExecutionProvider`, `CPUExecutionProvider` | import 성공 | pip 목록에는 `onnxruntime-gpu 1.17.0`도 있으나 runtime provider에는 CUDA/TensorRT provider가 노출되지 않음. |
+
+`yolo_env`에서 관찰된 ONNX Runtime warning:
+
+```text
+GPU device discovery failed: ReadFileContents Failed to open file:
+"/sys/class/drm/card1/device/vendor"
+```
+
+해석:
+
+- TensorRT Python binding, TensorRT library, ONNX parser package, PyCUDA, CUDA,
+  cuDNN, `tegrastats`가 있으므로 native TensorRT worker 개발은 가능한 상태다.
+- 향후 smoke script는 `/usr/src/tensorrt/bin/trtexec`를 명시적으로 호출하거나
+  `/usr/src/tensorrt/bin`을 `PATH`에 추가해야 한다.
+- compiler version evidence가 필요하면 `/usr/local/cuda/bin/nvcc`를 명시적으로
+  호출해야 한다.
+- 현재 `yolo_env`의 ONNX Runtime은 runtime에서 `AzureExecutionProvider`,
+  `CPUExecutionProvider`만 노출하므로 ONNX Runtime GPU provider 검증은 바로
+  완료된 상태가 아니다.
+- 이 결과는 dependency inventory일 뿐이다. TensorRT engine 실행, GPU provider
+  실행, TensorRT 기반 scheduler behavior를 증명하지 않는다.
+
 ## Smoke Script Plan
 
 향후 script는 `scripts/smoke_jetson_tensorrt.sh`로 추가할 수 있다.
