@@ -125,6 +125,8 @@ evidence, Jetson performance benchmark가 아니다.
   worker execution behavior를 검증한다.
 - 현재 worker가 identity engine을 실행하고 backend result metadata를 반환하는지
   확인한다.
+- end-to-end runtime telemetry가 `result_events[].output`에 TensorRT backend
+  metadata를 기록하는지 확인한다.
 
 Commands:
 
@@ -163,11 +165,14 @@ Latest physical-device record:
 | TensorRT engine | `models/identity_fp16.plan`, 8.2 KiB |
 | Raw build log | `reports/trtexec_identity_build.log` |
 | Raw validation note | `reports/jetson_tensorrt_guard_validation.md` |
-| Result | `PASS_TENSORRT_INFERENCE` |
+| Raw runtime telemetry | `reports/jetson_tensorrt_runtime_telemetry.json` |
+| Worker result | `PASS_TENSORRT_INFERENCE` |
+| Runtime telemetry result | `PASS_TENSORRT_TELEMETRY` |
 
-이 결과는 TensorRT setup과 single TensorRT worker inference path를 검증한다. ONNX
-Runtime GPU provider validation, TensorRT contention 상황의 scheduler behavior,
-performance benchmark는 검증하지 않는다.
+이 결과는 TensorRT setup, single TensorRT worker inference path, runtime telemetry
+result event까지 TensorRT backend metadata가 전달되는지를 검증한다. ONNX Runtime GPU
+provider validation, TensorRT contention 상황의 scheduler behavior, performance
+benchmark는 검증하지 않는다.
 
 ## Synthetic Overload Comparison
 
@@ -263,9 +268,9 @@ sample-specific schema note는
   production benchmark가 아니다.
 - Jetson ONNX Runtime smoke는 현재 `CPUExecutionProvider`를 사용한다. TensorRT
   또는 GPU benchmark evidence가 아니다.
-- Jetson TensorRT inference smoke는 engine creation과 single TensorRT worker
-  identity inference path만 증명한다. Multi-task TensorRT scheduling behavior는 아직
-  증명하지 않는다.
+- Jetson TensorRT inference smoke는 engine creation, single TensorRT worker identity
+  inference path, runtime telemetry metadata propagation을 증명한다. Multi-task
+  TensorRT scheduling behavior는 아직 증명하지 않는다.
 - raw generated report는 `reports/` 아래에 남기며 commit하지 않는다.
 - versioned sample JSON은 review와 schema inspection을 위한 curated
   documentation artifact다.

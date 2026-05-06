@@ -170,6 +170,8 @@ tensor address를 bind한다. 이후 선택된 frame을 TensorRT로 실행한다
   tensor metadata inspection, host/device buffer allocation, tensor address
   binding, TensorRT inference execution, worker result metadata 출력을 확인할 수
   있다.
+- 같은 script는 `OrchestratorRuntime`을 1 frame 실행해 `result_events[].output`에
+  TensorRT backend metadata가 남는지도 검증한다.
 
 추가로 더해야 할 validation rule:
 
@@ -194,6 +196,7 @@ ENGINE_PATH=models/detector.plan scripts/smoke_jetson_tensorrt.sh
 | `ENGINE_PATH` | `models/detector.plan` | runtime에 config로 주입할 device-local TensorRT engine path. |
 | `REPORT_DIR` | `reports` | local Jetson artifact를 기록할 ignored output directory. |
 | `VALIDATION_PATH` | `reports/jetson_tensorrt_guard_validation.md` | 사람이 읽을 TensorRT smoke record. |
+| `RUNTIME_TELEMETRY_PATH` | `reports/jetson_tensorrt_runtime_telemetry.json` | `result_events[].output` backend metadata를 검증하는 runtime telemetry JSON. |
 | `DEPENDENCY_PATH` | `reports/jetson_tensorrt_dependency.txt` | host, L4T, Python, TensorRT, `trtexec`, `nvcc`, `tegrastats` inventory. |
 | `CAPTURE_TEGRASTATS` | `0` | `1`로 설정하면 optional `tegrastats` output을 capture한다. |
 | `TEGRSTATS_PATH` | `reports/tegrastats_tensorrt_guard.log` | optional raw `tegrastats` capture path. |
@@ -207,6 +210,8 @@ ENGINE_PATH=models/detector.plan scripts/smoke_jetson_tensorrt.sh
 - `ENGINE_PATH`는 local engine file을 가리켜야 한다.
 - worker는 identity-model frame 1개를 실행하고 TensorRT backend result metadata를
   반환해야 한다.
+- runtime telemetry는 `result_events[].output` 아래 TensorRT backend metadata를
+  포함해야 한다.
 - script는 ignored `reports/` 아래에 local report를 작성한다.
 
 이 결과는 작은 identity model에 대한 TensorRT worker execution evidence다. 다만

@@ -1,6 +1,6 @@
 {
   "run": {
-    "name": "jetson_tensorrt_guard_smoke",
+    "name": "jetson_tensorrt_inference_smoke",
     "input_source": "dummy",
     "overload_backlog_threshold": 2
   },

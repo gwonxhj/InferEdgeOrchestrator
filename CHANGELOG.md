@@ -42,6 +42,8 @@ helps reviewers understand the project state.
 - Added TensorRT inference execution with `execute_async_v3`, host/device copy,
   optional `frame.payload["tensorrt_inputs"]`, and backend result metadata in
   `TensorRtWorker`.
+- Added Jetson TensorRT runtime telemetry smoke validation so
+  `result_events[].output` is checked for TensorRT backend metadata.
 
 ### Changed
 
@@ -64,6 +66,8 @@ helps reviewers understand the project state.
   while TensorRT inference execution remains the boundary.
 - Updated TensorRT smoke expectations and docs so the Jetson identity engine
   now reports `PASS_TENSORRT_INFERENCE` after one real TensorRT worker execution.
+- Updated TensorRT smoke expectations and docs so the Jetson smoke also reports
+  `PASS_TENSORRT_TELEMETRY` after an end-to-end runtime telemetry check.
 
 ## v0.1.1 - 2026-05-06
 

@@ -141,7 +141,7 @@ def test_jetson_tensorrt_smoke_config_matches_reserved_schema() -> None:
         json.loads(config_path.read_text(encoding="utf-8"))
     )
 
-    assert config.name == "jetson_tensorrt_guard_smoke"
+    assert config.name == "jetson_tensorrt_inference_smoke"
     assert len(config.tasks) == 1
     task = config.tasks[0]
     assert task.worker == "tensorrt"

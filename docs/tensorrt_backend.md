@@ -173,6 +173,8 @@ Worker behavior currently enforces:
   execution context creation, tensor metadata inspection, host/device buffer
   allocation, tensor address binding, TensorRT inference execution, and worker
   result metadata output.
+- The same script also runs `OrchestratorRuntime` for one frame and validates
+  that `result_events[].output` contains TensorRT backend metadata.
 
 Validation rules still to add:
 
@@ -197,6 +199,7 @@ Useful environment variables:
 | `ENGINE_PATH` | `models/detector.plan` | Device-local TensorRT engine path passed into the config at runtime. |
 | `REPORT_DIR` | `reports` | Ignored output directory for local Jetson artifacts. |
 | `VALIDATION_PATH` | `reports/jetson_tensorrt_guard_validation.md` | Human-readable TensorRT smoke record. |
+| `RUNTIME_TELEMETRY_PATH` | `reports/jetson_tensorrt_runtime_telemetry.json` | Runtime telemetry JSON used to validate `result_events[].output` backend metadata. |
 | `DEPENDENCY_PATH` | `reports/jetson_tensorrt_dependency.txt` | Host, L4T, Python, TensorRT, `trtexec`, `nvcc`, and `tegrastats` inventory. |
 | `CAPTURE_TEGRASTATS` | `0` | Set to `1` to capture optional `tegrastats` output. |
 | `TEGRSTATS_PATH` | `reports/tegrastats_tensorrt_guard.log` | Optional raw `tegrastats` capture path. |
@@ -210,6 +213,8 @@ Expected current behavior:
 - `ENGINE_PATH` must point to a local engine file.
 - The worker must execute one identity-model frame and return TensorRT backend
   result metadata.
+- Runtime telemetry must include TensorRT backend metadata under
+  `result_events[].output`.
 - The script writes local reports under ignored `reports/`.
 
 This is TensorRT worker execution evidence for a tiny identity model. It is not
