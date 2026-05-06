@@ -176,8 +176,8 @@ tensor address를 bind한다. 이후 선택된 frame을 TensorRT로 실행한다
 추가로 더해야 할 validation rule:
 
 - TensorRT/GPU에서 CPU로 fallback할 경우 config와 telemetry에 명시되어야 한다.
-- Multi-task TensorRT contention behavior는 이 single-worker identity smoke와
-  분리해 검증해야 한다.
+- 더 넓은 TensorRT contention evidence는 초기 two-task identity-engine smoke 이후
+  더 현실적인 model diversity로 확장한다.
 
 ## Jetson TensorRT Inference Smoke
 
@@ -220,6 +220,32 @@ behavior가 검증되었다는 증거도 아니다.
 
 이 smoke path에 사용할 작은 local engine 생성 절차는
 [`docs/tensorrt_engine_build.ko.md`](tensorrt_engine_build.ko.md)에 기록한다.
+
+## Jetson TensorRT Contention Smoke
+
+contention smoke script는 다음과 같다.
+
+```bash
+ENGINE_PATH=models/detector.plan scripts/smoke_jetson_tensorrt_contention.sh
+```
+
+이 script는 `OrchestratorRuntime`에서 두 TensorRT task를 실행한다.
+
+| Task | Priority | Expected role |
+| --- | --- | --- |
+| `detector_trt` | 100 | 보호해야 할 high-priority task |
+| `classifier_trt` | 10 | load shedding으로 제한되는 low-priority task |
+
+검증 항목:
+
+- 모든 runtime result event에 TensorRT backend metadata가 남는다.
+- `overload_events`가 기록된다.
+- policy decision에 `limited_task="classifier_trt"`가 포함된다.
+- `classifier_trt` frame이 drop되는 동안 `detector_trt`는 실행된다.
+
+이 결과는 TensorRT-backed scheduler/load-shedding evidence다. Throughput benchmark가
+아니며, 현재는 artifact를 작고 재현 가능하게 유지하기 위해 두 task 모두 같은 작은
+identity engine을 사용한다.
 
 ## Telemetry Plan
 

@@ -148,3 +148,17 @@ def test_jetson_tensorrt_smoke_config_matches_reserved_schema() -> None:
     assert task.engine_path == "models/detector.plan"
     assert task.worker_options is not None
     assert task.worker_options["allow_engine_build"] is False
+
+
+def test_jetson_tensorrt_contention_config_matches_reserved_schema() -> None:
+    config_path = Path("configs/jetson_tensorrt_contention.json")
+    config = OrchestratorConfig.from_dict(
+        json.loads(config_path.read_text(encoding="utf-8"))
+    )
+
+    assert config.name == "jetson_tensorrt_contention_smoke"
+    assert config.overload_backlog_threshold == 2
+    assert [task.name for task in config.tasks] == ["detector_trt", "classifier_trt"]
+    assert [task.worker for task in config.tasks] == ["tensorrt", "tensorrt"]
+    assert [task.priority for task in config.tasks] == [100, 10]
+    assert all(task.engine_path == "models/detector.plan" for task in config.tasks)

@@ -44,6 +44,9 @@ helps reviewers understand the project state.
   `TensorRtWorker`.
 - Added Jetson TensorRT runtime telemetry smoke validation so
   `result_events[].output` is checked for TensorRT backend metadata.
+- Added Jetson TensorRT contention smoke config and script to validate
+  TensorRT-backed scheduler/load-shedding behavior with high- and low-priority
+  TensorRT tasks.
 
 ### Changed
 

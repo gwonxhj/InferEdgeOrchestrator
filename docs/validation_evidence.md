@@ -18,6 +18,7 @@ observable, and that generated telemetry can explain what happened.
 | Jetson dummy smoke | CLI run, scheduler loop, bounded queues, telemetry JSON, resource snapshots, low-priority drops on Jetson Orin Nano | PASS | [`examples/telemetry/jetson_smoke_dummy_sample.json`](../examples/telemetry/jetson_smoke_dummy_sample.json) |
 | Jetson ONNX Runtime smoke | ONNX Runtime worker path on Jetson Orin Nano with `CPUExecutionProvider`, output metadata, resource snapshots, `tegrastats` capture summary | PASS | [`examples/telemetry/jetson_onnx_smoke_sample.json`](../examples/telemetry/jetson_onnx_smoke_sample.json) |
 | Jetson TensorRT inference smoke | Local identity ONNX to TensorRT engine creation and one TensorRT identity-frame execution on Jetson Orin Nano | PASS | [`docs/tensorrt_engine_build.md`](tensorrt_engine_build.md) |
+| Jetson TensorRT contention smoke | Two TensorRT tasks through scheduler/load-shedding with low-priority drops and TensorRT backend telemetry | PASS | [`docs/tensorrt_backend.md`](tensorrt_backend.md) |
 | Synthetic overload comparison | FIFO baseline vs scheduler/load-shedding policy under controlled overload | PASS | [`examples/telemetry/phase3_overload_sample.json`](../examples/telemetry/phase3_overload_sample.json) |
 | InferEdge result handoff | File-based conversion from InferEdge `result.json` latency signal to Orchestrator config | PASS | [`examples/inferedge_result_sample.json`](../examples/inferedge_result_sample.json), [`configs/from_inferedge.json`](../configs/from_inferedge.json) |
 | CI tests | Unit tests and sample artifact compatibility checks on Python 3.11 | PASS | [GitHub Actions CI](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml) |
@@ -169,10 +170,46 @@ Latest physical-device record:
 | Worker result | `PASS_TENSORRT_INFERENCE` |
 | Runtime telemetry result | `PASS_TENSORRT_TELEMETRY` |
 
-This validates TensorRT setup and a single TensorRT worker inference path. It is
+This validates TensorRT setup and a single TensorRT worker inference path. It
 also validates that TensorRT backend metadata reaches runtime telemetry result
 events. It is not ONNX Runtime GPU provider validation, scheduler behavior under
 TensorRT contention, or a performance benchmark.
+
+## Jetson TensorRT Contention Smoke
+
+Purpose:
+
+- Validate that two TensorRT tasks can run through `OrchestratorRuntime` on
+  Jetson Orin Nano.
+- Validate that bounded queues and load shedding limit the low-priority
+  TensorRT task while the high-priority TensorRT task executes.
+- Validate that TensorRT backend metadata remains present in runtime telemetry
+  result events during contention.
+
+Command:
+
+```bash
+PYTHON_BIN=$HOME/miniconda3/envs/yolo_env/bin/python \
+  ENGINE_PATH=models/identity_fp16.plan \
+  CONFIG=configs/jetson_tensorrt_contention.json \
+  CAPTURE_TEGRASTATS=1 \
+  scripts/smoke_jetson_tensorrt_contention.sh
+```
+
+Expected result:
+
+| Field | Value |
+| --- | --- |
+| Result | `PASS_TENSORRT_CONTENTION` |
+| Telemetry | `reports/jetson_tensorrt_contention_telemetry.json` |
+| Validation note | `reports/jetson_tensorrt_contention_validation.md` |
+| Detector | `executed=6`, `dropped=0` |
+| Classifier | `executed=1`, `dropped=5` |
+| Overload events | `5` |
+| Result event backends | `tensorrt` |
+
+This is TensorRT-backed scheduler/load-shedding evidence. It is not a TensorRT
+throughput benchmark.
 
 ## Synthetic Overload Comparison
 
@@ -271,6 +308,9 @@ For sample-specific schema notes, see
 - Jetson TensorRT inference smoke proves engine creation, a single TensorRT
   worker identity inference path, and runtime telemetry metadata propagation; it
   does not prove multi-task TensorRT scheduling behavior yet.
+- Jetson TensorRT contention smoke proves initial TensorRT-backed
+  scheduler/load-shedding behavior with a tiny shared identity engine; it does
+  not prove production model throughput.
 - Raw generated reports stay under `reports/` and are not committed.
 - Versioned sample JSON files are curated documentation artifacts for review and
   schema inspection.
