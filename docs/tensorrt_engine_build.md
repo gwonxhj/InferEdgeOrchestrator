@@ -269,3 +269,56 @@ The TensorRT CLI reported successful build-only runs with `--skipInference` for
 both generated ONNX models. This confirms that the two planned diverse engines
 can be generated on the target Jetson, but it still does not prove worker
 execution, scheduler behavior, or throughput.
+
+## Diverse Engine Guard Smoke Draft
+
+After the two diverse engines exist, run the individual worker guard smoke:
+
+```bash
+scripts/smoke_jetson_tensorrt_diverse_engines.sh
+```
+
+This script runs `detector_tiny_fp16.plan` and `classifier_tiny_fp16.plan`
+through `TensorRtWorker` one at a time. It validates engine deserialization,
+execution context creation, tensor metadata inspection, host/device buffer
+allocation and binding, TensorRT inference execution, and backend result
+metadata for each engine.
+
+Expected local-only outputs:
+
+| Artifact | Path | Git policy |
+| --- | --- | --- |
+| Guard result JSON | `reports/jetson_tensorrt_diverse_guard_results.json` | Do not commit. |
+| Guard validation note | `reports/jetson_tensorrt_diverse_guard_validation.md` | Do not commit raw reports. |
+
+Passing this script reports `PASS_TENSORRT_DIVERSE_GUARD`. It is worker guard
+evidence, not scheduler/load-shedding contention evidence.
+
+## Validated Diverse Engine Guard: 2026-05-06
+
+The individual worker guard smoke was run on the same Jetson target after the
+two FP16 engines were built.
+
+| Field | Value |
+| --- | --- |
+| Device | `nano01` |
+| Kernel | `Linux 5.15.148-tegra aarch64` |
+| Python | `3.10.12` |
+| TensorRT Python | `10.3.0` |
+| Detector engine | `models/generated/detector_tiny_fp16.plan` |
+| Classifier engine | `models/generated/classifier_tiny_fp16.plan` |
+| Result | `PASS_TENSORRT_DIVERSE_GUARD` |
+
+Guard metadata:
+
+| Task | Engine size | Input shape | Output shape | Output preview |
+| --- | ---: | --- | --- | --- |
+| `detector_trt` | 44,428 bytes | `detector_input: [1, 3, 16, 16]` | `detector_scores: [1, 6]` | `detector_scores` present |
+| `classifier_trt` | 17,764 bytes | `classifier_input: [1, 16]` | `classifier_logits: [1, 4]` | `classifier_logits` present |
+
+This confirms that each generated diverse engine can be deserialized by
+`TensorRtWorker`, create an execution context, expose TensorRT tensor metadata,
+bind host/device buffers, execute inference, and return backend metadata. The
+raw guard result JSON and validation note remain local under `reports/` and are
+not committed. The reported guard latency is not a benchmark because the run is
+an individual first-use smoke path.

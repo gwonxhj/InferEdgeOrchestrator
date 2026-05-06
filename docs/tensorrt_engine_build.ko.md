@@ -266,3 +266,54 @@ Raw build log는 local에만 남겼다.
 TensorRT CLI는 두 generated ONNX model 모두에 대해 `--skipInference` build-only run
 성공을 보고했다. 이는 계획한 diverse engine 2개를 target Jetson에서 생성할 수 있음을
 확인하지만, worker execution, scheduler behavior, throughput을 증명하지 않는다.
+
+## Diverse Engine Guard Smoke Draft
+
+두 diverse engine이 존재한 뒤 individual worker guard smoke를 실행한다.
+
+```bash
+scripts/smoke_jetson_tensorrt_diverse_engines.sh
+```
+
+이 script는 `detector_tiny_fp16.plan`과 `classifier_tiny_fp16.plan`을 각각
+`TensorRtWorker`로 한 번씩 실행한다. 각 engine에 대해 engine deserialization,
+execution context creation, tensor metadata inspection, host/device buffer allocation
+and binding, TensorRT inference execution, backend result metadata를 검증한다.
+
+Expected local-only outputs:
+
+| Artifact | Path | Git policy |
+| --- | --- | --- |
+| Guard result JSON | `reports/jetson_tensorrt_diverse_guard_results.json` | commit하지 않는다. |
+| Guard validation note | `reports/jetson_tensorrt_diverse_guard_validation.md` | raw report는 commit하지 않는다. |
+
+script가 통과하면 `PASS_TENSORRT_DIVERSE_GUARD`를 보고한다. 이는 worker guard
+evidence이며 scheduler/load-shedding contention evidence는 아니다.
+
+## Validated Diverse Engine Guard: 2026-05-06
+
+Individual worker guard smoke는 FP16 engine 2개를 build한 뒤 같은 Jetson target에서
+실행했다.
+
+| Field | Value |
+| --- | --- |
+| Device | `nano01` |
+| Kernel | `Linux 5.15.148-tegra aarch64` |
+| Python | `3.10.12` |
+| TensorRT Python | `10.3.0` |
+| Detector engine | `models/generated/detector_tiny_fp16.plan` |
+| Classifier engine | `models/generated/classifier_tiny_fp16.plan` |
+| Result | `PASS_TENSORRT_DIVERSE_GUARD` |
+
+Guard metadata:
+
+| Task | Engine size | Input shape | Output shape | Output preview |
+| --- | ---: | --- | --- | --- |
+| `detector_trt` | 44,428 bytes | `detector_input: [1, 3, 16, 16]` | `detector_scores: [1, 6]` | `detector_scores` present |
+| `classifier_trt` | 17,764 bytes | `classifier_input: [1, 16]` | `classifier_logits: [1, 4]` | `classifier_logits` present |
+
+이 결과는 생성된 diverse engine 각각이 `TensorRtWorker`에서 deserialize, execution
+context creation, TensorRT tensor metadata 노출, host/device buffer binding, inference
+execution, backend metadata 반환까지 통과함을 확인한다. Raw guard result JSON과
+validation note는 `reports/` 아래 local artifact로만 남기며 commit하지 않는다. Guard
+latency는 first-use smoke path라 benchmark로 해석하지 않는다.

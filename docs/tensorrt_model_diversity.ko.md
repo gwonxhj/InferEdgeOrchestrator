@@ -87,6 +87,19 @@ Jetson build contract:
 - Jetson result: 2026-05-06 `nano01`에서 확인했다. Detector-like FP16 engine은
   44,428 bytes, classifier-like FP16 engine은 17,764 bytes였다.
 
+Jetson guard contract:
+
+- Script: `scripts/smoke_jetson_tensorrt_diverse_engines.sh`
+- Detector input/output: `detector_input` -> `detector_scores`
+- Classifier input/output: `classifier_input` -> `classifier_logits`
+- Result JSON: `reports/jetson_tensorrt_diverse_guard_results.json`
+- Validation note: `reports/jetson_tensorrt_diverse_guard_validation.md`
+- Success marker: `PASS_TENSORRT_DIVERSE_GUARD`
+- 이 단계는 generated engine 각각의 individual TensorRtWorker execution을 검증한다.
+  Scheduler/load-shedding contention evidence는 아니다.
+- Jetson result: 2026-05-06 `nano01`에서 확인했다. 두 generated engine 모두
+  `TensorRtWorker`를 통해 TensorRT backend metadata와 output preview를 반환했다.
+
 Synthetic을 먼저 선택하는 이유:
 
 - License clarity: 생성된 source model은 repository-owned test fixture이므로
