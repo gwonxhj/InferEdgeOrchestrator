@@ -126,16 +126,14 @@ class Worker(Protocol):
   scheduler test와 overload-policy validation에 사용한다.
 - `onnxruntime`: ONNX model을 lazy loading하고 `CPUExecutionProvider`로 실행한
   뒤 output count와 output shape를 기록한다.
-- `tensorrt`: `engine_path`, TensorRT Python binding, engine file 존재 여부를
-  먼저 검증하는 worker guard path를 제공한다. Engine deserialization과 inference
-  execution은 아직 의도적으로 구현하지 않았다.
+- `tensorrt`: `engine_path`를 검증하고, TensorRT를 lazy import하며, 설정된 engine을
+  deserialize한 뒤 cache한다. Inference execution은 아직 의도적으로 구현하지 않았다.
 
 고정된 worker interface 덕분에 TensorRT path를 확장하더라도 scheduler, queue,
 telemetry contract를 바꾸지 않아도 된다.
 
-TensorRT/GPU backend 방향과 현재 stub boundary는
-[`docs/tensorrt_backend.ko.md`](tensorrt_backend.ko.md)에 기록한다. Jetson engine
-execution은 device smoke validation이 끝나기 전까지 worker guard path와 분리한다.
+TensorRT/GPU backend 방향과 현재 inference-execution boundary는
+[`docs/tensorrt_backend.ko.md`](tensorrt_backend.ko.md)에 기록한다.
 
 ## Telemetry Schema Overview
 

@@ -32,6 +32,8 @@ helps reviewers understand the project state.
   - `docs/tensorrt_engine_build.ko.md`
 - Recorded Jetson TensorRT guard-smoke evidence for local identity ONNX to FP16
   engine creation and `PASS_GUARD_STUB` worker-boundary validation.
+- Implemented TensorRT engine deserialization and engine-path caching in
+  `TensorRtWorker`; inference execution remains intentionally not implemented.
 
 ### Changed
 
@@ -40,6 +42,9 @@ helps reviewers understand the project state.
   language selector.
 - Updated the TensorRT engine build procedure to use `trtexec --skipInference`
   on the surveyed Jetson TensorRT 10.3.0 environment.
+- Updated TensorRT smoke expectations and docs so `PASS_GUARD_STUB` now means
+  engine deserialization succeeded and inference execution is the remaining
+  boundary.
 
 ## v0.1.1 - 2026-05-06
 

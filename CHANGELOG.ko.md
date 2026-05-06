@@ -32,6 +32,8 @@ Language: [English](CHANGELOG.md) | 한국어
   - `docs/tensorrt_engine_build.ko.md`
 - Jetson TensorRT guard-smoke evidence를 기록했다. local identity ONNX에서 FP16
   engine을 생성하고 `PASS_GUARD_STUB` worker-boundary validation을 확인했다.
+- `TensorRtWorker`에 TensorRT engine deserialization 및 engine-path cache를
+  구현했다. Inference execution은 의도적으로 아직 구현하지 않았다.
 
 ### Changed
 
@@ -39,6 +41,8 @@ Language: [English](CHANGELOG.md) | 한국어
   한국어 mirror는 각 문서의 language selector에서 선택하는 흐름으로 유지한다.
 - survey된 Jetson TensorRT 10.3.0 환경에 맞춰 TensorRT engine build 절차를
   `trtexec --skipInference` 사용으로 갱신했다.
+- TensorRT smoke 기대값과 문서를 갱신해 `PASS_GUARD_STUB`가 engine
+  deserialization 성공 후 inference execution만 남은 boundary를 의미하게 했다.
 
 ## v0.1.1 - 2026-05-06
 
