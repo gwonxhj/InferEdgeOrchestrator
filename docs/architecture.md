@@ -129,7 +129,8 @@ Supported workers:
   `CPUExecutionProvider`, and records output count and output shapes.
 - `tensorrt`: validates `engine_path`, imports TensorRT lazily, deserializes the
   configured engine, creates an execution context, and caches both by engine
-  path. Input/output binding and inference execution are intentionally not
+  path. It also records TensorRT name-based input/output tensor metadata.
+  Input/output buffer binding and inference execution are intentionally not
   implemented yet.
 
 The fixed worker interface lets the TensorRT path evolve without changing the

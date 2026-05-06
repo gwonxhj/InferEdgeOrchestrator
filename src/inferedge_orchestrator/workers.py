@@ -113,8 +113,8 @@ class TensorRtWorker:
     def run(self, task: TaskConfig, frame: FrameEnvelope) -> WorkerResult:
         self._context_for(task)
         raise NotImplementedError(
-            "tensorrt worker created an execution context, but input/output "
-            "binding and inference execution are not implemented yet"
+            "tensorrt worker inspected engine tensor metadata, but input/output "
+            "buffer binding and inference execution are not implemented yet"
         )
 
     def _context_for(self, task: TaskConfig) -> object:
@@ -129,6 +129,9 @@ class TensorRtWorker:
                 )
             self._contexts[engine_path] = context
             self._engine_metadata[engine_path]["execution_context_created"] = True
+            self._engine_metadata[engine_path]["io_tensors"] = (
+                self._inspect_io_tensors(engine)
+            )
         return self._contexts[engine_path]
 
     def _engine_for(self, task: TaskConfig) -> object:
@@ -164,6 +167,36 @@ class TensorRtWorker:
             )
         return str(engine_path)
 
+    def _inspect_io_tensors(self, engine: object) -> list[dict[str, object]]:
+        if not hasattr(engine, "num_io_tensors"):
+            raise RuntimeError(
+                "tensorrt worker requires TensorRT name-based tensor APIs "
+                "(num_io_tensors/get_tensor_name)."
+            )
+
+        tensor_count = int(engine.num_io_tensors)
+        tensors: list[dict[str, object]] = []
+        for index in range(tensor_count):
+            name = str(engine.get_tensor_name(index))
+            mode = engine.get_tensor_mode(name)
+            dtype = engine.get_tensor_dtype(name)
+            shape = engine.get_tensor_shape(name)
+            tensors.append(
+                {
+                    "index": index,
+                    "name": name,
+                    "mode": _short_enum_name(mode),
+                    "dtype": _short_enum_name(dtype),
+                    "shape": [int(dimension) for dimension in shape],
+                }
+            )
+
+        if not any(tensor["mode"] == "INPUT" for tensor in tensors):
+            raise RuntimeError("tensorrt worker found no input tensors in engine")
+        if not any(tensor["mode"] == "OUTPUT" for tensor in tensors):
+            raise RuntimeError("tensorrt worker found no output tensors in engine")
+        return tensors
+
     def _import_tensorrt(self) -> object:
         try:
             import tensorrt as trt
@@ -195,3 +228,8 @@ def _concrete_shape(shape: list[object]) -> tuple[int, ...]:
         else:
             concrete.append(1)
     return tuple(concrete)
+
+
+def _short_enum_name(value: object) -> str:
+    text = str(value)
+    return text.rsplit(".", 1)[-1]

@@ -17,6 +17,6 @@ def test_jetson_tensorrt_smoke_script_contract() -> None:
     assert "CAPTURE_TEGRASTATS" in text
     assert "/usr/src/tensorrt/bin/trtexec" in text
     assert "/usr/local/cuda/bin/nvcc" in text
-    assert "created an execution context" in text
-    assert "input/output binding" in text
+    assert "inspected engine tensor metadata" in text
+    assert "input/output buffer binding" in text
     assert "inference execution are not implemented yet" in text
