@@ -13,6 +13,8 @@ Language: [English](CHANGELOG.md) | 한국어
 - TensorRT/GPU backend 설계 및 config schema 계획 문서를 추가했다.
   - `docs/tensorrt_backend.md`
   - `docs/tensorrt_backend.ko.md`
+- 계획 중인 TensorRT/GPU backend path를 위한 2026-05-06 Jetson dependency
+  survey 결과를 기록했다.
 
 ### Changed
 

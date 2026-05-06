@@ -13,6 +13,8 @@ helps reviewers understand the project state.
 - Added TensorRT/GPU backend design and config schema planning documents:
   - `docs/tensorrt_backend.md`
   - `docs/tensorrt_backend.ko.md`
+- Recorded the 2026-05-06 Jetson dependency survey for the planned
+  TensorRT/GPU backend path.
 
 ### Changed
 
