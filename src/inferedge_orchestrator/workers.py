@@ -22,6 +22,17 @@ class Worker(Protocol):
         ...
 
 
+@dataclass(frozen=True)
+class TensorRtBuffer:
+    name: str
+    mode: str
+    dtype: str
+    shape: tuple[int, ...]
+    host: object
+    device: object
+    nbytes: int
+
+
 class DummyWorker:
     def __init__(self, *, sleep: bool = False) -> None:
         self._sleep = sleep
@@ -108,14 +119,39 @@ class TensorRtWorker:
     def __init__(self) -> None:
         self._engines: dict[str, object] = {}
         self._contexts: dict[str, object] = {}
+        self._buffers: dict[str, list[TensorRtBuffer]] = {}
         self._engine_metadata: dict[str, dict[str, object]] = {}
 
     def run(self, task: TaskConfig, frame: FrameEnvelope) -> WorkerResult:
-        self._context_for(task)
+        self._buffers_for(task)
         raise NotImplementedError(
-            "tensorrt worker inspected engine tensor metadata, but input/output "
-            "buffer binding and inference execution are not implemented yet"
+            "tensorrt worker bound input/output buffers, but inference execution "
+            "is not implemented yet"
         )
+
+    def _buffers_for(self, task: TaskConfig) -> list[TensorRtBuffer]:
+        engine_path = self._resolved_engine_path(task)
+        if engine_path not in self._buffers:
+            context = self._context_for(task)
+            metadata = self._engine_metadata[engine_path]
+            buffers = self._allocate_and_bind_buffers(
+                task,
+                context,
+                metadata["io_tensors"],
+            )
+            self._buffers[engine_path] = buffers
+            metadata["buffers_bound"] = True
+            metadata["io_buffers"] = [
+                {
+                    "name": buffer.name,
+                    "mode": buffer.mode,
+                    "dtype": buffer.dtype,
+                    "shape": list(buffer.shape),
+                    "nbytes": buffer.nbytes,
+                }
+                for buffer in buffers
+            ]
+        return self._buffers[engine_path]
 
     def _context_for(self, task: TaskConfig) -> object:
         engine_path = self._resolved_engine_path(task)
@@ -154,6 +190,7 @@ class TensorRtWorker:
                 "engine_deserialized": True,
                 "engine_size_bytes": len(engine_bytes),
                 "execution_context_created": False,
+                "buffers_bound": False,
             }
         return self._engines[resolved_engine_path]
 
@@ -197,6 +234,62 @@ class TensorRtWorker:
             raise RuntimeError("tensorrt worker found no output tensors in engine")
         return tensors
 
+    def _allocate_and_bind_buffers(
+        self,
+        task: TaskConfig,
+        context: object,
+        tensors: object,
+    ) -> list[TensorRtBuffer]:
+        try:
+            import numpy as np
+        except ModuleNotFoundError as exc:
+            raise RuntimeError(
+                "tensorrt worker requires numpy for TensorRT buffer allocation."
+            ) from exc
+
+        try:
+            import pycuda.autoinit  # noqa: F401
+            import pycuda.driver as cuda
+        except ImportError as exc:
+            raise RuntimeError(
+                "tensorrt worker requires PyCUDA for TensorRT buffer allocation. "
+                "Install PyCUDA on the target Jetson or run with a different worker."
+            ) from exc
+
+        if not hasattr(context, "set_tensor_address"):
+            raise RuntimeError(
+                "tensorrt worker requires TensorRT context.set_tensor_address."
+            )
+
+        buffers: list[TensorRtBuffer] = []
+        for tensor in tensors:
+            if not isinstance(tensor, dict):
+                raise RuntimeError(f"{task.name}: invalid TensorRT tensor metadata")
+            name = str(tensor["name"])
+            mode = str(tensor["mode"])
+            dtype_label = str(tensor["dtype"])
+            shape = tuple(int(dimension) for dimension in tensor["shape"])
+            dtype = _numpy_dtype_for(dtype_label, np)
+            host = np.zeros(shape, dtype=dtype)
+            nbytes = int(host.nbytes)
+            device = cuda.mem_alloc(nbytes)
+            if not context.set_tensor_address(name, int(device)):
+                raise RuntimeError(
+                    f"{task.name}: TensorRT failed to bind tensor address: {name}"
+                )
+            buffers.append(
+                TensorRtBuffer(
+                    name=name,
+                    mode=mode,
+                    dtype=dtype_label,
+                    shape=shape,
+                    host=host,
+                    device=device,
+                    nbytes=nbytes,
+                )
+            )
+        return buffers
+
     def _import_tensorrt(self) -> object:
         try:
             import tensorrt as trt
@@ -233,3 +326,17 @@ def _concrete_shape(shape: list[object]) -> tuple[int, ...]:
 def _short_enum_name(value: object) -> str:
     text = str(value)
     return text.rsplit(".", 1)[-1]
+
+
+def _numpy_dtype_for(dtype: str, np: object) -> object:
+    dtype_map = {
+        "FLOAT": np.float32,
+        "HALF": np.float16,
+        "INT32": np.int32,
+        "INT8": np.int8,
+        "BOOL": np.bool_,
+    }
+    try:
+        return dtype_map[dtype]
+    except KeyError as exc:
+        raise RuntimeError(f"unsupported TensorRT tensor dtype: {dtype}") from exc

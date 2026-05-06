@@ -3,13 +3,13 @@
 Language: English | [한국어](tensorrt_backend.ko.md)
 
 Status: schema, TensorRT engine deserialization, execution context creation,
-tensor metadata inspection, and Jetson guard-smoke validation. The config
-schema, TensorRT worker deserialization/context/metadata path, and
+tensor metadata inspection, host/device buffer allocation, tensor address
+binding, and Jetson guard-smoke validation. The config schema, TensorRT worker
+deserialization/context/metadata/buffer path, and
 `scripts/smoke_jetson_tensorrt.sh` are present. Jetson guard smoke reached
 `PASS_GUARD_STUB` with a local `models/identity_fp16.plan` engine, but this
-document does not claim that TensorRT input/output buffer binding, inference
-execution, GPU provider execution, or multi-task TensorRT scheduling evidence is
-implemented yet.
+document does not claim that TensorRT inference execution, GPU provider
+execution, or multi-task TensorRT scheduling evidence is implemented yet.
 
 InferEdgeOrchestrator already proves the scheduler, bounded queue, load
 shedding, telemetry, ONNX Runtime worker path, and Jetson smoke path. The
@@ -65,9 +65,9 @@ task, and returning latency/result metadata.
 The config schema accepts a `tensorrt` worker selection and preserves backward
 compatibility for existing `dummy` and `onnxruntime` configs. The worker layer
 can deserialize a configured TensorRT engine, create an execution context,
-record name-based input/output tensor metadata, and cache runtime objects by
-engine path, but TensorRT input/output buffer binding and inference execution
-are still not implemented.
+record name-based input/output tensor metadata, allocate and bind input/output
+buffers, and cache runtime objects by engine path, but TensorRT inference
+execution is still not implemented.
 
 Task fields:
 
@@ -125,8 +125,8 @@ Schema-valid example:
 This example validates as config schema. Runtime execution with
 `worker="tensorrt"` currently checks TensorRT prerequisites, deserializes the
 configured engine, creates an execution context, records input/output tensor
-metadata, and then raises a clear not-implemented error until input/output
-buffer binding and inference execution are added.
+metadata, allocates host/device buffers, binds tensor addresses, and then raises
+a clear not-implemented error until inference execution is added.
 
 ## Current Validation Rules
 
@@ -152,13 +152,17 @@ Worker guard behavior currently enforces:
   context.
 - `worker="tensorrt"` fails clearly when the engine exposes no input or output
   tensors through TensorRT name-based tensor APIs.
+- `worker="tensorrt"` fails clearly when PyCUDA is unavailable for TensorRT
+  host/device buffer allocation.
+- `worker="tensorrt"` fails clearly when TensorRT cannot bind tensor addresses
+  through `context.set_tensor_address`.
 - `worker="tensorrt"` caches deserialized engines and execution contexts by
   engine path.
 - `scripts/smoke_jetson_tensorrt.sh` can be run on Jetson to confirm dependency
   inventory capture, config validation, TensorRT engine deserialization,
-  execution context creation, tensor metadata inspection, and the current
-  expected not-implemented boundary for input/output buffer binding and
-  inference execution.
+  execution context creation, tensor metadata inspection, host/device buffer
+  allocation, tensor address binding, and the current expected not-implemented
+  boundary for TensorRT inference execution.
 
 Validation rules still to add with real TensorRT execution:
 
@@ -194,14 +198,14 @@ Expected current behavior:
 - TensorRT Python import must succeed.
 - `ENGINE_PATH` must point to a local engine file.
 - The worker must reach the current clear not-implemented boundary for
-  input/output buffer binding and inference execution after engine
-  deserialization, execution context creation, and tensor metadata inspection
-  succeed.
+  TensorRT inference execution after engine deserialization, execution context
+  creation, tensor metadata inspection, host/device buffer allocation, and
+  tensor address binding succeed.
 - The script writes local reports under ignored `reports/`.
 
 This is not TensorRT inference evidence. It proves that the Jetson environment,
-engine artifact, deserialization path, execution context path, and tensor
-metadata path are ready for the next implementation step.
+engine artifact, deserialization path, execution context path, tensor metadata
+path, and buffer-binding path are ready for the next implementation step.
 
 To create the small local engine used by this smoke path, see
 [`docs/tensorrt_engine_build.md`](tensorrt_engine_build.md).

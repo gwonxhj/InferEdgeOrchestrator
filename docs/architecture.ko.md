@@ -128,8 +128,9 @@ class Worker(Protocol):
   뒤 output count와 output shape를 기록한다.
 - `tensorrt`: `engine_path`를 검증하고, TensorRT를 lazy import하며, 설정된 engine을
   deserialize하고 execution context를 생성한 뒤 둘 다 engine path 기준으로 cache한다.
-  또한 TensorRT name-based input/output tensor metadata를 기록한다.
-  Input/output buffer binding과 inference execution은 아직 의도적으로 구현하지 않았다.
+  또한 TensorRT name-based input/output tensor metadata를 기록하고, host/device
+  buffer를 할당하며, TensorRT tensor address를 bind한 뒤 buffer를 engine path
+  기준으로 cache한다. Inference execution은 아직 의도적으로 구현하지 않았다.
 
 고정된 worker interface 덕분에 TensorRT path를 확장하더라도 scheduler, queue,
 telemetry contract를 바꾸지 않아도 된다.
