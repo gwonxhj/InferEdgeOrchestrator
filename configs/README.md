@@ -19,6 +19,7 @@ Tracked evidence samples live under
 | [`phase3_overload.json`](phase3_overload.json) | Compare FIFO baseline with scheduler/load-shedding behavior under synthetic overload. | Phase 3: Overload Scenario | `python3 -m inferedge_orchestrator compare-overload --config configs/phase3_overload.json --output reports/phase3_overload.json --frames 20` | `reports/phase3_overload.json` comparison with protected-task latency and low-priority drops. | This is policy evidence from a controlled synthetic scenario, not a production benchmark. |
 | [`phase4_jetson_smoke.json`](phase4_jetson_smoke.json) | Run the dummy scheduler smoke path on Jetson Orin Nano. | Phase 4: Jetson Smoke Test | `CAPTURE_TEGRASTATS=1 scripts/smoke_jetson_dummy.sh` | `reports/jetson_smoke_dummy.json` plus `reports/jetson_validation.md`. | Uses `dummy` workers; see [`docs/jetson_smoke_test.md`](../docs/jetson_smoke_test.md). |
 | [`from_inferedge.json`](from_inferedge.json) | Tracked sample output generated from an InferEdge `result.json` latency signal. | Phase 5: InferEdge Handoff | `python3 -m inferedge_orchestrator from-inferedge --result examples/inferedge_result_sample.json --output configs/from_inferedge.json --task-name detector --model-path models/detector.onnx --priority 100 --target-fps 15 --queue-size 4` | `configs/from_inferedge.json` with recommended `latency_budget_ms=64.0`. | Generated artifact, not hand-authored policy. It keeps the InferEdge boundary file-based. |
+| [`jetson_tensorrt_smoke.json`](jetson_tensorrt_smoke.json) | Exercise the reserved TensorRT worker guard path on Jetson. | TensorRT/GPU backend guard | `ENGINE_PATH=models/detector.plan scripts/smoke_jetson_tensorrt.sh` | `reports/jetson_tensorrt_guard_validation.md` plus dependency inventory under `reports/`. | Requires TensorRT Python bindings and a device-local engine file. This is a guard smoke draft, not TensorRT inference evidence. |
 
 ## Notes
 
@@ -26,9 +27,12 @@ Tracked evidence samples live under
   without loading model files.
 - `onnxruntime` worker configs require optional ONNX dependencies and a model
   file.
-- TensorRT/GPU backend execution is not implemented yet. The config schema
-  reserves `worker="tensorrt"`, `engine_path`, and `worker_options`, and the
-  worker layer now has an import/file guard stub for that path. See
+- TensorRT/GPU backend inference execution is not implemented yet. The config
+  schema reserves `worker="tensorrt"`, `engine_path`, and `worker_options`; the
+  worker layer has an import/file guard stub; and
+  [`scripts/smoke_jetson_tensorrt.sh`](../scripts/smoke_jetson_tensorrt.sh)
+  records Jetson dependency and guard-boundary evidence under ignored
+  `reports/`. See
   [`docs/tensorrt_backend.md`](../docs/tensorrt_backend.md).
 - `reports/` outputs are intentionally ignored. Commit curated samples under
   `examples/telemetry/` when reviewer-facing evidence is needed.

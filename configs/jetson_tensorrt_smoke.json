@@ -1,0 +1,26 @@
+{
+  "run": {
+    "name": "jetson_tensorrt_guard_smoke",
+    "input_source": "dummy",
+    "overload_backlog_threshold": 2
+  },
+  "tasks": [
+    {
+      "name": "detector_trt",
+      "model_path": "models/detector.onnx",
+      "engine_path": "models/detector.plan",
+      "priority": 100,
+      "target_fps": 15,
+      "latency_budget_ms": 80,
+      "queue_size": 2,
+      "drop_policy": "drop_oldest",
+      "worker": "tensorrt",
+      "worker_options": {
+        "precision": "fp16",
+        "warmup_runs": 0,
+        "device_id": 0,
+        "allow_engine_build": false
+      }
+    }
+  ]
+}

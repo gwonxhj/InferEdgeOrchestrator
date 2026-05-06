@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 from inferedge_orchestrator.config import OrchestratorConfig, TaskConfig
@@ -130,3 +133,18 @@ def test_worker_option_allow_engine_build_must_be_boolean() -> None:
                 "worker_options": {"allow_engine_build": "false"},
             }
         )
+
+
+def test_jetson_tensorrt_smoke_config_matches_reserved_schema() -> None:
+    config_path = Path("configs/jetson_tensorrt_smoke.json")
+    config = OrchestratorConfig.from_dict(
+        json.loads(config_path.read_text(encoding="utf-8"))
+    )
+
+    assert config.name == "jetson_tensorrt_guard_smoke"
+    assert len(config.tasks) == 1
+    task = config.tasks[0]
+    assert task.worker == "tensorrt"
+    assert task.engine_path == "models/detector.plan"
+    assert task.worker_options is not None
+    assert task.worker_options["allow_engine_build"] is False
