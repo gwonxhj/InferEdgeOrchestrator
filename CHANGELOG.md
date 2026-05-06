@@ -37,6 +37,9 @@ helps reviewers understand the project state.
 - Implemented TensorRT execution context creation and engine-path context
   caching in `TensorRtWorker`; input/output binding and inference execution
   remain intentionally not implemented.
+- Added TensorRT name-based input/output tensor metadata inspection to
+  `TensorRtWorker`; buffer binding and inference execution remain intentionally
+  not implemented.
 
 ### Changed
 
@@ -51,6 +54,9 @@ helps reviewers understand the project state.
 - Updated TensorRT smoke expectations and docs so `PASS_GUARD_STUB` now means
   engine deserialization and execution context creation succeeded, while
   input/output binding and inference execution remain the boundary.
+- Updated TensorRT smoke expectations and docs so `PASS_GUARD_STUB` now means
+  tensor metadata inspection also succeeded, while input/output buffer binding
+  and inference execution remain the boundary.
 
 ## v0.1.1 - 2026-05-06
 
