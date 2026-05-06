@@ -79,6 +79,19 @@ Generator contract:
 - Generated ONNX files and future TensorRT engines under `models/generated/`
   are ignored by git.
 
+Jetson build contract:
+
+- Script: `scripts/build_jetson_tensorrt_diverse_engines.sh`
+- Build target: Jetson-local FP16 TensorRT engines.
+- Detector engine: `models/generated/detector_tiny_fp16.plan`
+- Classifier engine: `models/generated/classifier_tiny_fp16.plan`
+- Build logs: `reports/trtexec_detector_tiny_fp16_build.log` and
+  `reports/trtexec_classifier_tiny_fp16_build.log`
+- Validation note: `reports/jetson_tensorrt_diverse_engine_build.md`
+- Success marker: `PASS_TENSORRT_DIVERSE_ENGINE_BUILD`
+- This is a build-only step. It does not claim scheduler behavior or TensorRT
+  throughput.
+
 Why synthetic first:
 
 - License clarity: generated source models are repository-owned test fixtures,

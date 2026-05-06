@@ -214,3 +214,27 @@ multi-task TensorRT work:
 
 Keep the project framing stable: TensorRT support is backend coverage for
 runtime operation control, not a conversion pipeline or benchmark suite.
+
+## Diverse Engine Build Draft
+
+The diversified TensorRT contention milestone uses two generated ONNX source
+models rather than external downloads. The build-only helper is:
+
+```bash
+scripts/build_jetson_tensorrt_diverse_engines.sh
+```
+
+Default outputs:
+
+| Artifact | Path | Git policy |
+| --- | --- | --- |
+| Detector-like ONNX | `models/generated/detector_tiny.onnx` | Do not commit. |
+| Classifier-like ONNX | `models/generated/classifier_tiny.onnx` | Do not commit. |
+| Detector-like TensorRT engine | `models/generated/detector_tiny_fp16.plan` | Do not commit. |
+| Classifier-like TensorRT engine | `models/generated/classifier_tiny_fp16.plan` | Do not commit. |
+| Build note | `reports/jetson_tensorrt_diverse_engine_build.md` | Do not commit raw reports. |
+
+The script writes `PASS_TENSORRT_DIVERSE_ENGINE_BUILD` only after both ONNX
+files and both non-empty FP16 TensorRT engines exist. This is still a build
+contract for a future contention smoke, not scheduler evidence and not a
+TensorRT throughput claim.
