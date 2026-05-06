@@ -97,6 +97,8 @@ Jetson guard contract:
 - Success marker: `PASS_TENSORRT_DIVERSE_GUARD`
 - 이 단계는 generated engine 각각의 individual TensorRtWorker execution을 검증한다.
   Scheduler/load-shedding contention evidence는 아니다.
+- Jetson result: 2026-05-06 `nano01`에서 확인했다. 두 generated engine 모두
+  `TensorRtWorker`를 통해 TensorRT backend metadata와 output preview를 반환했다.
 
 Synthetic을 먼저 선택하는 이유:
 
