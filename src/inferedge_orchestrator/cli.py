@@ -57,6 +57,7 @@ def build_parser() -> argparse.ArgumentParser:
     inferedge_parser.add_argument("--queue-size", type=int, default=2)
     inferedge_parser.add_argument("--drop-policy", default="drop_oldest")
     inferedge_parser.add_argument("--worker", default="onnxruntime")
+    inferedge_parser.add_argument("--engine-path")
     inferedge_parser.add_argument("--budget-multiplier", type=float, default=1.5)
     inferedge_parser.set_defaults(func=_from_inferedge)
 
@@ -123,6 +124,7 @@ def _from_inferedge(args: argparse.Namespace) -> int:
         queue_size=args.queue_size,
         drop_policy=args.drop_policy,
         worker=args.worker,
+        engine_path=args.engine_path,
         budget_multiplier=args.budget_multiplier,
     )
     latency_budget = config["tasks"][0]["latency_budget_ms"]

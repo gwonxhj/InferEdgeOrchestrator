@@ -5,6 +5,8 @@ import math
 from pathlib import Path
 from typing import Any
 
+from inferedge_orchestrator.config import OrchestratorConfig
+
 
 LATENCY_KEYS = (
     "expected_latency_ms",
@@ -56,6 +58,8 @@ def build_config_from_inferedge_result(
     queue_size: int,
     drop_policy: str = "drop_oldest",
     worker: str = "onnxruntime",
+    engine_path: str | None = None,
+    worker_options: dict[str, Any] | None = None,
     budget_multiplier: float = 1.5,
 ) -> dict[str, Any]:
     expected_latency_ms = extract_expected_latency_ms(result)
@@ -63,7 +67,22 @@ def build_config_from_inferedge_result(
         expected_latency_ms,
         multiplier=budget_multiplier,
     )
-    return {
+    task: dict[str, Any] = {
+        "name": task_name,
+        "model_path": model_path,
+        "priority": priority,
+        "target_fps": target_fps,
+        "latency_budget_ms": latency_budget_ms,
+        "queue_size": queue_size,
+        "drop_policy": drop_policy,
+        "worker": worker,
+    }
+    if engine_path is not None:
+        task["engine_path"] = engine_path
+    if worker_options is not None:
+        task["worker_options"] = worker_options
+
+    config = {
         "run": {
             "name": "from_inferedge_result",
             "input_source": "dummy",
@@ -76,19 +95,10 @@ def build_config_from_inferedge_result(
                 ),
             },
         },
-        "tasks": [
-            {
-                "name": task_name,
-                "model_path": model_path,
-                "priority": priority,
-                "target_fps": target_fps,
-                "latency_budget_ms": latency_budget_ms,
-                "queue_size": queue_size,
-                "drop_policy": drop_policy,
-                "worker": worker,
-            }
-        ],
+        "tasks": [task],
     }
+    OrchestratorConfig.from_dict(config)
+    return config
 
 
 def write_config_from_inferedge_result(

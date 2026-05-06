@@ -15,6 +15,12 @@ helps reviewers understand the project state.
   - `docs/tensorrt_backend.ko.md`
 - Recorded the 2026-05-06 Jetson dependency survey for the planned
   TensorRT/GPU backend path.
+- Added config schema support for reserved TensorRT fields:
+  - `worker="tensorrt"`
+  - `engine_path`
+  - `worker_options`
+- Validated InferEdge handoff generated configs before writing and added
+  `--engine-path` for reserved TensorRT schema output.
 
 ### Changed
 

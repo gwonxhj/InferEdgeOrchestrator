@@ -8,7 +8,7 @@ from typing import Any, Iterable
 
 DROP_POLICIES = {"drop_oldest", "drop_newest", "drop_low_priority"}
 INPUT_SOURCES = {"dummy", "image", "video"}
-WORKERS = {"dummy", "onnxruntime"}
+WORKERS = {"dummy", "onnxruntime", "tensorrt"}
 
 
 @dataclass(frozen=True)
@@ -22,9 +22,14 @@ class TaskConfig:
     drop_policy: str = "drop_oldest"
     worker: str = "dummy"
     simulated_latency_ms: float = 1.0
+    engine_path: str | None = None
+    worker_options: dict[str, Any] | None = None
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "TaskConfig":
+        worker_options = value.get("worker_options")
+        if worker_options is not None and not isinstance(worker_options, dict):
+            raise ValueError("worker_options must be a mapping when provided")
         task = cls(
             name=str(value["name"]),
             model_path=str(value.get("model_path", "")),
@@ -35,6 +40,12 @@ class TaskConfig:
             drop_policy=str(value.get("drop_policy", "drop_oldest")),
             worker=str(value.get("worker", "dummy")),
             simulated_latency_ms=float(value.get("simulated_latency_ms", 1.0)),
+            engine_path=(
+                None
+                if value.get("engine_path") is None
+                else str(value.get("engine_path"))
+            ),
+            worker_options=worker_options,
         )
         task.validate()
         return task
@@ -56,6 +67,24 @@ class TaskConfig:
             raise ValueError(f"{self.name}: unsupported worker {self.worker!r}")
         if self.simulated_latency_ms < 0:
             raise ValueError(f"{self.name}: simulated_latency_ms must be >= 0")
+        if self.engine_path is not None and not self.engine_path:
+            raise ValueError(f"{self.name}: engine_path must not be empty when provided")
+        if self.worker == "tensorrt" and not self.engine_path:
+            raise ValueError(f"{self.name}: tensorrt worker requires engine_path")
+        options = self.worker_options or {}
+        allow_engine_build = options.get("allow_engine_build")
+        if allow_engine_build is not None and not isinstance(allow_engine_build, bool):
+            raise ValueError(
+                f"{self.name}: worker_options.allow_engine_build must be a boolean"
+            )
+        providers = options.get("providers")
+        if providers is not None:
+            if not isinstance(providers, list) or not all(
+                isinstance(provider, str) and provider for provider in providers
+            ):
+                raise ValueError(
+                    f"{self.name}: worker_options.providers must be a list of strings"
+                )
 
 
 @dataclass(frozen=True)

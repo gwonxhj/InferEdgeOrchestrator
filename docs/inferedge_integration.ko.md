@@ -37,6 +37,11 @@ ceil(expected_latency_ms * budget_multiplier)
 
 기본 `budget_multiplier`는 `1.5`다.
 
+생성 config는 파일로 쓰기 전에 validation을 통과해야 한다. 예약된 TensorRT schema
+path를 사용할 때는 `--worker tensorrt`와 `--engine-path`를 함께 전달해야
+Orchestrator validation에서 실패하는 config를 만들지 않는다. 이 helper가
+TensorRT 실행을 구현하는 것은 아니다.
+
 ## Boundary Rule
 
 이 프로젝트에서 InferEdge 내부 모듈을 import하지 않는다. 관계는 artifact

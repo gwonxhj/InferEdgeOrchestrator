@@ -112,6 +112,10 @@ class WorkerPool:
         }
 
     def run(self, task: TaskConfig, frame: FrameEnvelope) -> WorkerResult:
+        if task.worker not in self._workers:
+            raise NotImplementedError(
+                f"{task.worker!r} worker is configured but not implemented yet"
+            )
         return self._workers[task.worker].run(task, frame)
 
 
