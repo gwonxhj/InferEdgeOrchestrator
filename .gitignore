@@ -4,6 +4,10 @@ __pycache__/
 *.egg-info/
 reports/*.json
 reports/*.log
+reports/*.md
+reports/*.txt
 reports/jetson_validation.md
 reports/jetson_onnx_validation.md
 models/*.onnx
+models/*.plan
+models/*.engine

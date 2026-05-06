@@ -112,6 +112,7 @@ boundary.
 | --- | --- | --- |
 | Jetson dummy smoke | `nano01` generated telemetry, resource snapshots, and low-priority drops: detector `20/0`, classifier `2/18` executed/dropped | `reports/jetson_smoke_dummy.json` |
 | Jetson ONNX Runtime smoke | `onnxruntime` worker executed identity ONNX on Jetson with `CPUExecutionProvider`, output shape `[1, 2]`, 13 `tegrastats` samples | `reports/jetson_onnx_smoke.json` |
+| Jetson TensorRT guard smoke | Built `models/identity_fp16.plan` from identity ONNX on Jetson and reached the expected TensorRT worker guard boundary: `PASS_GUARD_STUB` | `reports/jetson_tensorrt_guard_validation.md` |
 | Synthetic overload comparison | Detector p95 end-to-end latency improved from `782.0ms` FIFO baseline to `8.0ms` with scheduler + shedding; classifier dropped `16` low-priority frames | `reports/phase3_overload.json` |
 | InferEdge result handoff | Sample `expected_latency_ms=42.2` produced recommended `latency_budget_ms=64.0` without importing InferEdge internals | `configs/from_inferedge.json` |
 

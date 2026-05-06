@@ -23,6 +23,32 @@ The goal is narrow:
 
 This is still setup for backend development, not a benchmark.
 
+## Validated Guard Smoke: 2026-05-06
+
+This procedure was run on the surveyed Jetson Orin Nano target:
+
+| Field | Value |
+| --- | --- |
+| Device | `nano01` |
+| OS / L4T | `Ubuntu 22.04.5 LTS`, `L4T R36.4.7` |
+| Kernel | `Linux 5.15.148-tegra aarch64` |
+| Python | `3.10.12` from `~/miniconda3/envs/yolo_env/bin/python` |
+| TensorRT Python | `10.3.0` |
+| `trtexec` | TensorRT `v100300` at `/usr/src/tensorrt/bin/trtexec` |
+| ONNX model | `models/identity.onnx`, 104 bytes |
+| TensorRT engine | `models/identity_fp16.plan`, 8.2 KiB |
+| Guard smoke result | `PASS_GUARD_STUB` |
+
+The guard smoke reached the current expected worker boundary:
+
+```text
+NotImplementedError: tensorrt worker loaded the requested runtime prerequisites,
+but engine deserialization and inference execution are not implemented yet
+```
+
+This validates TensorRT dependency availability, engine creation, config
+validation, and the worker guard path. It is not TensorRT inference evidence.
+
 ## Artifact Policy
 
 Generated artifacts are local-only:
@@ -110,7 +136,7 @@ Build an FP16 engine with `trtexec`:
   --onnx="$MODEL_PATH" \
   --saveEngine="$ENGINE_PATH" \
   --fp16 \
-  --buildOnly \
+  --skipInference \
   --verbose \
   > "$BUILD_LOG" 2>&1
 ```
@@ -121,10 +147,14 @@ For an FP32-only build, remove `--fp16` and choose a different output name:
 "$TRTEXEC_BIN" \
   --onnx="$MODEL_PATH" \
   --saveEngine="models/identity_fp32.plan" \
-  --buildOnly \
+  --skipInference \
   --verbose \
   > "reports/trtexec_identity_fp32_build.log" 2>&1
 ```
+
+On the surveyed Jetson TensorRT 10.3.0 environment, `trtexec` accepts
+`--skipInference` for this build-only smoke path. Do not use `--buildOnly` on
+that device; it is not recognized by the installed `trtexec`.
 
 ## Step 4: Check Build Output
 

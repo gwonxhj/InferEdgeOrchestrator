@@ -30,11 +30,15 @@ Language: [English](CHANGELOG.md) | 한국어
 - Jetson에서 작은 ONNX model을 TensorRT engine으로 생성하는 절차 문서를 추가했다.
   - `docs/tensorrt_engine_build.md`
   - `docs/tensorrt_engine_build.ko.md`
+- Jetson TensorRT guard-smoke evidence를 기록했다. local identity ONNX에서 FP16
+  engine을 생성하고 `PASS_GUARD_STUB` worker-boundary validation을 확인했다.
 
 ### Changed
 
 - `README.md`의 문서 진입 link를 영어 문서가 main entry가 되도록 정리했다.
   한국어 mirror는 각 문서의 language selector에서 선택하는 흐름으로 유지한다.
+- survey된 Jetson TensorRT 10.3.0 환경에 맞춰 TensorRT engine build 절차를
+  `trtexec --skipInference` 사용으로 갱신했다.
 
 ## v0.1.1 - 2026-05-06
 
