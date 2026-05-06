@@ -107,26 +107,35 @@ class OnnxRuntimeWorker:
 class TensorRtWorker:
     def __init__(self) -> None:
         self._engines: dict[str, object] = {}
+        self._contexts: dict[str, object] = {}
         self._engine_metadata: dict[str, dict[str, object]] = {}
 
     def run(self, task: TaskConfig, frame: FrameEnvelope) -> WorkerResult:
-        self._engine_for(task)
+        self._context_for(task)
         raise NotImplementedError(
-            "tensorrt worker deserialized the configured engine, but inference "
-            "execution is not implemented yet"
+            "tensorrt worker created an execution context, but input/output "
+            "binding and inference execution are not implemented yet"
         )
 
+    def _context_for(self, task: TaskConfig) -> object:
+        engine_path = self._resolved_engine_path(task)
+        if engine_path not in self._contexts:
+            engine = self._engine_for(task)
+            context = engine.create_execution_context()
+            if context is None:
+                raise RuntimeError(
+                    f"{task.name}: TensorRT failed to create execution context: "
+                    f"{engine_path}"
+                )
+            self._contexts[engine_path] = context
+            self._engine_metadata[engine_path]["execution_context_created"] = True
+        return self._contexts[engine_path]
+
     def _engine_for(self, task: TaskConfig) -> object:
-        if not task.engine_path:
-            raise ValueError(f"{task.name}: tensorrt worker requires engine_path")
-        engine_path = Path(task.engine_path)
-        if not engine_path.exists():
-            raise FileNotFoundError(
-                f"{task.name}: TensorRT engine_path does not exist: {engine_path}"
-            )
-        resolved_engine_path = str(engine_path)
+        resolved_engine_path = self._resolved_engine_path(task)
         if resolved_engine_path not in self._engines:
             trt = self._import_tensorrt()
+            engine_path = Path(resolved_engine_path)
             engine_bytes = engine_path.read_bytes()
             logger = trt.Logger(getattr(trt.Logger, "WARNING", 1))
             runtime = trt.Runtime(logger)
@@ -141,8 +150,19 @@ class TensorRtWorker:
                 "tensorrt_version": trt.__version__,
                 "engine_deserialized": True,
                 "engine_size_bytes": len(engine_bytes),
+                "execution_context_created": False,
             }
         return self._engines[resolved_engine_path]
+
+    def _resolved_engine_path(self, task: TaskConfig) -> str:
+        if not task.engine_path:
+            raise ValueError(f"{task.name}: tensorrt worker requires engine_path")
+        engine_path = Path(task.engine_path)
+        if not engine_path.exists():
+            raise FileNotFoundError(
+                f"{task.name}: TensorRT engine_path does not exist: {engine_path}"
+            )
+        return str(engine_path)
 
     def _import_tensorrt(self) -> object:
         try:

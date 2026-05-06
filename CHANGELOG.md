@@ -34,6 +34,9 @@ helps reviewers understand the project state.
   engine creation and `PASS_GUARD_STUB` worker-boundary validation.
 - Implemented TensorRT engine deserialization and engine-path caching in
   `TensorRtWorker`; inference execution remains intentionally not implemented.
+- Implemented TensorRT execution context creation and engine-path context
+  caching in `TensorRtWorker`; input/output binding and inference execution
+  remain intentionally not implemented.
 
 ### Changed
 
@@ -45,6 +48,9 @@ helps reviewers understand the project state.
 - Updated TensorRT smoke expectations and docs so `PASS_GUARD_STUB` now means
   engine deserialization succeeded and inference execution is the remaining
   boundary.
+- Updated TensorRT smoke expectations and docs so `PASS_GUARD_STUB` now means
+  engine deserialization and execution context creation succeeded, while
+  input/output binding and inference execution remain the boundary.
 
 ## v0.1.1 - 2026-05-06
 

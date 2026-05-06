@@ -57,7 +57,11 @@ def test_tensorrt_worker_stub_fails_after_import_guard(tmp_path, monkeypatch) ->
     engine_path = tmp_path / "detector.plan"
     engine_path.write_bytes(b"serialized engine")
     task = _tensorrt_task(str(engine_path))
-    fake_engine = object()
+    fake_context = object()
+
+    class FakeEngine:
+        def create_execution_context(self) -> object:
+            return fake_context
 
     class FakeLogger:
         WARNING = 1
@@ -71,7 +75,7 @@ def test_tensorrt_worker_stub_fails_after_import_guard(tmp_path, monkeypatch) ->
 
         def deserialize_cuda_engine(self, engine_bytes: bytes) -> object:
             assert engine_bytes == b"serialized engine"
-            return fake_engine
+            return FakeEngine()
 
     monkeypatch.setitem(
         sys.modules,
@@ -79,7 +83,7 @@ def test_tensorrt_worker_stub_fails_after_import_guard(tmp_path, monkeypatch) ->
         types.SimpleNamespace(__version__="10.3.0", Logger=FakeLogger, Runtime=FakeRuntime),
     )
 
-    with pytest.raises(NotImplementedError, match="deserialized.*inference execution"):
+    with pytest.raises(NotImplementedError, match="execution context.*binding"):
         WorkerPool().run(task, _frame())
 
 
@@ -116,7 +120,12 @@ def test_tensorrt_worker_caches_deserialized_engines(tmp_path, monkeypatch) -> N
     engine_path = tmp_path / "detector.plan"
     engine_path.write_bytes(b"serialized engine")
     task = _tensorrt_task(str(engine_path))
-    calls = {"deserialize": 0}
+    calls = {"deserialize": 0, "context": 0}
+
+    class FakeEngine:
+        def create_execution_context(self) -> object:
+            calls["context"] += 1
+            return object()
 
     class FakeLogger:
         WARNING = 1
@@ -130,7 +139,7 @@ def test_tensorrt_worker_caches_deserialized_engines(tmp_path, monkeypatch) -> N
 
         def deserialize_cuda_engine(self, engine_bytes: bytes) -> object:
             calls["deserialize"] += 1
-            return object()
+            return FakeEngine()
 
     monkeypatch.setitem(
         sys.modules,
@@ -144,3 +153,38 @@ def test_tensorrt_worker_caches_deserialized_engines(tmp_path, monkeypatch) -> N
             worker.run(task, _frame())
 
     assert calls["deserialize"] == 1
+    assert calls["context"] == 1
+
+
+def test_tensorrt_worker_reports_context_creation_failure(
+    tmp_path, monkeypatch
+) -> None:
+    engine_path = tmp_path / "detector.plan"
+    engine_path.write_bytes(b"serialized engine")
+    task = _tensorrt_task(str(engine_path))
+
+    class FakeEngine:
+        def create_execution_context(self) -> None:
+            return None
+
+    class FakeLogger:
+        WARNING = 1
+
+        def __init__(self, severity: int) -> None:
+            self.severity = severity
+
+    class FakeRuntime:
+        def __init__(self, logger: FakeLogger) -> None:
+            self.logger = logger
+
+        def deserialize_cuda_engine(self, engine_bytes: bytes) -> object:
+            return FakeEngine()
+
+    monkeypatch.setitem(
+        sys.modules,
+        "tensorrt",
+        types.SimpleNamespace(__version__="10.3.0", Logger=FakeLogger, Runtime=FakeRuntime),
+    )
+
+    with pytest.raises(RuntimeError, match="failed to create execution context"):
+        TensorRtWorker().run(task, _frame())

@@ -128,13 +128,14 @@ Supported workers:
 - `onnxruntime`: loads ONNX models lazily, runs them with
   `CPUExecutionProvider`, and records output count and output shapes.
 - `tensorrt`: validates `engine_path`, imports TensorRT lazily, deserializes the
-  configured engine, and caches the deserialized engine. Inference execution is
-  intentionally not implemented yet.
+  configured engine, creates an execution context, and caches both by engine
+  path. Input/output binding and inference execution are intentionally not
+  implemented yet.
 
 The fixed worker interface lets the TensorRT path evolve without changing the
 scheduler, queue, or telemetry contracts.
 
-The TensorRT/GPU backend direction and current inference-execution boundary are
+The TensorRT/GPU backend direction and current binding/execution boundary are
 documented in [`docs/tensorrt_backend.md`](tensorrt_backend.md).
 
 ## Telemetry Schema Overview

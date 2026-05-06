@@ -34,6 +34,9 @@ Language: [English](CHANGELOG.md) | 한국어
   engine을 생성하고 `PASS_GUARD_STUB` worker-boundary validation을 확인했다.
 - `TensorRtWorker`에 TensorRT engine deserialization 및 engine-path cache를
   구현했다. Inference execution은 의도적으로 아직 구현하지 않았다.
+- `TensorRtWorker`에 TensorRT execution context creation 및 engine-path context
+  cache를 구현했다. Input/output binding과 inference execution은 의도적으로 아직
+  구현하지 않았다.
 
 ### Changed
 
@@ -43,6 +46,9 @@ Language: [English](CHANGELOG.md) | 한국어
   `trtexec --skipInference` 사용으로 갱신했다.
 - TensorRT smoke 기대값과 문서를 갱신해 `PASS_GUARD_STUB`가 engine
   deserialization 성공 후 inference execution만 남은 boundary를 의미하게 했다.
+- TensorRT smoke 기대값과 문서를 갱신해 `PASS_GUARD_STUB`가 engine
+  deserialization 및 execution context creation 성공 후 input/output binding과
+  inference execution만 남은 boundary를 의미하게 했다.
 
 ## v0.1.1 - 2026-05-06
 
