@@ -266,3 +266,26 @@ Raw build log는 local에만 남겼다.
 TensorRT CLI는 두 generated ONNX model 모두에 대해 `--skipInference` build-only run
 성공을 보고했다. 이는 계획한 diverse engine 2개를 target Jetson에서 생성할 수 있음을
 확인하지만, worker execution, scheduler behavior, throughput을 증명하지 않는다.
+
+## Diverse Engine Guard Smoke Draft
+
+두 diverse engine이 존재한 뒤 individual worker guard smoke를 실행한다.
+
+```bash
+scripts/smoke_jetson_tensorrt_diverse_engines.sh
+```
+
+이 script는 `detector_tiny_fp16.plan`과 `classifier_tiny_fp16.plan`을 각각
+`TensorRtWorker`로 한 번씩 실행한다. 각 engine에 대해 engine deserialization,
+execution context creation, tensor metadata inspection, host/device buffer allocation
+and binding, TensorRT inference execution, backend result metadata를 검증한다.
+
+Expected local-only outputs:
+
+| Artifact | Path | Git policy |
+| --- | --- | --- |
+| Guard result JSON | `reports/jetson_tensorrt_diverse_guard_results.json` | commit하지 않는다. |
+| Guard validation note | `reports/jetson_tensorrt_diverse_guard_validation.md` | raw report는 commit하지 않는다. |
+
+script가 통과하면 `PASS_TENSORRT_DIVERSE_GUARD`를 보고한다. 이는 worker guard
+evidence이며 scheduler/load-shedding contention evidence는 아니다.

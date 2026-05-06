@@ -67,6 +67,23 @@ def test_jetson_tensorrt_diverse_engine_build_script_contract() -> None:
     assert "does not claim scheduler behavior or TensorRT throughput" in text
 
 
+def test_jetson_tensorrt_diverse_guard_script_contract() -> None:
+    script = Path("scripts/smoke_jetson_tensorrt_diverse_engines.sh")
+    text = script.read_text(encoding="utf-8")
+    mode = script.stat().st_mode
+
+    assert mode & stat.S_IXUSR, "TensorRT diverse guard script should be executable"
+    assert "detector_tiny_fp16.plan" in text
+    assert "classifier_tiny_fp16.plan" in text
+    assert "detector_input" in text
+    assert "detector_scores" in text
+    assert "classifier_input" in text
+    assert "classifier_logits" in text
+    assert "TensorRtWorker" in text
+    assert "PASS_TENSORRT_DIVERSE_GUARD" in text
+    assert "not scheduler/load-shedding contention" in text
+
+
 def test_tensorrt_diverse_onnx_generator_contract(tmp_path) -> None:
     output_dir = tmp_path / "generated"
 

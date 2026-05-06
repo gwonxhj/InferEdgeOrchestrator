@@ -65,6 +65,9 @@ helps reviewers understand the project state.
   generated ONNX pair into local FP16 TensorRT engines on Jetson.
 - Recorded Jetson build-only evidence for the generated TensorRT diversity
   engine pair.
+- Added `scripts/smoke_jetson_tensorrt_diverse_engines.sh` to guard each
+  generated TensorRT diversity engine through individual TensorRtWorker
+  execution.
 
 ### Changed
 

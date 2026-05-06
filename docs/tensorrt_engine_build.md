@@ -269,3 +269,27 @@ The TensorRT CLI reported successful build-only runs with `--skipInference` for
 both generated ONNX models. This confirms that the two planned diverse engines
 can be generated on the target Jetson, but it still does not prove worker
 execution, scheduler behavior, or throughput.
+
+## Diverse Engine Guard Smoke Draft
+
+After the two diverse engines exist, run the individual worker guard smoke:
+
+```bash
+scripts/smoke_jetson_tensorrt_diverse_engines.sh
+```
+
+This script runs `detector_tiny_fp16.plan` and `classifier_tiny_fp16.plan`
+through `TensorRtWorker` one at a time. It validates engine deserialization,
+execution context creation, tensor metadata inspection, host/device buffer
+allocation and binding, TensorRT inference execution, and backend result
+metadata for each engine.
+
+Expected local-only outputs:
+
+| Artifact | Path | Git policy |
+| --- | --- | --- |
+| Guard result JSON | `reports/jetson_tensorrt_diverse_guard_results.json` | Do not commit. |
+| Guard validation note | `reports/jetson_tensorrt_diverse_guard_validation.md` | Do not commit raw reports. |
+
+Passing this script reports `PASS_TENSORRT_DIVERSE_GUARD`. It is worker guard
+evidence, not scheduler/load-shedding contention evidence.

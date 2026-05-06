@@ -63,6 +63,8 @@ Language: [English](CHANGELOG.md) | 한국어
   `scripts/build_jetson_tensorrt_diverse_engines.sh`를 추가했다.
 - 생성된 TensorRT diversity engine pair에 대한 Jetson build-only evidence를
   기록했다.
+- 생성된 TensorRT diversity engine 각각을 individual TensorRtWorker execution으로
+  검증하는 `scripts/smoke_jetson_tensorrt_diverse_engines.sh`를 추가했다.
 
 ### Changed
 
