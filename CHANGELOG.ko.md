@@ -61,6 +61,8 @@ Language: [English](CHANGELOG.md) | 한국어
   `scripts/create_tensorrt_diverse_onnx.py`를 추가했다.
 - 생성된 ONNX pair를 Jetson에서 local FP16 TensorRT engine으로 build하는
   `scripts/build_jetson_tensorrt_diverse_engines.sh`를 추가했다.
+- 생성된 TensorRT diversity engine pair에 대한 Jetson build-only evidence를
+  기록했다.
 
 ### Changed
 

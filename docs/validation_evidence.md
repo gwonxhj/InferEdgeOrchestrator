@@ -12,8 +12,10 @@ that the runtime control paths execute, that overload policy decisions are
 observable, and that generated telemetry can explain what happened.
 
 Planned v0.2 TensorRT model-diversity work is tracked separately in
-[`docs/tensorrt_model_diversity.md`](tensorrt_model_diversity.md). It is not
-counted as validation evidence until a Jetson run produces confirmed telemetry.
+[`docs/tensorrt_model_diversity.md`](tensorrt_model_diversity.md). The current
+diverse-engine record is build-only evidence; it is not counted as scheduler
+or telemetry evidence until a Jetson contention run produces confirmed
+telemetry.
 
 ## Evidence Summary
 
@@ -23,6 +25,7 @@ counted as validation evidence until a Jetson run produces confirmed telemetry.
 | Jetson ONNX Runtime smoke | ONNX Runtime worker path on Jetson Orin Nano with `CPUExecutionProvider`, output metadata, resource snapshots, `tegrastats` capture summary | PASS | [`examples/telemetry/jetson_onnx_smoke_sample.json`](../examples/telemetry/jetson_onnx_smoke_sample.json) |
 | Jetson TensorRT inference smoke | Local identity ONNX to TensorRT engine creation and one TensorRT identity-frame execution on Jetson Orin Nano | PASS | [`docs/tensorrt_engine_build.md`](tensorrt_engine_build.md) |
 | Jetson TensorRT contention smoke | Two TensorRT tasks through scheduler/load-shedding with low-priority drops and TensorRT backend telemetry | PASS | [`examples/telemetry/jetson_tensorrt_contention_sample.json`](../examples/telemetry/jetson_tensorrt_contention_sample.json) |
+| Jetson TensorRT diverse engine build | Generated detector-like/classifier-like ONNX pair and built two local FP16 TensorRT engines on Jetson Orin Nano | PASS, build-only | [`docs/tensorrt_engine_build.md`](tensorrt_engine_build.md) |
 | Synthetic overload comparison | FIFO baseline vs scheduler/load-shedding policy under controlled overload | PASS | [`examples/telemetry/phase3_overload_sample.json`](../examples/telemetry/phase3_overload_sample.json) |
 | InferEdge result handoff | File-based conversion from InferEdge `result.json` latency signal to Orchestrator config | PASS | [`examples/inferedge_result_sample.json`](../examples/inferedge_result_sample.json), [`configs/from_inferedge.json`](../configs/from_inferedge.json) |
 | CI tests | Unit tests and sample artifact compatibility checks on Python 3.11 | PASS | [GitHub Actions CI](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml) |
