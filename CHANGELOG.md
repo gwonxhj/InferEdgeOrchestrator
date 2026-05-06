@@ -52,6 +52,9 @@ helps reviewers understand the project state.
 - Documented the v0.1.x TensorRT model-diversity decision: keep contention
   evidence on the shared identity engine and defer distinct detector/classifier
   engines to a later milestone.
+- Added a v0.2 TensorRT model-diversity proposal for distinct
+  detector/classifier-style engine selection, build requirements, artifact
+  policy, and acceptance criteria.
 
 ### Changed
 

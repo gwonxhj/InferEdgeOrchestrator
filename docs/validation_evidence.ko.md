@@ -11,6 +11,10 @@ file-based handoff가 의도대로 동작했는지 보여주는 runtime validati
 control path가 실행되는지, overload policy decision이 관찰 가능한지, 생성된
 telemetry가 어떤 일이 일어났는지 설명할 수 있는지를 보여주는 것이다.
 
+Planned v0.2 TensorRT model-diversity 작업은
+[`docs/tensorrt_model_diversity.ko.md`](tensorrt_model_diversity.ko.md)에 별도로
+기록한다. Jetson run이 확정 telemetry를 만들기 전까지 validation evidence로 세지 않는다.
+
 ## Evidence Summary
 
 | Evidence | What it validates | Status | Tracked artifact |

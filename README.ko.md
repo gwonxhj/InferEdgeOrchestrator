@@ -231,3 +231,4 @@ python3 -m inferedge_orchestrator report --input reports/phase1_demo.json
 - `docs/inferedge_integration.ko.md` ([English](docs/inferedge_integration.md))
 - `docs/tensorrt_backend.ko.md` ([English](docs/tensorrt_backend.md))
 - `docs/tensorrt_engine_build.ko.md` ([English](docs/tensorrt_engine_build.md))
+- `docs/tensorrt_model_diversity.ko.md` ([English](docs/tensorrt_model_diversity.md))

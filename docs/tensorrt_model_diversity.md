@@ -1,0 +1,196 @@
+# TensorRT Model Diversity Proposal
+
+Language: English | [한국어](tensorrt_model_diversity.ko.md)
+
+Status: v0.2 proposal. This is a planning document, not confirmed validation
+evidence.
+
+This document defines how InferEdgeOrchestrator should expand the current
+TensorRT contention scenario from a shared tiny identity engine to distinct
+detector/classifier-style TensorRT engines without changing the project's
+positioning. The goal is still runtime operation control under multi-task
+contention, not single-model throughput benchmarking.
+
+## Decision Boundary
+
+The v0.1.x line keeps TensorRT contention evidence on a shared tiny identity
+engine. The identity engine already proves that the TensorRT worker path can
+participate in scheduler/load-shedding telemetry on Jetson.
+
+The v0.2 proposal is to add a diversified TensorRT contention scenario only
+after the model source, engine build procedure, artifact policy, and evidence
+boundary are explicit.
+
+## Goal
+
+The v0.2 scenario should answer this question:
+
+> When two distinct TensorRT-backed workloads contend for the same Jetson
+> device, does InferEdgeOrchestrator still protect the high-priority task and
+> limit lower-priority work through observable scheduling and load-shedding
+> decisions?
+
+Expected evidence:
+
+- Two or more distinct TensorRT engines are built locally on Jetson.
+- The high-priority task remains protected under backlog.
+- The low-priority task is dropped, delayed, or FPS-limited according to policy.
+- Telemetry records task execution, drops, overload events, policy decisions,
+  TensorRT backend metadata, and resource snapshots.
+- Documentation clearly states that the evidence is operation-control evidence,
+  not a TensorRT benchmark.
+
+## Non-Goals
+
+Do not use this milestone to add:
+
+- A model conversion pipeline inside InferEdgeOrchestrator.
+- A TensorRT benchmark table or model leaderboard.
+- Large ONNX files, TensorRT `.plan`/`.engine` binaries, or raw device logs in
+  git.
+- Triton, DeepStream, Kubernetes, distributed serving, or multi-device
+  orchestration.
+- Claims about production throughput or stable device performance.
+
+## Candidate Workloads
+
+The first diversified scenario should prefer small, license-clear, easy-to-build
+models over realistic but heavy models. The point is to create different engine
+shapes and execution profiles while preserving reproducibility.
+
+Candidate pair:
+
+| Role | Candidate source | Why it fits |
+| --- | --- | --- |
+| High-priority detector-like task | Small convolutional image model or tiny detection demo ONNX | Represents latency-sensitive perception work. |
+| Low-priority classifier-like task | Small classifier ONNX or MLP/CNN demo model | Represents droppable enrichment work. |
+
+Selection rules:
+
+- Source models must have clear redistribution/license terms or be generated
+  locally by a script.
+- Engine binaries must be generated on Jetson and excluded from git.
+- Build commands must include TensorRT, CUDA, L4T, precision, input shape, and
+  profile details.
+- The pair should be small enough to run as a smoke scenario on Jetson Orin Nano.
+
+## Artifact Policy
+
+Commit:
+
+- Config templates.
+- Engine build scripts or documented commands.
+- Small source-model generator scripts when models are synthetic.
+- Curated sample telemetry JSON derived from a successful Jetson run.
+- Human-readable docs summarizing the evidence.
+
+Do not commit:
+
+- TensorRT `.plan` or `.engine` files.
+- Large ONNX files.
+- Raw `reports/` outputs.
+- Raw `tegrastats` logs.
+- Downloaded third-party model files unless the license and size are explicitly
+  accepted for the repository.
+
+## Proposed Config Shape
+
+The existing schema should be enough for the first v0.2 scenario. Prefer adding
+new config files over changing core schema.
+
+```json
+{
+  "run": {
+    "name": "jetson_tensorrt_diverse_contention",
+    "input_source": "dummy",
+    "overload_backlog_threshold": 6
+  },
+  "tasks": [
+    {
+      "name": "detector_trt",
+      "model_path": "models/detector_tiny.onnx",
+      "engine_path": "models/detector_tiny_fp16.plan",
+      "priority": 100,
+      "target_fps": 15,
+      "latency_budget_ms": 80,
+      "queue_size": 4,
+      "drop_policy": "drop_oldest",
+      "worker": "tensorrt",
+      "worker_options": {
+        "precision": "fp16",
+        "allow_engine_build": false,
+        "profile_name": "detector_tiny_fp16"
+      }
+    },
+    {
+      "name": "classifier_trt",
+      "model_path": "models/classifier_tiny.onnx",
+      "engine_path": "models/classifier_tiny_fp16.plan",
+      "priority": 10,
+      "target_fps": 5,
+      "latency_budget_ms": 200,
+      "queue_size": 4,
+      "drop_policy": "drop_oldest",
+      "worker": "tensorrt",
+      "worker_options": {
+        "precision": "fp16",
+        "allow_engine_build": false,
+        "profile_name": "classifier_tiny_fp16"
+      }
+    }
+  ]
+}
+```
+
+## Build Procedure Requirements
+
+Before adding a smoke script, document or script the Jetson-local build flow:
+
+1. Record device inventory: hostname, Ubuntu, L4T, CUDA, TensorRT, Python,
+   `trtexec`, and optional `tegrastats` availability.
+2. Create or fetch the source ONNX models under a local ignored directory.
+3. Build each TensorRT engine with explicit `trtexec` commands.
+4. Inspect engine input/output tensor names, shapes, and dtypes.
+5. Run the worker guard smoke for each engine independently.
+6. Run the multi-task contention smoke.
+7. Curate a small sample telemetry artifact only after the device run succeeds.
+
+## Acceptance Criteria
+
+A v0.2 diversified TensorRT scenario is complete only when:
+
+- At least two distinct TensorRT engines are built on Jetson from documented
+  source models.
+- The engines are not committed to git.
+- The smoke script fails clearly if either engine is missing.
+- Telemetry includes TensorRT backend metadata for both tasks.
+- The high-priority task has zero or intentionally bounded drops.
+- Low-priority limiting is visible through drop events, policy decisions, and
+  overload events.
+- Validation evidence states the device, runtime versions, and artifact
+  boundaries.
+- README wording remains scheduler/load-shedding focused and avoids benchmark
+  claims.
+
+## Step Plan
+
+1. Choose source models and document license/size/build constraints.
+2. Add a Jetson-local engine build guide or helper script.
+3. Add `configs/jetson_tensorrt_diverse_contention.json`.
+4. Add `scripts/smoke_jetson_tensorrt_diverse_contention.sh`.
+5. Run individual engine guard smokes on Jetson.
+6. Run the diversified contention smoke on Jetson.
+7. Add a curated sample telemetry artifact if the run passes.
+8. Update validation evidence and release notes with confirmed results only.
+
+## Risks
+
+- Model acquisition can distract from scheduler evidence.
+- Larger engines can turn the story into a performance comparison.
+- Device-local TensorRT engines may not be portable across Jetson software
+  versions.
+- License or artifact-size issues can make the repository harder to review.
+
+Mitigation: keep models small, keep engines local, make every claim traceable to
+telemetry, and keep InferEdgeOrchestrator positioned as the operation-control
+layer.

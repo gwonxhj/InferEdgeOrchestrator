@@ -282,6 +282,9 @@ v0.1.x line의 결정: TensorRT contention evidence는 shared tiny identity engi
   limiting을 계속 증명한다.
 - 문서는 결과가 throughput benchmark가 아니라 operation-control evidence임을 명시한다.
 
+이 작업의 v0.2 milestone proposal은
+[`docs/tensorrt_model_diversity.ko.md`](tensorrt_model_diversity.ko.md)에 기록한다.
+
 ## Telemetry Plan
 
 현재 telemetry top-level shape는 유지한다. TensorRT/GPU 지원은 scheduler summary를

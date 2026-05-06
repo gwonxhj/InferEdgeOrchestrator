@@ -233,3 +233,4 @@ For more detail, see:
 - [`docs/inferedge_integration.md`](docs/inferedge_integration.md)
 - [`docs/tensorrt_backend.md`](docs/tensorrt_backend.md)
 - [`docs/tensorrt_engine_build.md`](docs/tensorrt_engine_build.md)
+- [`docs/tensorrt_model_diversity.md`](docs/tensorrt_model_diversity.md)
