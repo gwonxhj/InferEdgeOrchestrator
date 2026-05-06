@@ -55,9 +55,92 @@ def test_tensorrt_worker_reports_missing_python_bindings(tmp_path, monkeypatch) 
 
 def test_tensorrt_worker_stub_fails_after_import_guard(tmp_path, monkeypatch) -> None:
     engine_path = tmp_path / "detector.plan"
-    engine_path.write_bytes(b"not a real engine yet")
+    engine_path.write_bytes(b"serialized engine")
     task = _tensorrt_task(str(engine_path))
-    monkeypatch.setitem(sys.modules, "tensorrt", types.SimpleNamespace(__version__="10.3.0"))
+    fake_engine = object()
 
-    with pytest.raises(NotImplementedError, match="engine deserialization"):
+    class FakeLogger:
+        WARNING = 1
+
+        def __init__(self, severity: int) -> None:
+            self.severity = severity
+
+    class FakeRuntime:
+        def __init__(self, logger: FakeLogger) -> None:
+            self.logger = logger
+
+        def deserialize_cuda_engine(self, engine_bytes: bytes) -> object:
+            assert engine_bytes == b"serialized engine"
+            return fake_engine
+
+    monkeypatch.setitem(
+        sys.modules,
+        "tensorrt",
+        types.SimpleNamespace(__version__="10.3.0", Logger=FakeLogger, Runtime=FakeRuntime),
+    )
+
+    with pytest.raises(NotImplementedError, match="deserialized.*inference execution"):
         WorkerPool().run(task, _frame())
+
+
+def test_tensorrt_worker_reports_deserialization_failure(tmp_path, monkeypatch) -> None:
+    engine_path = tmp_path / "detector.plan"
+    engine_path.write_bytes(b"invalid engine")
+    task = _tensorrt_task(str(engine_path))
+
+    class FakeLogger:
+        WARNING = 1
+
+        def __init__(self, severity: int) -> None:
+            self.severity = severity
+
+    class FakeRuntime:
+        def __init__(self, logger: FakeLogger) -> None:
+            self.logger = logger
+
+        def deserialize_cuda_engine(self, engine_bytes: bytes) -> None:
+            assert engine_bytes == b"invalid engine"
+            return None
+
+    monkeypatch.setitem(
+        sys.modules,
+        "tensorrt",
+        types.SimpleNamespace(__version__="10.3.0", Logger=FakeLogger, Runtime=FakeRuntime),
+    )
+
+    with pytest.raises(RuntimeError, match="failed to deserialize engine"):
+        TensorRtWorker().run(task, _frame())
+
+
+def test_tensorrt_worker_caches_deserialized_engines(tmp_path, monkeypatch) -> None:
+    engine_path = tmp_path / "detector.plan"
+    engine_path.write_bytes(b"serialized engine")
+    task = _tensorrt_task(str(engine_path))
+    calls = {"deserialize": 0}
+
+    class FakeLogger:
+        WARNING = 1
+
+        def __init__(self, severity: int) -> None:
+            self.severity = severity
+
+    class FakeRuntime:
+        def __init__(self, logger: FakeLogger) -> None:
+            self.logger = logger
+
+        def deserialize_cuda_engine(self, engine_bytes: bytes) -> object:
+            calls["deserialize"] += 1
+            return object()
+
+    monkeypatch.setitem(
+        sys.modules,
+        "tensorrt",
+        types.SimpleNamespace(__version__="10.3.0", Logger=FakeLogger, Runtime=FakeRuntime),
+    )
+
+    worker = TensorRtWorker()
+    for _ in range(2):
+        with pytest.raises(NotImplementedError, match="inference execution"):
+            worker.run(task, _frame())
+
+    assert calls["deserialize"] == 1

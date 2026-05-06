@@ -17,4 +17,5 @@ def test_jetson_tensorrt_smoke_script_contract() -> None:
     assert "CAPTURE_TEGRASTATS" in text
     assert "/usr/src/tensorrt/bin/trtexec" in text
     assert "/usr/local/cuda/bin/nvcc" in text
-    assert "engine deserialization and inference execution are not implemented yet" in text
+    assert "deserialized the configured engine" in text
+    assert "inference execution is not implemented yet" in text

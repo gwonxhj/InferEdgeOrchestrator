@@ -183,8 +183,8 @@ Expected current result:
 - `reports/jetson_tensorrt_dependency.txt` is written.
 - `reports/jetson_tensorrt_guard_validation.md` is written.
 - Worker guard result is `PASS_GUARD_STUB`.
-- The worker still stops at the intentional not-implemented boundary for engine
-  deserialization and inference execution.
+- The worker still stops at the intentional not-implemented boundary for
+  inference execution after engine deserialization succeeds.
 
 If the script fails before `PASS_GUARD_STUB`, inspect the validation report and
 dependency inventory first. Common causes are a missing TensorRT Python binding,
@@ -195,11 +195,10 @@ Jetson.
 
 This procedure creates the local engine artifact needed for the next code step:
 
-1. implement TensorRT engine deserialization behind `TensorRtWorker`
-2. create an execution context
-3. bind the identity model input/output buffers
-4. return worker result metadata without changing scheduler contracts
-5. run the same smoke path again and record actual Jetson execution evidence
+1. create an execution context
+2. bind the identity model input/output buffers
+3. return worker result metadata without changing scheduler contracts
+4. run the same smoke path again and record actual Jetson execution evidence
 
 Keep the project framing stable: TensorRT support is backend coverage for
 runtime operation control, not a conversion pipeline or benchmark suite.

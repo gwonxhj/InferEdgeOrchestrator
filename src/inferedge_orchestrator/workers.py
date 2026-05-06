@@ -106,13 +106,14 @@ class OnnxRuntimeWorker:
 
 class TensorRtWorker:
     def __init__(self) -> None:
-        self._engine_metadata: dict[str, object] = {}
+        self._engines: dict[str, object] = {}
+        self._engine_metadata: dict[str, dict[str, object]] = {}
 
     def run(self, task: TaskConfig, frame: FrameEnvelope) -> WorkerResult:
         self._engine_for(task)
         raise NotImplementedError(
-            "tensorrt worker loaded the requested runtime prerequisites, but "
-            "engine deserialization and inference execution are not implemented yet"
+            "tensorrt worker deserialized the configured engine, but inference "
+            "execution is not implemented yet"
         )
 
     def _engine_for(self, task: TaskConfig) -> object:
@@ -124,19 +125,34 @@ class TensorRtWorker:
                 f"{task.name}: TensorRT engine_path does not exist: {engine_path}"
             )
         resolved_engine_path = str(engine_path)
-        if resolved_engine_path not in self._engine_metadata:
-            try:
-                import tensorrt as trt
-            except ImportError as exc:
+        if resolved_engine_path not in self._engines:
+            trt = self._import_tensorrt()
+            engine_bytes = engine_path.read_bytes()
+            logger = trt.Logger(getattr(trt.Logger, "WARNING", 1))
+            runtime = trt.Runtime(logger)
+            engine = runtime.deserialize_cuda_engine(engine_bytes)
+            if engine is None:
                 raise RuntimeError(
-                    "tensorrt worker requires the optional TensorRT Python bindings. "
-                    "Install TensorRT on the target Jetson or run with a different worker."
-                ) from exc
+                    f"{task.name}: TensorRT failed to deserialize engine: {engine_path}"
+                )
+            self._engines[resolved_engine_path] = engine
             self._engine_metadata[resolved_engine_path] = {
                 "engine_path": resolved_engine_path,
                 "tensorrt_version": trt.__version__,
+                "engine_deserialized": True,
+                "engine_size_bytes": len(engine_bytes),
             }
-        return self._engine_metadata[resolved_engine_path]
+        return self._engines[resolved_engine_path]
+
+    def _import_tensorrt(self) -> object:
+        try:
+            import tensorrt as trt
+        except ImportError as exc:
+            raise RuntimeError(
+                "tensorrt worker requires the optional TensorRT Python bindings. "
+                "Install TensorRT on the target Jetson or run with a different worker."
+            ) from exc
+        return trt
 
 
 class WorkerPool:
