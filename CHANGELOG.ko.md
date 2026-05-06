@@ -51,6 +51,9 @@ Language: [English](CHANGELOG.md) | 한국어
 - v0.1.x TensorRT model-diversity 결정을 문서화했다. Contention evidence는 shared
   identity engine으로 유지하고, 별도 detector/classifier engine은 이후 milestone로
   미룬다.
+- 서로 다른 detector/classifier-style engine 선택, build requirement, artifact
+  policy, acceptance criteria를 다루는 v0.2 TensorRT model-diversity proposal을
+  추가했다.
 
 ### Changed
 

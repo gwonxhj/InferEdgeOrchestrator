@@ -11,6 +11,10 @@ These records are lifecycle evidence, not benchmark claims. The goal is to show
 that the runtime control paths execute, that overload policy decisions are
 observable, and that generated telemetry can explain what happened.
 
+Planned v0.2 TensorRT model-diversity work is tracked separately in
+[`docs/tensorrt_model_diversity.md`](tensorrt_model_diversity.md). It is not
+counted as validation evidence until a Jetson run produces confirmed telemetry.
+
 ## Evidence Summary
 
 | Evidence | What it validates | Status | Tracked artifact |

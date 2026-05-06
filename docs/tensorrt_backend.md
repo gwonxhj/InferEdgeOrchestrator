@@ -287,6 +287,9 @@ Acceptance criteria for a future diversified scenario:
 - Documentation states that the result is operation-control evidence, not a
   throughput benchmark.
 
+The v0.2 milestone proposal for this work is tracked in
+[`docs/tensorrt_model_diversity.md`](tensorrt_model_diversity.md).
+
 ## Telemetry Plan
 
 The current telemetry top-level shape should remain stable. TensorRT/GPU support
