@@ -19,6 +19,7 @@ CONFIG="${CONFIG:-configs/jetson_tensorrt_smoke.json}"
 ENGINE_PATH="${ENGINE_PATH:-models/detector.plan}"
 REPORT_DIR="${REPORT_DIR:-reports}"
 VALIDATION_PATH="${VALIDATION_PATH:-${REPORT_DIR}/jetson_tensorrt_guard_validation.md}"
+RUNTIME_TELEMETRY_PATH="${RUNTIME_TELEMETRY_PATH:-${REPORT_DIR}/jetson_tensorrt_runtime_telemetry.json}"
 DEPENDENCY_PATH="${DEPENDENCY_PATH:-${REPORT_DIR}/jetson_tensorrt_dependency.txt}"
 TEGRSTATS_PATH="${TEGRSTATS_PATH:-${REPORT_DIR}/tegrastats_tensorrt_guard.log}"
 CAPTURE_TEGRASTATS="${CAPTURE_TEGRASTATS:-0}"
@@ -34,6 +35,7 @@ echo "[trt-smoke] python: $("$PYTHON_BIN" -c 'import sys; print(sys.executable)'
 echo "[trt-smoke] config: ${CONFIG}"
 echo "[trt-smoke] engine: ${ENGINE_PATH}"
 echo "[trt-smoke] validation: ${VALIDATION_PATH}"
+echo "[trt-smoke] runtime telemetry: ${RUNTIME_TELEMETRY_PATH}"
 
 TEGRSTATS_PID=""
 cleanup() {
@@ -157,6 +159,59 @@ if [[ "$WORKER_STATUS" -eq 0 ]] && grep -q '"worker": "tensorrt"' <<<"$WORKER_OU
   EXPECTED_RESULT="PASS_TENSORRT_INFERENCE"
 fi
 
+set +e
+RUNTIME_OUTPUT="$("$PYTHON_BIN" - "$CONFIG" "$ENGINE_PATH" "$RUNTIME_TELEMETRY_PATH" 2>&1 <<'PY'
+import json
+import sys
+from pathlib import Path
+
+from inferedge_orchestrator.config import OrchestratorConfig
+from inferedge_orchestrator.runtime import OrchestratorRuntime
+
+config_path = Path(sys.argv[1])
+engine_path = sys.argv[2]
+telemetry_path = Path(sys.argv[3])
+data = json.loads(config_path.read_text(encoding="utf-8"))
+for task in data.get("tasks", []):
+    if task.get("worker") == "tensorrt":
+        task["engine_path"] = engine_path
+config = OrchestratorConfig.from_dict(data)
+runtime = OrchestratorRuntime(config)
+report = runtime.run(frames=1, drain=True)
+telemetry_path.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
+events = report.get("result_events", [])
+if not events:
+    raise SystemExit("[trt-smoke] runtime telemetry validation failed: no result_events")
+event = events[0]
+output = event.get("output", {})
+if output.get("worker") != "tensorrt" or output.get("backend") != "tensorrt":
+    raise SystemExit("[trt-smoke] runtime telemetry validation failed: missing TensorRT backend metadata")
+if output.get("output_preview", {}).get("output") != [0.0, 0.0]:
+    raise SystemExit("[trt-smoke] runtime telemetry validation failed: unexpected runtime output preview")
+print(
+    json.dumps(
+        {
+            "telemetry_path": str(telemetry_path),
+            "result_event_count": len(events),
+            "task": event.get("task"),
+            "worker": output.get("worker"),
+            "backend": output.get("backend"),
+            "output_preview": output.get("output_preview"),
+        },
+        indent=2,
+        sort_keys=True,
+    )
+)
+PY
+)"
+RUNTIME_STATUS=$?
+set -e
+
+RUNTIME_RESULT="FAIL_UNEXPECTED"
+if [[ "$RUNTIME_STATUS" -eq 0 ]] && grep -q '"backend": "tensorrt"' <<<"$RUNTIME_OUTPUT" && grep -q '"result_event_count": 1' <<<"$RUNTIME_OUTPUT"; then
+  RUNTIME_RESULT="PASS_TENSORRT_TELEMETRY"
+fi
+
 TIMESTAMP_UTC="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 PYTHON_VERSION="$("$PYTHON_BIN" -c 'import sys; print(sys.version.split()[0])')"
 TRT_VERSION="$("$PYTHON_BIN" -c 'import tensorrt as trt; print(trt.__version__)')"
@@ -172,8 +227,10 @@ cat >"$VALIDATION_PATH" <<EOF
 - Config: ${CONFIG}
 - Engine: ${ENGINE_PATH}
 - Dependency inventory: ${DEPENDENCY_PATH}
+- Runtime telemetry: ${RUNTIME_TELEMETRY_PATH}
 - Optional tegrastats: ${TEGRSTATS_PATH}
 - Worker smoke result: ${EXPECTED_RESULT}
+- Runtime telemetry result: ${RUNTIME_RESULT}
 
 ## Notes
 
@@ -183,12 +240,20 @@ cat >"$VALIDATION_PATH" <<EOF
   TensorRT inference execution.
 - Passing this script means the TensorRT worker executed one identity-model
   smoke frame and returned worker result metadata.
+- Runtime telemetry must also contain TensorRT backend metadata in
+  result_events[].output.
 - Do not commit raw reports or TensorRT engine binaries.
 
 ## Worker Output
 
 \`\`\`text
 ${WORKER_OUTPUT}
+\`\`\`
+
+## Runtime Telemetry Validation
+
+\`\`\`text
+${RUNTIME_OUTPUT}
 \`\`\`
 EOF
 
@@ -198,6 +263,12 @@ echo "[trt-smoke] validation record: ${VALIDATION_PATH}"
 if [[ "$EXPECTED_RESULT" != "PASS_TENSORRT_INFERENCE" ]]; then
   echo "[trt-smoke] unexpected worker inference result"
   echo "$WORKER_OUTPUT"
+  exit 1
+fi
+
+if [[ "$RUNTIME_RESULT" != "PASS_TENSORRT_TELEMETRY" ]]; then
+  echo "[trt-smoke] unexpected runtime telemetry result"
+  echo "$RUNTIME_OUTPUT"
   exit 1
 fi
 

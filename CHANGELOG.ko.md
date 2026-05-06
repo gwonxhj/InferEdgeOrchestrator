@@ -42,6 +42,8 @@ Language: [English](CHANGELOG.md) | 한국어
 - `TensorRtWorker`에 `execute_async_v3` 기반 TensorRT inference execution,
   host/device copy, optional `frame.payload["tensorrt_inputs"]`, backend result
   metadata 반환을 추가했다.
+- Jetson TensorRT runtime telemetry smoke validation을 추가해
+  `result_events[].output`에 TensorRT backend metadata가 남는지 확인한다.
 
 ### Changed
 
@@ -62,6 +64,8 @@ Language: [English](CHANGELOG.md) | 한국어
   남은 boundary를 의미하게 했다.
 - TensorRT smoke 기대값과 문서를 갱신해 Jetson identity engine이 실제 TensorRT
   worker 실행 1회 후 `PASS_TENSORRT_INFERENCE`를 보고하도록 했다.
+- TensorRT smoke 기대값과 문서를 갱신해 end-to-end runtime telemetry check 후
+  `PASS_TENSORRT_TELEMETRY`도 보고하도록 했다.
 
 ## v0.1.1 - 2026-05-06
 

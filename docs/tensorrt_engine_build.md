@@ -189,9 +189,13 @@ Expected current result:
 
 - `reports/jetson_tensorrt_dependency.txt` is written.
 - `reports/jetson_tensorrt_guard_validation.md` is written.
+- `reports/jetson_tensorrt_runtime_telemetry.json` is written.
 - Worker smoke result is `PASS_TENSORRT_INFERENCE`.
+- Runtime telemetry result is `PASS_TENSORRT_TELEMETRY`.
 - The worker executes one identity-model frame and returns TensorRT backend
   metadata including `output_preview`.
+- The runtime telemetry `result_events[].output` contains TensorRT backend
+  metadata.
 
 If the script fails before `PASS_TENSORRT_INFERENCE`, inspect the validation
 report and dependency inventory first. Common causes are a missing TensorRT
@@ -204,8 +208,9 @@ This procedure creates and validates the local engine artifact needed for later
 multi-task TensorRT work:
 
 1. keep worker result metadata stable without changing scheduler contracts
-2. record TensorRT backend metadata in end-to-end telemetry paths
-3. validate scheduler/load-shedding behavior under multi-task TensorRT contention
+2. validate scheduler/load-shedding behavior under multi-task TensorRT contention
+3. curate a small sample telemetry artifact once the TensorRT telemetry shape is
+   stable enough for review
 
 Keep the project framing stable: TensorRT support is backend coverage for
 runtime operation control, not a conversion pipeline or benchmark suite.

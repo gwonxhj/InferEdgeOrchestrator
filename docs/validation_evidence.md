@@ -125,6 +125,8 @@ Purpose:
   TensorRT worker execution behavior.
 - Confirm that the current worker can execute the identity engine and return
   backend result metadata.
+- Confirm that end-to-end runtime telemetry records TensorRT backend metadata in
+  `result_events[].output`.
 
 Commands:
 
@@ -163,11 +165,14 @@ Latest physical-device record:
 | TensorRT engine | `models/identity_fp16.plan`, 8.2 KiB |
 | Raw build log | `reports/trtexec_identity_build.log` |
 | Raw validation note | `reports/jetson_tensorrt_guard_validation.md` |
-| Result | `PASS_TENSORRT_INFERENCE` |
+| Raw runtime telemetry | `reports/jetson_tensorrt_runtime_telemetry.json` |
+| Worker result | `PASS_TENSORRT_INFERENCE` |
+| Runtime telemetry result | `PASS_TENSORRT_TELEMETRY` |
 
 This validates TensorRT setup and a single TensorRT worker inference path. It is
-not ONNX Runtime GPU provider validation, scheduler behavior under TensorRT
-contention, or a performance benchmark.
+also validates that TensorRT backend metadata reaches runtime telemetry result
+events. It is not ONNX Runtime GPU provider validation, scheduler behavior under
+TensorRT contention, or a performance benchmark.
 
 ## Synthetic Overload Comparison
 
@@ -263,9 +268,9 @@ For sample-specific schema notes, see
   production benchmark.
 - Jetson ONNX Runtime smoke currently uses `CPUExecutionProvider`; it is not
   TensorRT or GPU benchmark evidence.
-- Jetson TensorRT inference smoke proves engine creation and a single TensorRT
-  worker identity inference path only; it does not prove multi-task TensorRT
-  scheduling behavior yet.
+- Jetson TensorRT inference smoke proves engine creation, a single TensorRT
+  worker identity inference path, and runtime telemetry metadata propagation; it
+  does not prove multi-task TensorRT scheduling behavior yet.
 - Raw generated reports stay under `reports/` and are not committed.
 - Versioned sample JSON files are curated documentation artifacts for review and
   schema inspection.
