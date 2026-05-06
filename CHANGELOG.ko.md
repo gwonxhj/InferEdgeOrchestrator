@@ -54,6 +54,8 @@ Language: [English](CHANGELOG.md) | 한국어
 - 서로 다른 detector/classifier-style engine 선택, build requirement, artifact
   policy, acceptance criteria를 다루는 v0.2 TensorRT model-diversity proposal을
   추가했다.
+- v0.2 TensorRT diversity scenario의 source-model 후보로 repository script가
+  생성하는 detector-like tiny CNN과 classifier-like tiny MLP/CNN을 선정했다.
 
 ### Changed
 

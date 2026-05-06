@@ -53,21 +53,46 @@ v0.2 scenario는 다음 질문에 답해야 한다.
 모델을 우선한다. 목적은 서로 다른 engine shape와 execution profile을 만들되
 재현성을 유지하는 것이다.
 
-Candidate pair:
+선정한 v0.2 candidate pair:
 
-| Role | Candidate source | Why it fits |
-| --- | --- | --- |
-| High-priority detector-like task | 작은 convolutional image model 또는 tiny detection demo ONNX | latency-sensitive perception work를 대표한다. |
-| Low-priority classifier-like task | 작은 classifier ONNX 또는 MLP/CNN demo model | droppable enrichment work를 대표한다. |
+| Role | Candidate source | Planned ONNX path | Planned engine path | Why it fits |
+| --- | --- | --- | --- | --- |
+| High-priority detector-like task | local script로 생성하는 synthetic tiny CNN | `models/generated/detector_tiny.onnx` | `models/generated/detector_tiny_fp16.plan` | image-shaped input과 convolution/pooling-style operation을 사용하므로 identity smoke보다 latency-sensitive perception work에 가깝다. |
+| Low-priority classifier-like task | local script로 생성하는 synthetic tiny MLP 또는 small classifier CNN | `models/generated/classifier_tiny.onnx` | `models/generated/classifier_tiny_fp16.plan` | detector-like task와 다른 graph shape를 가진 droppable enrichment/classification work를 대표한다. |
+
+결정: 첫 v0.2 diversity scenario는 synthetic local model을 사용한다. TensorRT
+contention path가 generated model로 안정화되기 전까지 외부 model download는 피한다.
+
+Synthetic을 먼저 선택하는 이유:
+
+- License clarity: 생성된 source model은 repository-owned test fixture이므로
+  third-party redistribution 문제가 없다.
+- Size control: generator가 ONNX file을 작게 유지하고 큰 binary artifact를 피할 수
+  있다.
+- Jetson practicality: Jetson Orin Nano에서 `trtexec`로 빠르게 build할 수 있다.
+- Evidence focus: 서로 다른 graph shape를 만들되 model quality 또는 throughput
+  comparison으로 milestone이 흐르지 않는다.
 
 선택 규칙:
 
-- Source model은 redistribution/license 조건이 명확하거나 script로 local generation
-  가능해야 한다.
+- 첫 v0.2 implementation에서는 source model을 script로 local generation해야 한다.
 - Engine binary는 Jetson에서 생성하고 git에서 제외한다.
 - Build command에는 TensorRT, CUDA, L4T, precision, input shape, profile 정보를
   포함한다.
 - Jetson Orin Nano에서 smoke scenario로 실행 가능한 크기여야 한다.
+- Generator는 deterministic해야 telemetry와 engine metadata를 run 간 비교하기 쉽다.
+- Detector-like model과 classifier-like model은 input shape 또는 operation mix가
+  달라야 하지만, output은 단순 metadata tensor여도 된다. 이 scenario는 task accuracy가
+  아니라 scheduling behavior를 검증한다.
+
+미룬 대안:
+
+- Public tiny classifier model은 license, size, download provenance를 문서화한 뒤에만
+  재검토한다.
+- Public tiny detector model은 build flow가 smoke validation에 충분히 작고 benchmark
+  positioning을 만들지 않을 때만 재검토한다.
+- 실제 production detector/classifier model은 이후 milestone이 evidence boundary를
+  명시적으로 바꾸지 않는 한 이 repository 범위 밖에 둔다.
 
 ## Artifact Policy
 
