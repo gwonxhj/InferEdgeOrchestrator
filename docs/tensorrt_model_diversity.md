@@ -250,6 +250,16 @@ A v0.2 diversified TensorRT scenario is complete only when:
 7. Add a curated sample telemetry artifact if the run passes.
 8. Update validation evidence and release notes with confirmed results only.
 
+Current config contract:
+
+- Config: `configs/jetson_tensorrt_diverse_contention.json`
+- High-priority task: `detector_trt`
+- Low-priority task: `classifier_trt`
+- Detector engine: `models/generated/detector_tiny_fp16.plan`
+- Classifier engine: `models/generated/classifier_tiny_fp16.plan`
+- Status: config/schema contract. It becomes scheduler/load-shedding evidence
+  only after the diverse contention smoke script is added and run on Jetson.
+
 ## Risks
 
 - Model acquisition can distract from scheduler evidence.

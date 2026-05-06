@@ -67,6 +67,8 @@ Language: [English](CHANGELOG.md) | 한국어
   검증하는 `scripts/smoke_jetson_tensorrt_diverse_engines.sh`를 추가했다.
 - 생성된 TensorRT diversity engine pair에 대한 Jetson worker-guard evidence를
   기록했다.
+- 서로 다른 generated TensorRT engine을 scheduler/load-shedding contention으로 실행하기
+  위한 reserved config `configs/jetson_tensorrt_diverse_contention.json`을 추가했다.
 
 ### Changed
 

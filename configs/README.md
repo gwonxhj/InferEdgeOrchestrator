@@ -21,6 +21,7 @@ Tracked evidence samples live under
 | [`from_inferedge.json`](from_inferedge.json) | Tracked sample output generated from an InferEdge `result.json` latency signal. | Phase 5: InferEdge Handoff | `python3 -m inferedge_orchestrator from-inferedge --result examples/inferedge_result_sample.json --output configs/from_inferedge.json --task-name detector --model-path models/detector.onnx --priority 100 --target-fps 15 --queue-size 4` | `configs/from_inferedge.json` with recommended `latency_budget_ms=64.0`. | Generated artifact, not hand-authored policy. It keeps the InferEdge boundary file-based. |
 | [`jetson_tensorrt_smoke.json`](jetson_tensorrt_smoke.json) | Run the TensorRT worker inference and runtime telemetry smoke on Jetson. | TensorRT/GPU backend smoke | `ENGINE_PATH=models/detector.plan scripts/smoke_jetson_tensorrt.sh` | `reports/jetson_tensorrt_guard_validation.md`, `reports/jetson_tensorrt_runtime_telemetry.json`, and dependency inventory under `reports/`. | Requires TensorRT Python bindings, PyCUDA, and a device-local engine file. This is single-worker identity inference evidence, not multi-task TensorRT scheduling evidence. |
 | [`jetson_tensorrt_contention.json`](jetson_tensorrt_contention.json) | Run two TensorRT tasks through scheduler/load-shedding contention on Jetson. | TensorRT/GPU contention smoke | `ENGINE_PATH=models/detector.plan scripts/smoke_jetson_tensorrt_contention.sh` | `reports/jetson_tensorrt_contention_telemetry.json` and `reports/jetson_tensorrt_contention_validation.md`. | Requires TensorRT Python bindings, PyCUDA, and a device-local engine file. This validates TensorRT-backed scheduling behavior, not throughput. |
+| [`jetson_tensorrt_diverse_contention.json`](jetson_tensorrt_diverse_contention.json) | Reserved config for running distinct detector-like and classifier-like TensorRT engines through scheduler/load-shedding contention on Jetson. | TensorRT/GPU diverse contention smoke | Planned for `scripts/smoke_jetson_tensorrt_diverse_contention.sh` | Planned telemetry and validation note under ignored `reports/`. | Requires generated local engines from `scripts/build_jetson_tensorrt_diverse_engines.sh`. This is a config contract until the diverse contention smoke script is added and run. |
 
 ## Notes
 
@@ -32,6 +33,9 @@ Tracked evidence samples live under
   Jetson. The smoke script validates worker inference and confirms TensorRT
   backend metadata reaches runtime telemetry under ignored `reports/`. See
   [`docs/tensorrt_backend.md`](../docs/tensorrt_backend.md).
+- `jetson_tensorrt_diverse_contention.json` uses two distinct generated engines
+  under `models/generated/`. Those ONNX and TensorRT engine files are local
+  artifacts and must not be committed.
 - `reports/` outputs are intentionally ignored. Commit curated samples under
   `examples/telemetry/` when reviewer-facing evidence is needed.
 - `from_inferedge.json` can be regenerated from
