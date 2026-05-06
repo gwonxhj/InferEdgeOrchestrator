@@ -3,6 +3,8 @@ from __future__ import annotations
 import stat
 from pathlib import Path
 
+from scripts.create_tensorrt_diverse_onnx import write_models
+
 
 def test_jetson_tensorrt_smoke_script_contract() -> None:
     script = Path("scripts/smoke_jetson_tensorrt.sh")
@@ -45,3 +47,27 @@ def test_jetson_tensorrt_contention_script_contract() -> None:
     assert "overload_events" in text
     assert "limited_task" in text
     assert "backend" in text
+
+
+def test_tensorrt_diverse_onnx_generator_contract(tmp_path) -> None:
+    output_dir = tmp_path / "generated"
+
+    written = write_models(output_dir, "all")
+
+    assert [path.name for path in written] == [
+        "detector_tiny.onnx",
+        "classifier_tiny.onnx",
+    ]
+    assert all(path.exists() for path in written)
+
+    import onnx
+
+    detector = onnx.load(output_dir / "detector_tiny.onnx")
+    classifier = onnx.load(output_dir / "classifier_tiny.onnx")
+
+    assert detector.graph.name == "synthetic_detector_tiny"
+    assert classifier.graph.name == "synthetic_classifier_tiny"
+    assert detector.graph.input[0].name == "detector_input"
+    assert detector.graph.output[0].name == "detector_scores"
+    assert classifier.graph.input[0].name == "classifier_input"
+    assert classifier.graph.output[0].name == "classifier_logits"

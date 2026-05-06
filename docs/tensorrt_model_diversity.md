@@ -69,6 +69,16 @@ Decision: use synthetic local models for the first v0.2 diversity scenario.
 Avoid external model downloads until the TensorRT contention path is already
 stable with generated models.
 
+Generator contract:
+
+- Script: `scripts/create_tensorrt_diverse_onnx.py`
+- Default output directory: `models/generated`
+- Default mode: create both models.
+- Detector ONNX: `models/generated/detector_tiny.onnx`
+- Classifier ONNX: `models/generated/classifier_tiny.onnx`
+- Generated ONNX files and future TensorRT engines under `models/generated/`
+  are ignored by git.
+
 Why synthetic first:
 
 - License clarity: generated source models are repository-owned test fixtures,
