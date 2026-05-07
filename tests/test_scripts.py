@@ -84,6 +84,25 @@ def test_jetson_tensorrt_diverse_guard_script_contract() -> None:
     assert "not scheduler/load-shedding contention" in text
 
 
+def test_jetson_tensorrt_diverse_contention_script_contract() -> None:
+    script = Path("scripts/smoke_jetson_tensorrt_diverse_contention.sh")
+    text = script.read_text(encoding="utf-8")
+    mode = script.stat().st_mode
+
+    assert mode & stat.S_IXUSR, "TensorRT diverse contention script should be executable"
+    assert "configs/jetson_tensorrt_diverse_contention.json" in text
+    assert "PASS_TENSORRT_DIVERSE_CONTENTION" in text
+    assert "detector_tiny_fp16.plan" in text
+    assert "classifier_tiny_fp16.plan" in text
+    assert "OrchestratorRuntime" in text
+    assert "detector_trt" in text
+    assert "classifier_trt" in text
+    assert "overload_events" in text
+    assert "limited_task" in text
+    assert "both distinct TensorRT engines did not execute" in text
+    assert "not a throughput" in text
+
+
 def test_tensorrt_diverse_onnx_generator_contract(tmp_path) -> None:
     output_dir = tmp_path / "generated"
 

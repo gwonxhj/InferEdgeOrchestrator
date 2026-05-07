@@ -244,8 +244,10 @@ Current config contract:
 - Low-priority task: `classifier_trt`
 - Detector engine: `models/generated/detector_tiny_fp16.plan`
 - Classifier engine: `models/generated/classifier_tiny_fp16.plan`
-- Status: config/schema contract. Diverse contention smoke script를 추가하고
-  Jetson에서 실행하기 전까지 scheduler/load-shedding evidence가 아니다.
+- Smoke script: `scripts/smoke_jetson_tensorrt_diverse_contention.sh`
+- Success marker: `PASS_TENSORRT_DIVERSE_CONTENTION`
+- Status: script/config contract. Diverse contention smoke script를 Jetson에서
+  실행하기 전까지 confirmed scheduler/load-shedding evidence가 아니다.
 
 ## Risks
 

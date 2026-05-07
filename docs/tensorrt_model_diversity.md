@@ -257,8 +257,10 @@ Current config contract:
 - Low-priority task: `classifier_trt`
 - Detector engine: `models/generated/detector_tiny_fp16.plan`
 - Classifier engine: `models/generated/classifier_tiny_fp16.plan`
-- Status: config/schema contract. It becomes scheduler/load-shedding evidence
-  only after the diverse contention smoke script is added and run on Jetson.
+- Smoke script: `scripts/smoke_jetson_tensorrt_diverse_contention.sh`
+- Success marker: `PASS_TENSORRT_DIVERSE_CONTENTION`
+- Status: script/config contract. It becomes confirmed scheduler/load-shedding
+  evidence only after the diverse contention smoke script is run on Jetson.
 
 ## Risks
 
