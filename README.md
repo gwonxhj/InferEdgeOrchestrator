@@ -4,6 +4,8 @@ Language: English | [한국어](README.ko.md)
 
 [![CI](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml)
 
+Release: [v0.1.2](https://github.com/gwonxhj/InferEdgeOrchestrator/releases/tag/v0.1.2)
+
 InferEdgeOrchestrator is a lightweight runtime scheduler for constrained edge
 devices. It controls multiple inference tasks after deployment, using
 per-task priority, latency budgets, bounded queues, load shedding, and telemetry

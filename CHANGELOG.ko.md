@@ -8,6 +8,13 @@ Language: [English](CHANGELOG.md) | 한국어
 
 ## Unreleased
 
+아직 unreleased 변경 사항 없음.
+
+## v0.1.2 - 2026-05-07
+
+documentation 및 TensorRT validation evidence patch release다. 이 release는
+runtime scheduler behavior를 변경하지 않는다.
+
 ### Added
 
 - TensorRT/GPU backend 설계 및 config schema 계획 문서를 추가했다.

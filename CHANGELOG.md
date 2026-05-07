@@ -8,6 +8,13 @@ helps reviewers understand the project state.
 
 ## Unreleased
 
+No unreleased changes.
+
+## v0.1.2 - 2026-05-07
+
+Documentation and TensorRT validation evidence patch release. This release does
+not change runtime scheduler behavior.
+
 ### Added
 
 - Added TensorRT/GPU backend design and config schema planning documents:

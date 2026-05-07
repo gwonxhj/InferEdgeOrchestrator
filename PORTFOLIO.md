@@ -4,7 +4,7 @@ Language: English | [한국어](PORTFOLIO.ko.md)
 
 [![CI](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml)
 
-Release: [v0.1.1](https://github.com/gwonxhj/InferEdgeOrchestrator/releases/tag/v0.1.1)
+Release: [v0.1.2](https://github.com/gwonxhj/InferEdgeOrchestrator/releases/tag/v0.1.2)
 
 ## One-Line Summary
 
@@ -84,7 +84,7 @@ frames when queue pressure grows.
 | Jetson TensorRT contention smoke | TensorRT-backed high/low-priority tasks ran through scheduler/load shedding on Jetson; low-priority work was shed while TensorRT backend metadata remained visible |
 | Jetson TensorRT diverse contention smoke | Distinct generated detector/classifier TensorRT engines produced scheduler/load-shedding evidence: detector `6/0`, classifier `1/5` executed/dropped, `5` overload events |
 | CI | GitHub Actions runs `python -m pytest` on Python 3.11 for PRs and pushes to `main` |
-| Release | `v0.1.1` captures the docs and validation evidence patch snapshot |
+| Release | `v0.1.2` captures the TensorRT evidence and portfolio wording patch snapshot |
 
 Sample telemetry artifacts are available in `examples/telemetry/` for reviewers
 who want to inspect the JSON evidence shape without running the CLI.

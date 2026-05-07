@@ -4,7 +4,7 @@ Language: [English](PORTFOLIO.md) | 한국어
 
 [![CI](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml)
 
-Release: [v0.1.1](https://github.com/gwonxhj/InferEdgeOrchestrator/releases/tag/v0.1.1)
+Release: [v0.1.2](https://github.com/gwonxhj/InferEdgeOrchestrator/releases/tag/v0.1.2)
 
 ## One-Line Summary
 
@@ -84,7 +84,7 @@ low-priority 또는 stale frame을 drop한다.
 | Jetson TensorRT contention smoke | Jetson에서 TensorRT-backed high/low-priority task를 scheduler/load shedding으로 실행, low-priority work 제한과 TensorRT backend metadata 확인 |
 | Jetson TensorRT diverse contention smoke | 서로 다른 generated detector/classifier TensorRT engine으로 scheduler/load-shedding evidence 생성: detector `6/0`, classifier `1/5` executed/dropped, overload event `5` |
 | CI | GitHub Actions가 PR과 `main` push에서 Python 3.11 기준 `python -m pytest` 실행 |
-| Release | `v0.1.1`로 docs 및 validation evidence patch snapshot 고정 |
+| Release | `v0.1.2`로 TensorRT evidence 및 portfolio wording patch snapshot 고정 |
 
 CLI를 실행하지 않아도 JSON evidence 형태를 확인할 수 있도록
 `examples/telemetry/`에 sample telemetry artifact를 제공한다.
