@@ -75,6 +75,8 @@ Language: [English](CHANGELOG.md) | 한국어
   `PASS_TENSORRT_DIVERSE_CONTENTION` evidence를 기록했다: detector `6/0`,
   classifier `1/5` executed/dropped, overload event `5`, TensorRT backend
   telemetry.
+- curated diverse TensorRT contention sample telemetry artifact를 추가했다:
+  `examples/telemetry/jetson_tensorrt_diverse_contention_sample.json`.
 
 ### Changed
 

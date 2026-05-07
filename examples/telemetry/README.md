@@ -18,6 +18,7 @@ They are not benchmark artifacts. Raw runtime reports remain ignored under
 | `jetson_smoke_dummy_sample.json` | Telemetry schema from the Jetson dummy smoke path: task counts, drop events, result events, scheduler decisions, and resource snapshots. |
 | `jetson_onnx_smoke_sample.json` | Telemetry schema from the ONNX Runtime worker smoke path: result event metadata, output shape `[1, 2]`, and resource snapshots. |
 | `jetson_tensorrt_contention_sample.json` | TensorRT-backed scheduler/load-shedding evidence from Jetson: `detector_trt` is protected, `classifier_trt` is shed, and result events keep TensorRT backend metadata. |
+| `jetson_tensorrt_diverse_contention_sample.json` | Distinct-engine TensorRT contention evidence from Jetson: generated detector/classifier engines both appear in result events while the low-priority classifier is shed. |
 
 ## Schema Signals
 

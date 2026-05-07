@@ -79,6 +79,8 @@ helps reviewers understand the project state.
   generated detector/classifier TensorRT engines: detector `6/0`,
   classifier `1/5` executed/dropped, `5` overload events, and TensorRT backend
   telemetry.
+- Added a curated diverse TensorRT contention sample telemetry artifact:
+  `examples/telemetry/jetson_tensorrt_diverse_contention_sample.json`.
 
 ### Changed
 
