@@ -18,6 +18,7 @@ portfolio evidence를 확인할 수 있도록 제공한다.
 | `jetson_smoke_dummy_sample.json` | Jetson dummy smoke path의 telemetry schema. task count, drop event, result event, scheduler decision, resource snapshot을 보여준다. |
 | `jetson_onnx_smoke_sample.json` | ONNX Runtime worker smoke path의 telemetry schema. result event metadata, output shape `[1, 2]`, resource snapshot을 보여준다. |
 | `jetson_tensorrt_contention_sample.json` | Jetson의 TensorRT-backed scheduler/load-shedding evidence. `detector_trt`는 보호되고 `classifier_trt`는 제한되며 result event에 TensorRT backend metadata가 유지된다. |
+| `jetson_tensorrt_diverse_contention_sample.json` | Jetson의 distinct-engine TensorRT contention evidence. generated detector/classifier engine이 result event에 모두 남고 low-priority classifier가 제한된다. |
 
 ## Schema Signals
 

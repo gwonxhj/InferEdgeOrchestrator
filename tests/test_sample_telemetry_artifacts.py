@@ -72,3 +72,35 @@ def test_jetson_tensorrt_contention_sample_records_policy_and_backend_metadata()
     assert first_event["output"]["worker"] == "tensorrt"
     assert first_event["output"]["output_shapes"] == {"output": [1, 2]}
     assert first_event["output"]["output_preview"] == {"output": [0.0, 0.0]}
+
+
+def test_jetson_tensorrt_diverse_contention_sample_records_distinct_engines() -> None:
+    sample = _load_sample("jetson_tensorrt_diverse_contention_sample.json")
+
+    assert sample["run"]["name"] == "jetson_tensorrt_diverse_contention_smoke"  # type: ignore[index]
+    assert sample["tasks"]["detector_trt"]["executed"] == 6  # type: ignore[index]
+    assert sample["tasks"]["detector_trt"]["dropped"] == 0  # type: ignore[index]
+    assert sample["tasks"]["classifier_trt"]["executed"] == 1  # type: ignore[index]
+    assert sample["tasks"]["classifier_trt"]["dropped"] == 5  # type: ignore[index]
+    assert len(sample["overload_events"]) == 5  # type: ignore[arg-type]
+    assert len(sample["policy_decisions"]) == 5  # type: ignore[arg-type]
+    assert len(sample["drop_events"]) == 5  # type: ignore[arg-type]
+    assert all(  # type: ignore[index]
+        event["limited_task"] == "classifier_trt"
+        for event in sample["policy_decisions"]  # type: ignore[index]
+    )
+    result_events = sample["result_events"]  # type: ignore[index]
+    assert len(result_events) == 7
+    assert {event["output"]["backend"] for event in result_events} == {"tensorrt"}
+    assert {event["output"]["engine_path"] for event in result_events} == {
+        "models/generated/detector_tiny_fp16.plan",
+        "models/generated/classifier_tiny_fp16.plan",
+    }
+    detector_event = next(event for event in result_events if event["task"] == "detector_trt")
+    classifier_event = next(
+        event for event in result_events if event["task"] == "classifier_trt"
+    )
+    assert detector_event["output"]["output_shapes"] == {"detector_scores": [1, 6]}
+    assert classifier_event["output"]["output_shapes"] == {
+        "classifier_logits": [1, 4]
+    }

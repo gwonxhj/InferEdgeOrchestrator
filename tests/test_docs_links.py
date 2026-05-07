@@ -19,6 +19,8 @@ EXPECTED_SAMPLE_ARTIFACTS = {
     Path("examples/telemetry/phase3_overload_sample.json"),
     Path("examples/telemetry/jetson_smoke_dummy_sample.json"),
     Path("examples/telemetry/jetson_onnx_smoke_sample.json"),
+    Path("examples/telemetry/jetson_tensorrt_contention_sample.json"),
+    Path("examples/telemetry/jetson_tensorrt_diverse_contention_sample.json"),
 }
 REPO_ROOT = Path(".").resolve()
 

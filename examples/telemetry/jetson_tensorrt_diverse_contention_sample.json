@@ -1,0 +1,416 @@
+{
+  "drop_events": [
+    {
+      "frame_id": "classifier_trt-0-2",
+      "reason": "load_shedding_backlog_threshold_exceeded",
+      "task": "classifier_trt"
+    },
+    {
+      "frame_id": "classifier_trt-1-4",
+      "reason": "load_shedding_backlog_threshold_exceeded",
+      "task": "classifier_trt"
+    },
+    {
+      "frame_id": "classifier_trt-2-6",
+      "reason": "load_shedding_backlog_threshold_exceeded",
+      "task": "classifier_trt"
+    },
+    {
+      "frame_id": "classifier_trt-3-8",
+      "reason": "load_shedding_backlog_threshold_exceeded",
+      "task": "classifier_trt"
+    },
+    {
+      "frame_id": "classifier_trt-4-10",
+      "reason": "load_shedding_backlog_threshold_exceeded",
+      "task": "classifier_trt"
+    }
+  ],
+  "overload_events": [
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    },
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    },
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    },
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    },
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    }
+  ],
+  "policy_decisions": [
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    },
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    },
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    },
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    },
+    {
+      "dropped_frames": 1,
+      "event": "load_shedding",
+      "limited_task": "classifier_trt",
+      "protected_task": "detector_trt",
+      "reason": "queue_backlog_threshold_exceeded"
+    }
+  ],
+  "resource_snapshots": [
+    {
+      "cpu_percent": 0.0,
+      "memory_percent": 0.167,
+      "platform": "Linux-5.15.148-tegra-aarch64-with-glibc2.35",
+      "process_rss_mb": 12.762,
+      "stage": "start"
+    },
+    {
+      "cpu_percent": 0.0,
+      "memory_percent": 3.11,
+      "platform": "Linux-5.15.148-tegra-aarch64-with-glibc2.35",
+      "process_rss_mb": 236.988,
+      "stage": "end"
+    }
+  ],
+  "result_events": [
+    {
+      "frame_id": "detector_trt-0-1",
+      "latency_ms": 487.985,
+      "output": {
+        "backend": "tensorrt",
+        "engine_path": "models/generated/detector_tiny_fp16.plan",
+        "engine_size_bytes": 44428,
+        "input_shapes": {
+          "detector_input": [
+            1,
+            3,
+            16,
+            16
+          ]
+        },
+        "output_count": 1,
+        "output_dtypes": {
+          "detector_scores": "FLOAT"
+        },
+        "output_preview": {
+          "detector_scores": [
+            0.2700999975204468,
+            0.2695000171661377,
+            0.2689000070095062,
+            0.26829999685287476,
+            0.2677000164985657,
+            0.26969999074935913
+          ]
+        },
+        "output_shapes": {
+          "detector_scores": [
+            1,
+            6
+          ]
+        },
+        "tensorrt_version": "10.3.0",
+        "worker": "tensorrt"
+      },
+      "task": "detector_trt"
+    },
+    {
+      "frame_id": "detector_trt-1-3",
+      "latency_ms": 0.94,
+      "output": {
+        "backend": "tensorrt",
+        "engine_path": "models/generated/detector_tiny_fp16.plan",
+        "engine_size_bytes": 44428,
+        "input_shapes": {
+          "detector_input": [
+            1,
+            3,
+            16,
+            16
+          ]
+        },
+        "output_count": 1,
+        "output_dtypes": {
+          "detector_scores": "FLOAT"
+        },
+        "output_preview": {
+          "detector_scores": [
+            0.2700999975204468,
+            0.2695000171661377,
+            0.2689000070095062,
+            0.26829999685287476,
+            0.2677000164985657,
+            0.26969999074935913
+          ]
+        },
+        "output_shapes": {
+          "detector_scores": [
+            1,
+            6
+          ]
+        },
+        "tensorrt_version": "10.3.0",
+        "worker": "tensorrt"
+      },
+      "task": "detector_trt"
+    },
+    {
+      "frame_id": "detector_trt-2-5",
+      "latency_ms": 1.013,
+      "output": {
+        "backend": "tensorrt",
+        "engine_path": "models/generated/detector_tiny_fp16.plan",
+        "engine_size_bytes": 44428,
+        "input_shapes": {
+          "detector_input": [
+            1,
+            3,
+            16,
+            16
+          ]
+        },
+        "output_count": 1,
+        "output_dtypes": {
+          "detector_scores": "FLOAT"
+        },
+        "output_preview": {
+          "detector_scores": [
+            0.2700999975204468,
+            0.2695000171661377,
+            0.2689000070095062,
+            0.26829999685287476,
+            0.2677000164985657,
+            0.26969999074935913
+          ]
+        },
+        "output_shapes": {
+          "detector_scores": [
+            1,
+            6
+          ]
+        },
+        "tensorrt_version": "10.3.0",
+        "worker": "tensorrt"
+      },
+      "task": "detector_trt"
+    },
+    {
+      "frame_id": "detector_trt-3-7",
+      "latency_ms": 1.048,
+      "output": {
+        "backend": "tensorrt",
+        "engine_path": "models/generated/detector_tiny_fp16.plan",
+        "engine_size_bytes": 44428,
+        "input_shapes": {
+          "detector_input": [
+            1,
+            3,
+            16,
+            16
+          ]
+        },
+        "output_count": 1,
+        "output_dtypes": {
+          "detector_scores": "FLOAT"
+        },
+        "output_preview": {
+          "detector_scores": [
+            0.2700999975204468,
+            0.2695000171661377,
+            0.2689000070095062,
+            0.26829999685287476,
+            0.2677000164985657,
+            0.26969999074935913
+          ]
+        },
+        "output_shapes": {
+          "detector_scores": [
+            1,
+            6
+          ]
+        },
+        "tensorrt_version": "10.3.0",
+        "worker": "tensorrt"
+      },
+      "task": "detector_trt"
+    },
+    {
+      "frame_id": "detector_trt-4-9",
+      "latency_ms": 1.028,
+      "output": {
+        "backend": "tensorrt",
+        "engine_path": "models/generated/detector_tiny_fp16.plan",
+        "engine_size_bytes": 44428,
+        "input_shapes": {
+          "detector_input": [
+            1,
+            3,
+            16,
+            16
+          ]
+        },
+        "output_count": 1,
+        "output_dtypes": {
+          "detector_scores": "FLOAT"
+        },
+        "output_preview": {
+          "detector_scores": [
+            0.2700999975204468,
+            0.2695000171661377,
+            0.2689000070095062,
+            0.26829999685287476,
+            0.2677000164985657,
+            0.26969999074935913
+          ]
+        },
+        "output_shapes": {
+          "detector_scores": [
+            1,
+            6
+          ]
+        },
+        "tensorrt_version": "10.3.0",
+        "worker": "tensorrt"
+      },
+      "task": "detector_trt"
+    },
+    {
+      "frame_id": "detector_trt-5-11",
+      "latency_ms": 1.045,
+      "output": {
+        "backend": "tensorrt",
+        "engine_path": "models/generated/detector_tiny_fp16.plan",
+        "engine_size_bytes": 44428,
+        "input_shapes": {
+          "detector_input": [
+            1,
+            3,
+            16,
+            16
+          ]
+        },
+        "output_count": 1,
+        "output_dtypes": {
+          "detector_scores": "FLOAT"
+        },
+        "output_preview": {
+          "detector_scores": [
+            0.2700999975204468,
+            0.2695000171661377,
+            0.2689000070095062,
+            0.26829999685287476,
+            0.2677000164985657,
+            0.26969999074935913
+          ]
+        },
+        "output_shapes": {
+          "detector_scores": [
+            1,
+            6
+          ]
+        },
+        "tensorrt_version": "10.3.0",
+        "worker": "tensorrt"
+      },
+      "task": "detector_trt"
+    },
+    {
+      "frame_id": "classifier_trt-5-12",
+      "latency_ms": 5.864,
+      "output": {
+        "backend": "tensorrt",
+        "engine_path": "models/generated/classifier_tiny_fp16.plan",
+        "engine_size_bytes": 17764,
+        "input_shapes": {
+          "classifier_input": [
+            1,
+            16
+          ]
+        },
+        "output_count": 1,
+        "output_dtypes": {
+          "classifier_logits": "FLOAT"
+        },
+        "output_preview": {
+          "classifier_logits": [
+            0.02500000037252903,
+            0.023000000044703484,
+            0.020999999716877937,
+            0.024000000208616257
+          ]
+        },
+        "output_shapes": {
+          "classifier_logits": [
+            1,
+            4
+          ]
+        },
+        "tensorrt_version": "10.3.0",
+        "worker": "tensorrt"
+      },
+      "task": "classifier_trt"
+    }
+  ],
+  "run": {
+    "name": "jetson_tensorrt_diverse_contention_smoke"
+  },
+  "tasks": {
+    "classifier_trt": {
+      "dropped": 5,
+      "executed": 1,
+      "max_queue_backlog": 2,
+      "mean_latency_ms": 5.864,
+      "p95_latency_ms": 5.864
+    },
+    "detector_trt": {
+      "dropped": 0,
+      "executed": 6,
+      "max_queue_backlog": 1,
+      "mean_latency_ms": 82.176,
+      "p95_latency_ms": 487.985
+    }
+  }
+}
