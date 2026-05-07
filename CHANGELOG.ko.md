@@ -80,6 +80,8 @@ Language: [English](CHANGELOG.md) | 한국어
 
 ### Changed
 
+- README 첫 화면과 portfolio brief를 다듬어 현재 TensorRT evidence가 보이되
+  throughput benchmark처럼 읽히지 않도록 정리했다.
 - `README.md`의 문서 진입 link를 영어 문서가 main entry가 되도록 정리했다.
   한국어 mirror는 각 문서의 language selector에서 선택하는 흐름으로 유지한다.
 - survey된 Jetson TensorRT 10.3.0 환경에 맞춰 TensorRT engine build 절차를

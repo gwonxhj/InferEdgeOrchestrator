@@ -53,7 +53,7 @@ low-priority 또는 stale frame을 drop한다.
 | Input source | dummy frame 생성 또는 image/video file payload routing |
 | Task queue | task별 bounded queue와 overflow drop policy 관리 |
 | Scheduler | priority와 deadline pressure로 다음 task 선택 |
-| Worker | 공통 interface 뒤에서 `dummy`, `onnxruntime` inference 실행 |
+| Worker | 공통 interface 뒤에서 `dummy`, `onnxruntime`, TensorRT-backed inference 실행 |
 | Policy | low-priority backlog에 load shedding 적용 |
 | Monitor | process resource snapshot 기록 및 Jetson `tegrastats` parsing |
 | Telemetry | executed/dropped count, latency, backlog, result event, resource snapshot, policy decision export |
@@ -66,7 +66,7 @@ low-priority 또는 stale frame을 drop한다.
 - low-priority frame drop을 실패가 아니라 안정성을 위한 의도적 policy로
   다뤘다.
 - worker interface를 고정해 scheduler logic이 dummy inference, ONNX Runtime,
-  향후 TensorRT-style worker와 분리되도록 했다.
+  TensorRT-backed worker와 분리되도록 했다.
 - overload control 주장을 telemetry evidence로 뒷받침하기 위해 policy
   decision을 기록했다.
 - InferEdge integration은 `result.json` 기반 file handoff로 유지해 deployment
@@ -80,6 +80,9 @@ low-priority 또는 stale frame을 drop한다.
 | Synthetic overload comparison | detector p95 end-to-end latency가 FIFO baseline `782.0ms`에서 scheduler + load shedding `8.0ms`로 개선, low-priority classifier frame 16개 drop |
 | Jetson dummy smoke | `nano01`에서 telemetry, resource snapshot, low-priority drop 생성 확인, detector `20/0`, classifier `2/18` executed/dropped |
 | Jetson ONNX Runtime smoke | Jetson에서 ONNX Runtime `1.23.2` worker가 `CPUExecutionProvider`로 identity ONNX 실행, output shape `[1, 2]`, `tegrastats` sample 13개 기록 |
+| Jetson TensorRT inference smoke | local identity ONNX를 TensorRT engine으로 build하고 TensorRT worker로 실행, runtime telemetry에 backend metadata 기록 |
+| Jetson TensorRT contention smoke | Jetson에서 TensorRT-backed high/low-priority task를 scheduler/load shedding으로 실행, low-priority work 제한과 TensorRT backend metadata 확인 |
+| Jetson TensorRT diverse contention smoke | 서로 다른 generated detector/classifier TensorRT engine으로 scheduler/load-shedding evidence 생성: detector `6/0`, classifier `1/5` executed/dropped, overload event `5` |
 | CI | GitHub Actions가 PR과 `main` push에서 Python 3.11 기준 `python -m pytest` 실행 |
 | Release | `v0.1.1`로 docs 및 validation evidence patch snapshot 고정 |
 
@@ -117,8 +120,9 @@ InferEdge result.json -> recommended Orchestrator task config
 - 평균 latency 경쟁을 위한 benchmark tool이 아니다.
 - distributed serving platform이 아니다.
 - Kubernetes, cloud deployment, multi-device orchestration 프로젝트가 아니다.
-- TensorRT/GPU benchmark evidence가 아니다. 현재 Jetson ONNX smoke는
-  `CPUExecutionProvider` 기반 ONNX Runtime worker path 검증이다.
+- TensorRT/GPU throughput benchmark evidence가 아니다. TensorRT 작업은 Jetson
+  contention 상황에서 worker integration, scheduler/load-shedding behavior,
+  telemetry를 검증한다.
 
 ## Interview Talking Points
 
@@ -131,4 +135,5 @@ InferEdge result.json -> recommended Orchestrator task config
 - 단순히 무엇이 실행됐는지가 아니라 왜 특정 task가 drop/protect 되었는지를
   남기기 위해 telemetry를 중심에 두었다.
 - Jetson smoke validation으로 CLI, telemetry path, resource snapshot, ONNX
-  Runtime worker path가 실제 Edge hardware에서 동작함을 확인했다.
+  Runtime path, TensorRT-backed contention path가 실제 Edge hardware에서
+  동작함을 확인했다.

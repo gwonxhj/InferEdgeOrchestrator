@@ -18,6 +18,17 @@ Portfolio positioning: Triton/DeepStream 대체가 아니라 lightweight edge sc
 
 Portfolio brief: [PORTFOLIO.md](PORTFOLIO.md) ([한국어](PORTFOLIO.ko.md))
 
+## 30-Second Read
+
+- Solves the post-deployment operation problem: what runs first, what gets
+  dropped, and why, when edge inference tasks contend for limited resources.
+- Protects high-priority workloads with priority/deadline-aware scheduling,
+  bounded queues, and adaptive load shedding.
+- Records every important runtime decision in telemetry so overload behavior is
+  inspectable instead of hand-waved.
+- Validated with local pytest, synthetic overload comparison, Jetson dummy/ONNX
+  smoke, and Jetson TensorRT-backed contention evidence.
+
 ## What It Does
 
 | Runtime concern | Implementation |
@@ -26,9 +37,9 @@ Portfolio brief: [PORTFOLIO.md](PORTFOLIO.md) ([한국어](PORTFOLIO.ko.md))
 | Priority control | Priority and deadline-aware scheduling based on `priority` and `latency_budget_ms` |
 | Backlog control | Bounded per-task queues with `drop_oldest`, `drop_newest`, and low-priority shedding behavior |
 | Overload stability | Adaptive load shedding limits low-priority work to protect high-priority latency |
-| Worker abstraction | Shared worker interface with `dummy` and `onnxruntime` workers |
+| Worker abstraction | Shared worker interface with `dummy`, `onnxruntime`, and TensorRT-backed workers |
 | Runtime evidence | Telemetry JSON records executed/dropped counts, latency, backlog, result events, resource snapshots, and policy decisions |
-| Edge validation | Jetson Orin Nano smoke scripts validate CLI, telemetry, `tegrastats` parsing, and ONNX Runtime worker execution |
+| Edge validation | Jetson Orin Nano smoke scripts validate CLI, telemetry, `tegrastats` parsing, ONNX Runtime execution, and TensorRT-backed contention |
 
 ## Runtime Model
 
@@ -110,12 +121,12 @@ boundary.
 
 | Evidence | Key result | Artifact |
 | --- | --- | --- |
-| Jetson dummy smoke | `nano01` generated telemetry, resource snapshots, and low-priority drops: detector `20/0`, classifier `2/18` executed/dropped | `reports/jetson_smoke_dummy.json` |
-| Jetson ONNX Runtime smoke | `onnxruntime` worker executed identity ONNX on Jetson with `CPUExecutionProvider`, output shape `[1, 2]`, 13 `tegrastats` samples | `reports/jetson_onnx_smoke.json` |
-| Jetson TensorRT inference smoke | Built `models/identity_fp16.plan` from identity ONNX on Jetson, executed one TensorRT identity frame, and confirmed runtime telemetry metadata: `PASS_TENSORRT_INFERENCE`, `PASS_TENSORRT_TELEMETRY` | `reports/jetson_tensorrt_guard_validation.md`, `reports/jetson_tensorrt_runtime_telemetry.json` |
-| Jetson TensorRT contention smoke | Ran high-priority and low-priority TensorRT tasks through scheduler/load-shedding contention: `PASS_TENSORRT_CONTENTION` | `reports/jetson_tensorrt_contention_validation.md`, `reports/jetson_tensorrt_contention_telemetry.json` |
-| Jetson TensorRT diverse contention smoke | Ran distinct generated detector/classifier TensorRT engines through scheduler/load-shedding contention: detector `6/0`, classifier `1/5` executed/dropped, `5` overload events, `PASS_TENSORRT_DIVERSE_CONTENTION` | `reports/jetson_tensorrt_diverse_contention_validation.md`, `reports/jetson_tensorrt_diverse_contention_telemetry.json` |
-| Synthetic overload comparison | Detector p95 end-to-end latency improved from `782.0ms` FIFO baseline to `8.0ms` with scheduler + shedding; classifier dropped `16` low-priority frames | `reports/phase3_overload.json` |
+| Jetson dummy smoke | `nano01` generated telemetry, resource snapshots, and low-priority drops: detector `20/0`, classifier `2/18` executed/dropped | [`examples/telemetry/jetson_smoke_dummy_sample.json`](examples/telemetry/jetson_smoke_dummy_sample.json) |
+| Jetson ONNX Runtime smoke | `onnxruntime` worker executed identity ONNX on Jetson with `CPUExecutionProvider`, output shape `[1, 2]`, 13 `tegrastats` samples | [`examples/telemetry/jetson_onnx_smoke_sample.json`](examples/telemetry/jetson_onnx_smoke_sample.json) |
+| Jetson TensorRT inference smoke | Built `models/identity_fp16.plan` from identity ONNX on Jetson, executed one TensorRT identity frame, and confirmed runtime telemetry metadata: `PASS_TENSORRT_INFERENCE`, `PASS_TENSORRT_TELEMETRY` | [`docs/validation_evidence.md`](docs/validation_evidence.md) |
+| Jetson TensorRT contention smoke | Ran high-priority and low-priority TensorRT tasks through scheduler/load-shedding contention: `PASS_TENSORRT_CONTENTION` | [`examples/telemetry/jetson_tensorrt_contention_sample.json`](examples/telemetry/jetson_tensorrt_contention_sample.json) |
+| Jetson TensorRT diverse contention smoke | Ran distinct generated detector/classifier TensorRT engines through scheduler/load-shedding contention: detector `6/0`, classifier `1/5` executed/dropped, `5` overload events, `PASS_TENSORRT_DIVERSE_CONTENTION` | [`examples/telemetry/jetson_tensorrt_diverse_contention_sample.json`](examples/telemetry/jetson_tensorrt_diverse_contention_sample.json) |
+| Synthetic overload comparison | Detector p95 end-to-end latency improved from `782.0ms` FIFO baseline to `8.0ms` with scheduler + shedding; classifier dropped `16` low-priority frames | [`examples/telemetry/phase3_overload_sample.json`](examples/telemetry/phase3_overload_sample.json) |
 | InferEdge result handoff | Sample `expected_latency_ms=42.2` produced recommended `latency_budget_ms=64.0` without importing InferEdge internals | `configs/from_inferedge.json` |
 
 Versioned sample telemetry artifacts are available in
@@ -142,8 +153,8 @@ Latest device records:
 | Dummy scheduler smoke | `nano01` | `Ubuntu 22.04.5 LTS`, `L4T R36.4.7` | `3.10.12` | `PASS` | CLI, telemetry, resource snapshots, low-priority drops |
 | ONNX Runtime smoke | `nano01` | `Ubuntu 22.04.5 LTS`, `L4T R36.4.7` | `3.10.12` | `PASS` | ONNX Runtime `1.23.2`, `CPUExecutionProvider`, output metadata recorded |
 
-The ONNX smoke validates the worker path, not TensorRT or GPU benchmark
-performance.
+These smoke records validate worker, scheduler, telemetry, and Jetson execution
+paths. They are not TensorRT/GPU throughput benchmarks.
 
 ### Overload Comparison
 
