@@ -11,11 +11,11 @@ These records are lifecycle evidence, not benchmark claims. The goal is to show
 that the runtime control paths execute, that overload policy decisions are
 observable, and that generated telemetry can explain what happened.
 
-Planned v0.2 TensorRT model-diversity work is tracked separately in
+TensorRT model-diversity work is tracked separately in
 [`docs/tensorrt_model_diversity.md`](tensorrt_model_diversity.md). The current
-diverse-engine record is build-only evidence; it is not counted as scheduler
-or telemetry evidence until a Jetson contention run produces confirmed
-telemetry.
+diverse-engine record is counted only as scheduler/load-shedding evidence for
+the generated detector/classifier engines after the Jetson contention smoke
+produces confirmed telemetry; it is not a throughput benchmark.
 
 ## Evidence Summary
 
@@ -27,6 +27,7 @@ telemetry.
 | Jetson TensorRT contention smoke | Two TensorRT tasks through scheduler/load-shedding with low-priority drops and TensorRT backend telemetry | PASS | [`examples/telemetry/jetson_tensorrt_contention_sample.json`](../examples/telemetry/jetson_tensorrt_contention_sample.json) |
 | Jetson TensorRT diverse engine build | Generated detector-like/classifier-like ONNX pair and built two local FP16 TensorRT engines on Jetson Orin Nano | PASS, build-only | [`docs/tensorrt_engine_build.md`](tensorrt_engine_build.md) |
 | Jetson TensorRT diverse engine guard | Ran each generated FP16 TensorRT engine through `TensorRtWorker` individually and validated backend metadata | PASS, worker guard | [`docs/tensorrt_engine_build.md`](tensorrt_engine_build.md) |
+| Jetson TensorRT diverse contention smoke | Distinct generated detector/classifier TensorRT engines through scheduler/load-shedding with protected detector drops, classifier shedding, overload events, policy decisions, and TensorRT backend telemetry | PASS | [`docs/tensorrt_model_diversity.md`](tensorrt_model_diversity.md) |
 | Synthetic overload comparison | FIFO baseline vs scheduler/load-shedding policy under controlled overload | PASS | [`examples/telemetry/phase3_overload_sample.json`](../examples/telemetry/phase3_overload_sample.json) |
 | InferEdge result handoff | File-based conversion from InferEdge `result.json` latency signal to Orchestrator config | PASS | [`examples/inferedge_result_sample.json`](../examples/inferedge_result_sample.json), [`configs/from_inferedge.json`](../configs/from_inferedge.json) |
 | CI tests | Unit tests and sample artifact compatibility checks on Python 3.11 | PASS | [GitHub Actions CI](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml) |
@@ -222,6 +223,50 @@ throughput benchmark.
 Tracked sample:
 
 - [`examples/telemetry/jetson_tensorrt_contention_sample.json`](../examples/telemetry/jetson_tensorrt_contention_sample.json)
+
+## Jetson TensorRT Diverse Contention Smoke
+
+Purpose:
+
+- Validate that two distinct generated TensorRT engines can run through
+  `OrchestratorRuntime` on Jetson Orin Nano.
+- Validate that load shedding limits the low-priority classifier task while the
+  high-priority detector task is protected from drops.
+- Validate that overload events, policy decisions, result events, and TensorRT
+  backend metadata remain observable in telemetry.
+
+Command:
+
+```bash
+PYTHON_BIN=$HOME/miniconda3/envs/yolo_env/bin/python \
+  CAPTURE_TEGRASTATS=1 \
+  scripts/smoke_jetson_tensorrt_diverse_contention.sh
+```
+
+Latest physical-device record:
+
+| Field | Value |
+| --- | --- |
+| Result | `PASS_TENSORRT_DIVERSE_CONTENTION` |
+| Device | `nano01` |
+| Timestamp | `2026-05-07T03:38:21Z` |
+| Python | `3.10.12` |
+| TensorRT Python | `10.3.0` |
+| Config | `configs/jetson_tensorrt_diverse_contention.json` |
+| Frames | `6` |
+| Detector engine | `models/generated/detector_tiny_fp16.plan` |
+| Classifier engine | `models/generated/classifier_tiny_fp16.plan` |
+| Detector | `executed=6`, `dropped=0` |
+| Classifier | `executed=1`, `dropped=5` |
+| Overload events | `5` |
+| Limited tasks | `classifier_trt` |
+| Result event backends | `tensorrt` |
+| Raw telemetry | `reports/jetson_tensorrt_diverse_contention_telemetry.json` |
+| Raw validation note | `reports/jetson_tensorrt_diverse_contention_validation.md` |
+| Optional `tegrastats` log | `reports/tegrastats_tensorrt_diverse_contention.log` |
+
+This is distinct-engine TensorRT scheduler/load-shedding evidence. It validates
+policy behavior and telemetry shape, not stable TensorRT latency or throughput.
 
 ## Synthetic Overload Comparison
 

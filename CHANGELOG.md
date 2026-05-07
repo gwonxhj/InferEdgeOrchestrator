@@ -75,6 +75,10 @@ helps reviewers understand the project state.
   engines.
 - Added `scripts/smoke_jetson_tensorrt_diverse_contention.sh` to validate
   distinct-engine TensorRT scheduler/load-shedding behavior on Jetson.
+- Recorded Jetson `PASS_TENSORRT_DIVERSE_CONTENTION` evidence for distinct
+  generated detector/classifier TensorRT engines: detector `6/0`,
+  classifier `1/5` executed/dropped, `5` overload events, and TensorRT backend
+  telemetry.
 
 ### Changed
 

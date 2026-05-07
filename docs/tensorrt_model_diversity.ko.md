@@ -246,8 +246,24 @@ Current config contract:
 - Classifier engine: `models/generated/classifier_tiny_fp16.plan`
 - Smoke script: `scripts/smoke_jetson_tensorrt_diverse_contention.sh`
 - Success marker: `PASS_TENSORRT_DIVERSE_CONTENTION`
-- Status: script/config contract. Diverse contention smoke script를 Jetson에서
-  실행하기 전까지 confirmed scheduler/load-shedding evidence가 아니다.
+- Status: Jetson Orin Nano `nano01`에서 `2026-05-07T03:38:21Z` 기준 확인됨.
+
+확인된 Jetson contention 결과:
+
+| Field | Value |
+| --- | --- |
+| Result | `PASS_TENSORRT_DIVERSE_CONTENTION` |
+| Frames | `6` |
+| Detector | `executed=6`, `dropped=0` |
+| Classifier | `executed=1`, `dropped=5` |
+| Overload events | `5` |
+| Limited tasks | `classifier_trt` |
+| Backends | `tensorrt` |
+| Raw telemetry | `reports/jetson_tensorrt_diverse_contention_telemetry.json` |
+| Raw validation note | `reports/jetson_tensorrt_diverse_contention_validation.md` |
+
+이는 서로 다른 engine의 scheduler/load-shedding behavior와 telemetry shape를
+확인한다. TensorRT throughput 또는 안정적인 latency claim은 하지 않는다.
 
 ## Risks
 

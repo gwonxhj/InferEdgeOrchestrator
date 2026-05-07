@@ -11,10 +11,11 @@ file-based handoff가 의도대로 동작했는지 보여주는 runtime validati
 control path가 실행되는지, overload policy decision이 관찰 가능한지, 생성된
 telemetry가 어떤 일이 일어났는지 설명할 수 있는지를 보여주는 것이다.
 
-Planned v0.2 TensorRT model-diversity 작업은
+TensorRT model-diversity 작업은
 [`docs/tensorrt_model_diversity.ko.md`](tensorrt_model_diversity.ko.md)에 별도로
-기록한다. 현재 diverse-engine 기록은 build-only evidence이며, Jetson contention run이
-확정 telemetry를 만들기 전까지 scheduler 또는 telemetry evidence로 세지 않는다.
+기록한다. 현재 diverse-engine 기록은 Jetson contention smoke가 확정 telemetry를
+생성한 뒤 generated detector/classifier engine에 대한 scheduler/load-shedding
+evidence로만 계산한다. Throughput benchmark는 아니다.
 
 ## Evidence Summary
 
@@ -26,6 +27,7 @@ Planned v0.2 TensorRT model-diversity 작업은
 | Jetson TensorRT contention smoke | TensorRT task 2개를 scheduler/load-shedding으로 실행하고 low-priority drop 및 TensorRT backend telemetry 검증 | PASS | [`examples/telemetry/jetson_tensorrt_contention_sample.json`](../examples/telemetry/jetson_tensorrt_contention_sample.json) |
 | Jetson TensorRT diverse engine build | Jetson Orin Nano에서 detector-like/classifier-like ONNX pair를 생성하고 local FP16 TensorRT engine 2개 build 검증 | PASS, build-only | [`docs/tensorrt_engine_build.ko.md`](tensorrt_engine_build.ko.md) |
 | Jetson TensorRT diverse engine guard | 생성된 FP16 TensorRT engine 각각을 `TensorRtWorker`로 개별 실행하고 backend metadata 검증 | PASS, worker guard | [`docs/tensorrt_engine_build.ko.md`](tensorrt_engine_build.ko.md) |
+| Jetson TensorRT diverse contention smoke | 서로 다른 generated detector/classifier TensorRT engine을 scheduler/load-shedding으로 실행하고 detector drop 보호, classifier shedding, overload event, policy decision, TensorRT backend telemetry 검증 | PASS | [`docs/tensorrt_model_diversity.ko.md`](tensorrt_model_diversity.ko.md) |
 | Synthetic overload comparison | controlled overload에서 FIFO baseline과 scheduler/load-shedding policy 비교 | PASS | [`examples/telemetry/phase3_overload_sample.json`](../examples/telemetry/phase3_overload_sample.json) |
 | InferEdge result handoff | InferEdge `result.json` latency signal에서 Orchestrator config로 file-based 변환 | PASS | [`examples/inferedge_result_sample.json`](../examples/inferedge_result_sample.json), [`configs/from_inferedge.json`](../configs/from_inferedge.json) |
 | CI tests | Python 3.11에서 unit test와 sample artifact compatibility check 실행 | PASS | [GitHub Actions CI](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml) |
@@ -221,6 +223,51 @@ benchmark는 아니다.
 Tracked sample:
 
 - [`examples/telemetry/jetson_tensorrt_contention_sample.json`](../examples/telemetry/jetson_tensorrt_contention_sample.json)
+
+## Jetson TensorRT Diverse Contention Smoke
+
+목적:
+
+- 서로 다른 generated TensorRT engine 2개가 Jetson Orin Nano의
+  `OrchestratorRuntime`에서 실행되는지 검증한다.
+- Load shedding이 low-priority classifier task를 제한하는 동안
+  high-priority detector task가 drop되지 않도록 보호되는지 검증한다.
+- Overload event, policy decision, result event, TensorRT backend metadata가
+  telemetry에 남는지 검증한다.
+
+명령:
+
+```bash
+PYTHON_BIN=$HOME/miniconda3/envs/yolo_env/bin/python \
+  CAPTURE_TEGRASTATS=1 \
+  scripts/smoke_jetson_tensorrt_diverse_contention.sh
+```
+
+최신 실기기 기록:
+
+| Field | Value |
+| --- | --- |
+| Result | `PASS_TENSORRT_DIVERSE_CONTENTION` |
+| Device | `nano01` |
+| Timestamp | `2026-05-07T03:38:21Z` |
+| Python | `3.10.12` |
+| TensorRT Python | `10.3.0` |
+| Config | `configs/jetson_tensorrt_diverse_contention.json` |
+| Frames | `6` |
+| Detector engine | `models/generated/detector_tiny_fp16.plan` |
+| Classifier engine | `models/generated/classifier_tiny_fp16.plan` |
+| Detector | `executed=6`, `dropped=0` |
+| Classifier | `executed=1`, `dropped=5` |
+| Overload events | `5` |
+| Limited tasks | `classifier_trt` |
+| Result event backends | `tensorrt` |
+| Raw telemetry | `reports/jetson_tensorrt_diverse_contention_telemetry.json` |
+| Raw validation note | `reports/jetson_tensorrt_diverse_contention_validation.md` |
+| Optional `tegrastats` log | `reports/tegrastats_tensorrt_diverse_contention.log` |
+
+이는 서로 다른 engine 기반 TensorRT scheduler/load-shedding evidence다.
+정책 동작과 telemetry shape를 검증하며, 안정적인 TensorRT latency나 throughput
+benchmark는 아니다.
 
 ## Synthetic Overload Comparison
 

@@ -71,6 +71,10 @@ Language: [English](CHANGELOG.md) | 한국어
   위한 reserved config `configs/jetson_tensorrt_diverse_contention.json`을 추가했다.
 - Jetson에서 distinct-engine TensorRT scheduler/load-shedding behavior를 검증하는
   `scripts/smoke_jetson_tensorrt_diverse_contention.sh`를 추가했다.
+- 서로 다른 generated detector/classifier TensorRT engine에 대한 Jetson
+  `PASS_TENSORRT_DIVERSE_CONTENTION` evidence를 기록했다: detector `6/0`,
+  classifier `1/5` executed/dropped, overload event `5`, TensorRT backend
+  telemetry.
 
 ### Changed
 
