@@ -259,8 +259,24 @@ Current config contract:
 - Classifier engine: `models/generated/classifier_tiny_fp16.plan`
 - Smoke script: `scripts/smoke_jetson_tensorrt_diverse_contention.sh`
 - Success marker: `PASS_TENSORRT_DIVERSE_CONTENTION`
-- Status: script/config contract. It becomes confirmed scheduler/load-shedding
-  evidence only after the diverse contention smoke script is run on Jetson.
+- Status: confirmed on Jetson Orin Nano `nano01` at `2026-05-07T03:38:21Z`.
+
+Confirmed Jetson contention result:
+
+| Field | Value |
+| --- | --- |
+| Result | `PASS_TENSORRT_DIVERSE_CONTENTION` |
+| Frames | `6` |
+| Detector | `executed=6`, `dropped=0` |
+| Classifier | `executed=1`, `dropped=5` |
+| Overload events | `5` |
+| Limited tasks | `classifier_trt` |
+| Backends | `tensorrt` |
+| Raw telemetry | `reports/jetson_tensorrt_diverse_contention_telemetry.json` |
+| Raw validation note | `reports/jetson_tensorrt_diverse_contention_validation.md` |
+
+This confirms distinct-engine scheduler/load-shedding behavior and telemetry
+shape. It does not make a TensorRT throughput or stable latency claim.
 
 ## Risks
 
