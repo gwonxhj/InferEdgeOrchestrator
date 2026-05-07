@@ -18,6 +18,16 @@ Portfolio positioning: Triton/DeepStream 대체가 아니라 lightweight edge sc
 
 Portfolio brief: [PORTFOLIO.ko.md](PORTFOLIO.ko.md) ([English](PORTFOLIO.md))
 
+## 30-Second Read
+
+- 배포 이후 운영 문제에 집중한다. Edge inference task가 제한된 자원을 두고
+  경쟁할 때 무엇을 먼저 실행하고, 무엇을 drop하며, 왜 그런 결정을 했는지 다룬다.
+- Priority/deadline-aware scheduling, bounded queue, adaptive load shedding으로
+  high-priority workload를 보호한다.
+- 중요한 runtime decision을 telemetry로 남겨 overload behavior를 추적 가능하게 한다.
+- Local pytest, synthetic overload comparison, Jetson dummy/ONNX smoke,
+  Jetson TensorRT-backed contention evidence로 검증했다.
+
 ## What It Does
 
 | Runtime concern | Implementation |
@@ -26,9 +36,9 @@ Portfolio brief: [PORTFOLIO.ko.md](PORTFOLIO.ko.md) ([English](PORTFOLIO.md))
 | Priority control | `priority`, `latency_budget_ms` 기반 priority/deadline-aware scheduling |
 | Backlog control | task별 bounded queue와 `drop_oldest`, `drop_newest`, low-priority shedding |
 | Overload stability | low-priority work를 제한해 high-priority latency 보호 |
-| Worker abstraction | `dummy`, `onnxruntime` worker를 같은 interface로 실행 |
+| Worker abstraction | `dummy`, `onnxruntime`, TensorRT-backed worker를 같은 interface로 실행 |
 | Runtime evidence | executed/dropped count, latency, backlog, result event, resource snapshot, policy decision을 telemetry JSON으로 기록 |
-| Edge validation | Jetson Orin Nano smoke script로 CLI, telemetry, `tegrastats` parsing, ONNX Runtime worker 실행 검증 |
+| Edge validation | Jetson Orin Nano smoke script로 CLI, telemetry, `tegrastats` parsing, ONNX Runtime execution, TensorRT-backed contention 검증 |
 
 ## Runtime Model
 
@@ -110,12 +120,12 @@ control이 파일 기반 경계로 연결됨을 보여준다.
 
 | Evidence | Key result | Artifact |
 | --- | --- | --- |
-| Jetson dummy smoke | `nano01`에서 telemetry, resource snapshot, low-priority drop 확인: detector `20/0`, classifier `2/18` executed/dropped | `reports/jetson_smoke_dummy.json` |
-| Jetson ONNX Runtime smoke | Jetson에서 `onnxruntime` worker가 identity ONNX를 `CPUExecutionProvider`로 실행, output shape `[1, 2]`, `tegrastats` sample 13개 | `reports/jetson_onnx_smoke.json` |
-| Jetson TensorRT inference smoke | Jetson에서 identity ONNX로 `models/identity_fp16.plan`을 생성하고 TensorRT identity frame 1개 실행 및 runtime telemetry metadata 확인: `PASS_TENSORRT_INFERENCE`, `PASS_TENSORRT_TELEMETRY` | `reports/jetson_tensorrt_guard_validation.md`, `reports/jetson_tensorrt_runtime_telemetry.json` |
-| Jetson TensorRT contention smoke | high-priority/low-priority TensorRT task를 scheduler/load-shedding contention으로 실행: `PASS_TENSORRT_CONTENTION` | `reports/jetson_tensorrt_contention_validation.md`, `reports/jetson_tensorrt_contention_telemetry.json` |
-| Jetson TensorRT diverse contention smoke | 서로 다른 generated detector/classifier TensorRT engine을 scheduler/load-shedding contention으로 실행: detector `6/0`, classifier `1/5` executed/dropped, overload event `5`, `PASS_TENSORRT_DIVERSE_CONTENTION` | `reports/jetson_tensorrt_diverse_contention_validation.md`, `reports/jetson_tensorrt_diverse_contention_telemetry.json` |
-| Synthetic overload comparison | detector p95 end-to-end latency가 FIFO baseline `782.0ms`에서 scheduler + shedding `8.0ms`로 개선, classifier low-priority frame 16개 drop | `reports/phase3_overload.json` |
+| Jetson dummy smoke | `nano01`에서 telemetry, resource snapshot, low-priority drop 확인: detector `20/0`, classifier `2/18` executed/dropped | [`examples/telemetry/jetson_smoke_dummy_sample.json`](examples/telemetry/jetson_smoke_dummy_sample.json) |
+| Jetson ONNX Runtime smoke | Jetson에서 `onnxruntime` worker가 identity ONNX를 `CPUExecutionProvider`로 실행, output shape `[1, 2]`, `tegrastats` sample 13개 | [`examples/telemetry/jetson_onnx_smoke_sample.json`](examples/telemetry/jetson_onnx_smoke_sample.json) |
+| Jetson TensorRT inference smoke | Jetson에서 identity ONNX로 `models/identity_fp16.plan`을 생성하고 TensorRT identity frame 1개 실행 및 runtime telemetry metadata 확인: `PASS_TENSORRT_INFERENCE`, `PASS_TENSORRT_TELEMETRY` | [`docs/validation_evidence.ko.md`](docs/validation_evidence.ko.md) |
+| Jetson TensorRT contention smoke | high-priority/low-priority TensorRT task를 scheduler/load-shedding contention으로 실행: `PASS_TENSORRT_CONTENTION` | [`examples/telemetry/jetson_tensorrt_contention_sample.json`](examples/telemetry/jetson_tensorrt_contention_sample.json) |
+| Jetson TensorRT diverse contention smoke | 서로 다른 generated detector/classifier TensorRT engine을 scheduler/load-shedding contention으로 실행: detector `6/0`, classifier `1/5` executed/dropped, overload event `5`, `PASS_TENSORRT_DIVERSE_CONTENTION` | [`examples/telemetry/jetson_tensorrt_diverse_contention_sample.json`](examples/telemetry/jetson_tensorrt_diverse_contention_sample.json) |
+| Synthetic overload comparison | detector p95 end-to-end latency가 FIFO baseline `782.0ms`에서 scheduler + shedding `8.0ms`로 개선, classifier low-priority frame 16개 drop | [`examples/telemetry/phase3_overload_sample.json`](examples/telemetry/phase3_overload_sample.json) |
 | InferEdge result handoff | sample `expected_latency_ms=42.2`에서 recommended `latency_budget_ms=64.0` 생성, InferEdge internals import 없음 | `configs/from_inferedge.json` |
 
 versioned sample telemetry artifact는 `examples/telemetry/`
@@ -142,7 +152,8 @@ Latest device records:
 | Dummy scheduler smoke | `nano01` | `Ubuntu 22.04.5 LTS`, `L4T R36.4.7` | `3.10.12` | `PASS` | CLI, telemetry, resource snapshot, low-priority drop |
 | ONNX Runtime smoke | `nano01` | `Ubuntu 22.04.5 LTS`, `L4T R36.4.7` | `3.10.12` | `PASS` | ONNX Runtime `1.23.2`, `CPUExecutionProvider`, output metadata 기록 |
 
-ONNX smoke는 worker path 검증이지 TensorRT/GPU benchmark 성능 검증이 아니다.
+이 smoke 기록들은 worker, scheduler, telemetry, Jetson execution path 검증이다.
+TensorRT/GPU throughput benchmark가 아니다.
 
 ### Overload Comparison
 

@@ -84,6 +84,8 @@ helps reviewers understand the project state.
 
 ### Changed
 
+- Polished the README first viewport and portfolio brief so the current
+  TensorRT evidence is visible without reading like a throughput benchmark.
 - Updated `README.md` document entry links so English documentation is the
   primary entry point; Korean mirrors remain available from each document's
   language selector.

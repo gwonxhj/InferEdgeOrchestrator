@@ -53,7 +53,7 @@ frames when queue pressure grows.
 | Input source | Generates dummy frames or routes image/video file payloads |
 | Task queue | Maintains bounded per-task queues and overflow drop policy |
 | Scheduler | Chooses the next task using priority and deadline pressure |
-| Worker | Runs `dummy` or `onnxruntime` inference behind a shared interface |
+| Worker | Runs `dummy`, `onnxruntime`, or TensorRT-backed inference behind a shared interface |
 | Policy | Applies load shedding to low-priority backlog |
 | Monitor | Captures process resource snapshots and parses Jetson `tegrastats` |
 | Telemetry | Exports executed/dropped counts, latency, backlog, result events, resource snapshots, and policy decisions |
@@ -66,7 +66,7 @@ frames when queue pressure grows.
 - Treat dropping low-priority frames as a deliberate stability policy, not as a
   failure condition.
 - Keep the worker interface stable so scheduler logic stays independent from
-  dummy inference, ONNX Runtime, or future TensorRT-style workers.
+  dummy inference, ONNX Runtime, or TensorRT-backed workers.
 - Record policy decisions in telemetry so claims about overload control are
   backed by execution evidence.
 - Keep InferEdge integration file-based through `result.json` to avoid coupling
@@ -80,6 +80,9 @@ frames when queue pressure grows.
 | Synthetic overload comparison | Detector p95 end-to-end latency improved from `782.0ms` FIFO baseline to `8.0ms` with scheduler + load shedding; low-priority classifier dropped `16` frames |
 | Jetson dummy smoke | `nano01` generated telemetry, resource snapshots, and low-priority drops with detector `20/0` and classifier `2/18` executed/dropped |
 | Jetson ONNX Runtime smoke | ONNX Runtime `1.23.2` worker executed identity ONNX on Jetson with `CPUExecutionProvider`, output shape `[1, 2]`, and 13 `tegrastats` samples |
+| Jetson TensorRT inference smoke | Local identity ONNX was built into a TensorRT engine and executed through the TensorRT worker, with backend metadata recorded in runtime telemetry |
+| Jetson TensorRT contention smoke | TensorRT-backed high/low-priority tasks ran through scheduler/load shedding on Jetson; low-priority work was shed while TensorRT backend metadata remained visible |
+| Jetson TensorRT diverse contention smoke | Distinct generated detector/classifier TensorRT engines produced scheduler/load-shedding evidence: detector `6/0`, classifier `1/5` executed/dropped, `5` overload events |
 | CI | GitHub Actions runs `python -m pytest` on Python 3.11 for PRs and pushes to `main` |
 | Release | `v0.1.1` captures the docs and validation evidence patch snapshot |
 
@@ -117,8 +120,9 @@ InferEdge result.json -> recommended Orchestrator task config
 - Not a benchmark tool focused on average latency competition.
 - Not a distributed serving platform.
 - Not Kubernetes, cloud deployment, or multi-device orchestration.
-- Not TensorRT/GPU benchmark evidence; the Jetson ONNX smoke currently validates
-  the ONNX Runtime worker path with `CPUExecutionProvider`.
+- Not TensorRT/GPU throughput benchmark evidence. TensorRT work here validates
+  worker integration, scheduler/load-shedding behavior, and telemetry under
+  Jetson contention.
 
 ## Interview Talking Points
 
@@ -131,4 +135,5 @@ InferEdge result.json -> recommended Orchestrator task config
 - I kept telemetry central because the interesting engineering question is not
   just what ran, but why the scheduler dropped or protected a task.
 - I added Jetson smoke validation to prove the CLI, telemetry path, resource
-  snapshots, and ONNX Runtime worker path run on physical edge hardware.
+  snapshots, ONNX Runtime path, and TensorRT-backed contention path run on
+  physical edge hardware.
