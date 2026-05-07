@@ -73,6 +73,8 @@ helps reviewers understand the project state.
 - Added `configs/jetson_tensorrt_diverse_contention.json` as the reserved
   scheduler/load-shedding contention config for the distinct generated TensorRT
   engines.
+- Added `scripts/smoke_jetson_tensorrt_diverse_contention.sh` to validate
+  distinct-engine TensorRT scheduler/load-shedding behavior on Jetson.
 
 ### Changed
 

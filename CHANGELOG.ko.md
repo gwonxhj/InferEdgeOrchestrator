@@ -69,6 +69,8 @@ Language: [English](CHANGELOG.md) | 한국어
   기록했다.
 - 서로 다른 generated TensorRT engine을 scheduler/load-shedding contention으로 실행하기
   위한 reserved config `configs/jetson_tensorrt_diverse_contention.json`을 추가했다.
+- Jetson에서 distinct-engine TensorRT scheduler/load-shedding behavior를 검증하는
+  `scripts/smoke_jetson_tensorrt_diverse_contention.sh`를 추가했다.
 
 ### Changed
 
