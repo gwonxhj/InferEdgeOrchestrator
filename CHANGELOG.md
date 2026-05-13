@@ -23,6 +23,8 @@ helps reviewers understand the project state.
   through the dummy scheduler, report, and synthetic overload paths.
 - Refreshed README and portfolio evidence wording so the 30-second entry path
   reflects the new package/CLI smoke without changing the core positioning.
+- Updated the validation evidence index so CI evidence includes package install
+  and installed CLI smoke coverage.
 
 ## v0.1.2 - 2026-05-07
 

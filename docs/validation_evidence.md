@@ -30,7 +30,7 @@ a throughput benchmark or production serving claim.
 | Jetson TensorRT diverse contention smoke | Distinct generated detector/classifier TensorRT engines through scheduler/load-shedding with protected detector drops, classifier shedding, overload events, policy decisions, and TensorRT backend telemetry | PASS | [`examples/telemetry/jetson_tensorrt_diverse_contention_sample.json`](../examples/telemetry/jetson_tensorrt_diverse_contention_sample.json) |
 | Synthetic overload comparison | FIFO baseline vs scheduler/load-shedding policy under controlled overload | PASS | [`examples/telemetry/phase3_overload_sample.json`](../examples/telemetry/phase3_overload_sample.json) |
 | InferEdge result handoff | File-based conversion from InferEdge `result.json` latency signal to Orchestrator config | PASS | [`examples/inferedge_result_sample.json`](../examples/inferedge_result_sample.json), [`configs/from_inferedge.json`](../configs/from_inferedge.json) |
-| CI tests | Unit tests and sample artifact compatibility checks on Python 3.11 | PASS | [GitHub Actions CI](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml) |
+| CI package/install smoke | Python 3.11 pytest, sample artifact compatibility checks, editable package install, and installed CLI smoke for `run`, `report`, and `compare-overload` | PASS | [GitHub Actions CI](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml) |
 
 Raw smoke reports are generated under `reports/` during local or Jetson runs and
 are intentionally ignored by git. The JSON files under `examples/telemetry/` are
@@ -379,3 +379,5 @@ For sample-specific schema notes, see
 - Raw generated reports stay under `reports/` and are not committed.
 - Versioned sample JSON files are curated documentation artifacts for review and
   schema inspection.
+- CI package/install smoke validates portable install and CLI entrypoint health;
+  it does not replace Jetson physical-device smoke evidence.
