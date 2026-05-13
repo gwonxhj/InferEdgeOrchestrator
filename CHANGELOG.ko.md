@@ -20,6 +20,8 @@ Language: [English](CHANGELOG.md) | 한국어
 - GitHub Actions CI를 Node 24 호환 공식 action
   (`actions/checkout@v6`, `actions/setup-python@v6`)으로 갱신하고, remote pytest
   명령을 local no-cache test command와 맞췄다.
+- GitHub Actions package/install smoke step을 추가해 설치된 CLI가 dummy scheduler,
+  report, synthetic overload path를 실제로 실행하는지 검증한다.
 
 ## v0.1.2 - 2026-05-07
 

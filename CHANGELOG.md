@@ -19,6 +19,8 @@ helps reviewers understand the project state.
 - Updated GitHub Actions CI to use Node 24-compatible official actions
   (`actions/checkout@v6`, `actions/setup-python@v6`) and aligned the remote
   pytest command with the local no-cache test command.
+- Added a GitHub Actions package/install smoke step that runs the installed CLI
+  through the dummy scheduler, report, and synthetic overload paths.
 
 ## v0.1.2 - 2026-05-07
 
