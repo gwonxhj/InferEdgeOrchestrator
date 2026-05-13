@@ -13,9 +13,9 @@ observable, and that generated telemetry can explain what happened.
 
 TensorRT model-diversity work is tracked separately in
 [`docs/tensorrt_model_diversity.md`](tensorrt_model_diversity.md). The current
-diverse-engine record is counted only as scheduler/load-shedding evidence for
-the generated detector/classifier engines after the Jetson contention smoke
-produces confirmed telemetry; it is not a throughput benchmark.
+diverse-engine record is counted as TensorRT-backed scheduler/load-shedding
+operation-control evidence for generated detector/classifier engines; it is not
+a throughput benchmark or production serving claim.
 
 ## Evidence Summary
 
@@ -354,6 +354,8 @@ InferEdgeOrchestrator = runtime operation control layer
 | [`examples/telemetry/phase3_overload_sample.json`](../examples/telemetry/phase3_overload_sample.json) | Synthetic overload comparison | protected task, baseline p95, scheduled p95, low-priority drops, overload events |
 | [`examples/telemetry/jetson_smoke_dummy_sample.json`](../examples/telemetry/jetson_smoke_dummy_sample.json) | Jetson dummy smoke | executed/dropped counts, drop events, schedule decisions, result events, resource snapshots |
 | [`examples/telemetry/jetson_onnx_smoke_sample.json`](../examples/telemetry/jetson_onnx_smoke_sample.json) | Jetson ONNX Runtime smoke | ONNX worker output metadata, output shapes, result events, resource snapshots |
+| [`examples/telemetry/jetson_tensorrt_contention_sample.json`](../examples/telemetry/jetson_tensorrt_contention_sample.json) | Jetson TensorRT contention smoke | protected high-priority task, low-priority shedding, overload events, TensorRT backend metadata |
+| [`examples/telemetry/jetson_tensorrt_diverse_contention_sample.json`](../examples/telemetry/jetson_tensorrt_diverse_contention_sample.json) | Jetson TensorRT diverse contention smoke | distinct generated engines, protected detector-like task, limited classifier-like task, policy decisions |
 
 For sample-specific schema notes, see
 [`examples/telemetry/README.md`](../examples/telemetry/README.md).
@@ -368,11 +370,12 @@ For sample-specific schema notes, see
   TensorRT or GPU benchmark evidence.
 - Jetson TensorRT inference smoke proves engine creation, a single TensorRT
   worker identity inference path, and runtime telemetry metadata propagation; it
-  does not prove multi-task TensorRT scheduling behavior yet.
-- Jetson TensorRT contention smoke proves initial TensorRT-backed
-  scheduler/load-shedding behavior with a tiny shared identity engine; it does
-  not prove production model throughput or diversified detector/classifier
-  engine behavior.
+  is not multi-task contention evidence by itself.
+- Jetson TensorRT contention smoke proves TensorRT-backed
+  scheduler/load-shedding behavior with a tiny shared identity engine.
+- Jetson TensorRT diverse contention smoke proves the same operation-control
+  telemetry shape with distinct generated detector/classifier engines; it does
+  not prove production model throughput or stable device performance.
 - Raw generated reports stay under `reports/` and are not committed.
 - Versioned sample JSON files are curated documentation artifacts for review and
   schema inspection.

@@ -22,8 +22,8 @@ The current implementation is intentionally small and explicit:
 - `telemetry.py` records the operational evidence needed to explain scheduler
   decisions.
 
-This makes the project a scheduler-focused edge runtime, not a general inference
-server.
+This makes the project a runtime operation-control layer for edge inference, not
+a general inference server.
 
 ## Runtime Flow
 
@@ -92,7 +92,8 @@ When a queue is full:
   shedding is handled by `LoadSheddingPolicy`.
 
 Drops are not silent. Every queue overflow or policy-driven drop becomes a
-`drop_events` telemetry entry with task, frame id, and reason.
+`drop_events` telemetry entry with task, frame id, and reason, so overload
+behavior can be explained after the run.
 
 ## Load Shedding Policy
 
@@ -205,5 +206,6 @@ InferEdgeOrchestrator is not:
 - A multi-device scheduler.
 - A TensorRT performance benchmark.
 
-The project goal is to show explicit, testable scheduling and overload-control
-behavior for constrained edge inference workloads.
+The project goal is not maximum-throughput serving. It is to make inference
+behavior controllable under constrained edge workloads through explicit,
+testable scheduling, load shedding, and telemetry.

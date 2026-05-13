@@ -6,17 +6,21 @@ Language: English | [한국어](README.ko.md)
 
 Release: [v0.1.2](https://github.com/gwonxhj/InferEdgeOrchestrator/releases/tag/v0.1.2)
 
-InferEdgeOrchestrator is a lightweight runtime scheduler for constrained edge
-devices. It controls multiple inference tasks after deployment, using
-per-task priority, latency budgets, bounded queues, load shedding, and telemetry
-so high-priority workloads stay responsive when backlog and latency spikes
-appear.
+InferEdgeOrchestrator is a post-deployment runtime operation-control layer and
+lightweight scheduler for constrained edge devices. It controls multiple
+inference tasks after deployment, using per-task priority, latency budgets,
+bounded queues, load shedding, and telemetry so high-priority workloads stay
+responsive when backlog and latency spikes appear.
 
-It is not a Triton or DeepStream replacement. The project is a scheduler-focused
-edge runtime layer that makes overload-control decisions explicit, testable, and
-explainable.
+It is not a Triton or DeepStream replacement. The project is a runtime
+operation-control layer that makes overload-control decisions explicit,
+testable, and explainable.
 
-Portfolio positioning: Triton/DeepStream 대체가 아니라 lightweight edge scheduler.
+The goal is not maximum-throughput serving. The goal is controllable inference
+behavior under constrained edge workloads.
+
+Portfolio positioning: post-deployment runtime operation control, not
+Triton/DeepStream replacement or throughput serving.
 
 Portfolio brief: [PORTFOLIO.md](PORTFOLIO.md) ([한국어](PORTFOLIO.ko.md))
 
@@ -26,8 +30,8 @@ Portfolio brief: [PORTFOLIO.md](PORTFOLIO.md) ([한국어](PORTFOLIO.ko.md))
   dropped, and why, when edge inference tasks contend for limited resources.
 - Protects high-priority workloads with priority/deadline-aware scheduling,
   bounded queues, and adaptive load shedding.
-- Records every important runtime decision in telemetry so overload behavior is
-  inspectable instead of hand-waved.
+- Does not silently drop work: overload decisions, drop reasons, and protected
+  tasks are recorded as structured telemetry evidence.
 - Validated with local pytest, synthetic overload comparison, Jetson dummy/ONNX
   smoke, and Jetson TensorRT-backed contention evidence.
 
@@ -172,9 +176,9 @@ python3 -m inferedge_orchestrator compare-overload \
 | FIFO baseline | 20 | 0 | 782.0ms | 20 | 0 | 0 |
 | Scheduler + load shedding | 20 | 0 | 8.0ms | 4 | 16 | 16 |
 
-This is the core scheduler story: low-priority classifier work is intentionally
-dropped under overload so the high-priority detector stays within latency
-budget.
+This is the core runtime operation-control story: low-priority classifier work
+is intentionally dropped under overload so the high-priority detector stays
+within latency budget, and the reason is visible in telemetry.
 
 ### InferEdge Handoff
 
