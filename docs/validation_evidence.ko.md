@@ -30,7 +30,7 @@ Throughput benchmark나 production serving claim은 아니다.
 | Jetson TensorRT diverse contention smoke | 서로 다른 generated detector/classifier TensorRT engine을 scheduler/load-shedding으로 실행하고 detector drop 보호, classifier shedding, overload event, policy decision, TensorRT backend telemetry 검증 | PASS | [`examples/telemetry/jetson_tensorrt_diverse_contention_sample.json`](../examples/telemetry/jetson_tensorrt_diverse_contention_sample.json) |
 | Synthetic overload comparison | controlled overload에서 FIFO baseline과 scheduler/load-shedding policy 비교 | PASS | [`examples/telemetry/phase3_overload_sample.json`](../examples/telemetry/phase3_overload_sample.json) |
 | InferEdge result handoff | InferEdge `result.json` latency signal에서 Orchestrator config로 file-based 변환 | PASS | [`examples/inferedge_result_sample.json`](../examples/inferedge_result_sample.json), [`configs/from_inferedge.json`](../configs/from_inferedge.json) |
-| CI tests | Python 3.11에서 unit test와 sample artifact compatibility check 실행 | PASS | [GitHub Actions CI](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml) |
+| CI package/install smoke | Python 3.11 pytest, sample artifact compatibility check, editable package install, 설치된 CLI의 `run`, `report`, `compare-overload` smoke 실행 | PASS | [GitHub Actions CI](https://github.com/gwonxhj/InferEdgeOrchestrator/actions/workflows/ci.yml) |
 
 raw smoke report는 local 또는 Jetson run 중 `reports/` 아래에 생성되며 git에는
 의도적으로 포함하지 않는다. `examples/telemetry/` 아래 JSON은 reviewer가 device
@@ -380,3 +380,5 @@ sample-specific schema note는
 - raw generated report는 `reports/` 아래에 남기며 commit하지 않는다.
 - versioned sample JSON은 review와 schema inspection을 위한 curated
   documentation artifact다.
+- CI package/install smoke는 portable install과 CLI entrypoint 상태를 검증한다.
+  Jetson physical-device smoke evidence를 대체하지 않는다.
