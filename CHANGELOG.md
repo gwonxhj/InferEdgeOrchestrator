@@ -16,6 +16,9 @@ helps reviewers understand the project state.
   or Triton/DeepStream replacement.
 - Updated TensorRT documentation to describe confirmed Jetson TensorRT-backed
   scheduler/load-shedding evidence instead of older future-plan wording.
+- Updated GitHub Actions CI to use Node 24-compatible official actions
+  (`actions/checkout@v6`, `actions/setup-python@v6`) and aligned the remote
+  pytest command with the local no-cache test command.
 
 ## v0.1.2 - 2026-05-07
 
