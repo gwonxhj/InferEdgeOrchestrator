@@ -85,7 +85,7 @@ low-priority 또는 stale frame을 drop한다.
 | Jetson TensorRT inference smoke | local identity ONNX를 TensorRT engine으로 build하고 TensorRT worker로 실행, runtime telemetry에 backend metadata 기록 |
 | Jetson TensorRT contention smoke | Jetson에서 TensorRT-backed high/low-priority task를 scheduler/load shedding으로 실행, low-priority work 제한과 TensorRT backend metadata 확인 |
 | Jetson TensorRT diverse contention smoke | 서로 다른 generated detector/classifier TensorRT engine으로 scheduler/load-shedding evidence 생성: detector `6/0`, classifier `1/5` executed/dropped, overload event `5` |
-| CI | GitHub Actions가 PR과 `main` push에서 Python 3.11 기준 `python -m pytest` 실행 |
+| CI | GitHub Actions가 Python 3.11 기준 pytest와 설치된 package의 `run`, `report`, `compare-overload` CLI smoke 실행 |
 | Release | `v0.1.2`로 TensorRT evidence 및 portfolio wording patch snapshot 고정 |
 
 CLI를 실행하지 않아도 JSON evidence 형태를 확인할 수 있도록

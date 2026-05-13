@@ -32,8 +32,8 @@ Portfolio brief: [PORTFOLIO.ko.md](PORTFOLIO.ko.md) ([English](PORTFOLIO.md))
   high-priority workload를 보호한다.
 - 작업을 조용히 버리지 않는다. overload decision, drop reason, 보호된 task를
   structured telemetry evidence로 남긴다.
-- Local pytest, synthetic overload comparison, Jetson dummy/ONNX smoke,
-  Jetson TensorRT-backed contention evidence로 검증했다.
+- Local pytest, GitHub Actions package/CLI smoke, synthetic overload comparison,
+  Jetson dummy/ONNX smoke, Jetson TensorRT-backed contention evidence로 검증했다.
 
 ## What It Does
 

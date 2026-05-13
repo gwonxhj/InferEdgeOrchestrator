@@ -85,7 +85,7 @@ frames when queue pressure grows.
 | Jetson TensorRT inference smoke | Local identity ONNX was built into a TensorRT engine and executed through the TensorRT worker, with backend metadata recorded in runtime telemetry |
 | Jetson TensorRT contention smoke | TensorRT-backed high/low-priority tasks ran through scheduler/load shedding on Jetson; low-priority work was shed while TensorRT backend metadata remained visible |
 | Jetson TensorRT diverse contention smoke | Distinct generated detector/classifier TensorRT engines produced scheduler/load-shedding evidence: detector `6/0`, classifier `1/5` executed/dropped, `5` overload events |
-| CI | GitHub Actions runs `python -m pytest` on Python 3.11 for PRs and pushes to `main` |
+| CI | GitHub Actions runs Python 3.11 pytest plus installed-package CLI smoke for `run`, `report`, and `compare-overload` |
 | Release | `v0.1.2` captures the TensorRT evidence and portfolio wording patch snapshot |
 
 Sample telemetry artifacts are available in `examples/telemetry/` for reviewers
