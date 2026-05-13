@@ -30,3 +30,11 @@ jobs:
 
       - name: Run tests
         run: PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cacheprovider
+
+      - name: Run package CLI smoke
+        run: |
+          python -m inferedge_orchestrator run --config configs/phase1_demo.json --output reports/ci_phase1_demo.json --frames 3
+          python -m inferedge_orchestrator report --input reports/ci_phase1_demo.json
+          python -m inferedge_orchestrator compare-overload --config configs/phase3_overload.json --output reports/ci_phase3_overload.json --frames 5
+          test -s reports/ci_phase1_demo.json
+          test -s reports/ci_phase3_overload.json
