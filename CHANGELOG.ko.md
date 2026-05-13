@@ -17,6 +17,9 @@ Language: [English](CHANGELOG.md) | 한국어
 - TensorRT 문서에서 과거 future-plan 표현을 줄이고, 확인된 Jetson
   TensorRT-backed scheduler/load-shedding evidence를 현재형으로 설명하도록
   갱신했다.
+- GitHub Actions CI를 Node 24 호환 공식 action
+  (`actions/checkout@v6`, `actions/setup-python@v6`)으로 갱신하고, remote pytest
+  명령을 local no-cache test command와 맞췄다.
 
 ## v0.1.2 - 2026-05-07
 
