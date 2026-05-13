@@ -32,8 +32,9 @@ Portfolio brief: [PORTFOLIO.md](PORTFOLIO.md) ([한국어](PORTFOLIO.ko.md))
   bounded queues, and adaptive load shedding.
 - Does not silently drop work: overload decisions, drop reasons, and protected
   tasks are recorded as structured telemetry evidence.
-- Validated with local pytest, synthetic overload comparison, Jetson dummy/ONNX
-  smoke, and Jetson TensorRT-backed contention evidence.
+- Validated with local pytest, GitHub Actions package/CLI smoke, synthetic
+  overload comparison, Jetson dummy/ONNX smoke, and Jetson TensorRT-backed
+  contention evidence.
 
 ## What It Does
 

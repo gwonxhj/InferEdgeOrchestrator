@@ -22,6 +22,8 @@ Language: [English](CHANGELOG.md) | 한국어
   명령을 local no-cache test command와 맞췄다.
 - GitHub Actions package/install smoke step을 추가해 설치된 CLI가 dummy scheduler,
   report, synthetic overload path를 실제로 실행하는지 검증한다.
+- README와 portfolio evidence 문구를 갱신해 30초 진입 경로에서 새 package/CLI
+  smoke가 보이도록 하되, 핵심 positioning은 바꾸지 않았다.
 
 ## v0.1.2 - 2026-05-07
 
