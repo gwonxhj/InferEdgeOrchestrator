@@ -8,20 +8,28 @@ Language: [English](CHANGELOG.md) | 한국어
 
 ## Unreleased
 
-아직 unreleased 변경 사항 없음.
+### Changed
+
+- README, portfolio, architecture, validation, config, TensorRT backend 문서의
+  표현을 현재 포지셔닝에 맞춰 정렬했다. InferEdgeOrchestrator는 throughput
+  benchmark나 Triton/DeepStream 대체제가 아니라 deployment 이후 runtime
+  operation-control layer다.
+- TensorRT 문서에서 과거 future-plan 표현을 줄이고, 확인된 Jetson
+  TensorRT-backed scheduler/load-shedding evidence를 현재형으로 설명하도록
+  갱신했다.
 
 ## v0.1.2 - 2026-05-07
 
 documentation 및 TensorRT validation evidence patch release다. 이 release는
-runtime scheduler behavior를 변경하지 않는다.
+runtime operation-control behavior를 변경하지 않는다.
 
 ### Added
 
 - TensorRT/GPU backend 설계 및 config schema 계획 문서를 추가했다.
   - `docs/tensorrt_backend.md`
   - `docs/tensorrt_backend.ko.md`
-- 계획 중인 TensorRT/GPU backend path를 위한 2026-05-06 Jetson dependency
-  survey 결과를 기록했다.
+- TensorRT/GPU backend path를 위한 2026-05-06 Jetson dependency survey 결과를
+  기록했다.
 - 예약된 TensorRT field에 대한 config schema 지원을 추가했다.
   - `worker="tensorrt"`
   - `engine_path`
@@ -55,15 +63,15 @@ runtime scheduler behavior를 변경하지 않는다.
   behavior를 검증하는 Jetson TensorRT contention smoke config와 script를 추가했다.
 - curated TensorRT contention sample telemetry artifact를 추가했다:
   `examples/telemetry/jetson_tensorrt_contention_sample.json`.
-- v0.1.x TensorRT model-diversity 결정을 문서화했다. Contention evidence는 shared
-  identity engine으로 유지하고, 별도 detector/classifier engine은 이후 milestone로
-  미룬다.
+- TensorRT model-diversity boundary를 문서화했다. 초기 smoke path는 shared
+  identity-engine evidence로 유지하고, operation-control evidence에는 generated
+  distinct engine을 사용하며, throughput claim은 피한다.
 - 서로 다른 detector/classifier-style engine 선택, build requirement, artifact
   policy, acceptance criteria를 다루는 v0.2 TensorRT model-diversity proposal을
   추가했다.
 - v0.2 TensorRT diversity scenario의 source-model 후보로 repository script가
   생성하는 detector-like tiny CNN과 classifier-like tiny MLP/CNN을 선정했다.
-- 향후 Jetson TensorRT diversity smoke run을 위한 deterministic detector-like 및
+- Jetson TensorRT diversity smoke run을 위한 deterministic detector-like 및
   classifier-like ONNX source model 생성 script
   `scripts/create_tensorrt_diverse_onnx.py`를 추가했다.
 - 생성된 ONNX pair를 Jetson에서 local FP16 TensorRT engine으로 build하는
@@ -112,7 +120,7 @@ runtime scheduler behavior를 변경하지 않는다.
 ## v0.1.1 - 2026-05-06
 
 documentation 및 validation evidence patch release다. 이 release는 runtime
-scheduler behavior를 변경하지 않는다.
+operation-control behavior를 변경하지 않는다.
 
 ### Added
 
@@ -146,7 +154,8 @@ scheduler behavior를 변경하지 않는다.
 
 ## v0.1.0 - 2026-05-05
 
-lightweight edge inference runtime scheduler의 첫 portfolio-ready release다.
+lightweight edge inference runtime operation-control layer의 첫 portfolio-ready
+release다.
 
 ### Added
 

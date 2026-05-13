@@ -6,17 +6,21 @@ Language: [English](README.md) | 한국어
 
 Release: [v0.1.2](https://github.com/gwonxhj/InferEdgeOrchestrator/releases/tag/v0.1.2)
 
-InferEdgeOrchestrator는 제한된 Edge 디바이스를 위한 lightweight runtime
-scheduler이다. 배포 이후 여러 inference task가 동시에 들어오는 상황에서
-task별 priority, latency budget, bounded queue, load shedding, telemetry를
-기준으로 실행을 제어해 high-priority workload가 backlog와 latency spike
+InferEdgeOrchestrator는 제한된 Edge 디바이스를 위한 배포 이후 runtime operation
+control layer이자 lightweight scheduler다. 배포 이후 여러 inference task가 동시에
+들어오는 상황에서 task별 priority, latency budget, bounded queue, load shedding,
+telemetry를 기준으로 실행을 제어해 high-priority workload가 backlog와 latency spike
 상황에서도 최대한 응답성을 유지하도록 한다.
 
 이 프로젝트는 Triton이나 DeepStream을 대체하려는 시스템이 아니다.
 overload-control 결정을 명시적이고 테스트 가능하며 설명 가능한 형태로
-보여주는 scheduler 중심 edge runtime layer다.
+보여주는 runtime operation-control layer다.
 
-Portfolio positioning: Triton/DeepStream 대체가 아니라 lightweight edge scheduler.
+목표는 maximum-throughput serving이 아니다. 제한된 Edge workload에서 inference
+behavior를 제어 가능하게 만드는 것이 목표다.
+
+Portfolio positioning: Triton/DeepStream 대체나 throughput serving이 아니라
+deployment 이후 runtime operation control.
 
 Portfolio brief: [PORTFOLIO.ko.md](PORTFOLIO.ko.md) ([English](PORTFOLIO.md))
 
@@ -26,7 +30,8 @@ Portfolio brief: [PORTFOLIO.ko.md](PORTFOLIO.ko.md) ([English](PORTFOLIO.md))
   경쟁할 때 무엇을 먼저 실행하고, 무엇을 drop하며, 왜 그런 결정을 했는지 다룬다.
 - Priority/deadline-aware scheduling, bounded queue, adaptive load shedding으로
   high-priority workload를 보호한다.
-- 중요한 runtime decision을 telemetry로 남겨 overload behavior를 추적 가능하게 한다.
+- 작업을 조용히 버리지 않는다. overload decision, drop reason, 보호된 task를
+  structured telemetry evidence로 남긴다.
 - Local pytest, synthetic overload comparison, Jetson dummy/ONNX smoke,
   Jetson TensorRT-backed contention evidence로 검증했다.
 
@@ -171,9 +176,9 @@ python3 -m inferedge_orchestrator compare-overload \
 | FIFO baseline | 20 | 0 | 782.0ms | 20 | 0 | 0 |
 | Scheduler + load shedding | 20 | 0 | 8.0ms | 4 | 16 | 16 |
 
-핵심 scheduler story는 명확하다. overload 상황에서 low-priority classifier
-work를 의도적으로 drop해 high-priority detector가 latency budget 안에
-머무르도록 보호한다.
+핵심 runtime operation-control story는 명확하다. overload 상황에서 low-priority
+classifier work를 의도적으로 drop해 high-priority detector가 latency budget 안에
+머무르도록 보호하고, 그 이유를 telemetry로 확인할 수 있다.
 
 ### InferEdge Handoff
 

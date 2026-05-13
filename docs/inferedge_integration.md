@@ -5,11 +5,15 @@ Language: English | [한국어](inferedge_integration.ko.md)
 InferEdge and InferEdgeOrchestrator intentionally stay separate.
 
 - InferEdge validates whether a model is deployable.
-- InferEdgeOrchestrator controls runtime operation after deployment.
+- InferEdgeOrchestrator controls whether deployed workloads can remain stable
+  under overload.
 
 The integration boundary is a file, not an import. InferEdgeOrchestrator reads an
 InferEdge `result.json` artifact and uses the latency signal to recommend an
 initial `latency_budget_ms` for an Orchestrator task config.
+
+This keeps validation and operation control connected by evidence while keeping
+the repositories loosely coupled.
 
 ## Create Config From InferEdge Result
 
@@ -39,7 +43,8 @@ The default `budget_multiplier` is `1.5`.
 The generated config is validated before it is written. When using the reserved
 TensorRT schema path, pass `--worker tensorrt` together with `--engine-path` so
 the helper does not emit a config that would fail Orchestrator validation.
-TensorRT execution is still not implemented by this helper.
+The helper only emits config; TensorRT execution remains the worker/runtime
+responsibility.
 
 ## Boundary Rule
 

@@ -8,10 +8,10 @@ Release: [v0.1.2](https://github.com/gwonxhj/InferEdgeOrchestrator/releases/tag/
 
 ## One-Line Summary
 
-InferEdgeOrchestrator는 제한된 Edge 환경에서 여러 inference task가 동시에
-실행될 때 priority/deadline-aware scheduling, bounded queue, adaptive load
-shedding, runtime telemetry로 high-priority task의 응답성을 보호하는
-lightweight edge inference runtime scheduler다.
+InferEdgeOrchestrator는 edge inference를 위한 배포 이후 runtime operation-control
+layer다. 제한된 Edge 환경에서 여러 inference task가 동시에 실행될 때
+priority/deadline-aware scheduling, bounded queue, adaptive load shedding,
+runtime telemetry로 high-priority task의 응답성을 보호한다.
 
 ## Problem
 
@@ -22,8 +22,8 @@ stale frame 처리, latency spike, real-time task의 latency budget 위반이
 발생할 수 있다.
 
 이 프로젝트는 배포 이후 runtime operation 문제에 집중한다. 즉, overload가
-발생했을 때 어떤 task를 먼저 실행하고, 어떤 frame을 drop할 수 있으며, 그
-결정을 어떤 telemetry evidence로 남길지를 다룬다.
+발생했을 때 어떤 task를 먼저 실행하고, 어떤 frame을 drop할 수 있으며, 어떤
+workload를 보호하고, 그 결정을 어떤 telemetry evidence로 남길지를 다룬다.
 
 ## Solution
 
@@ -65,6 +65,8 @@ low-priority 또는 stale frame을 drop한다.
   behavior를 조용히 망가뜨리지 않게 했다.
 - low-priority frame drop을 실패가 아니라 안정성을 위한 의도적 policy로
   다뤘다.
+- 작업을 조용히 버리지 않고 overload decision과 scheduling behavior를 structured
+  telemetry evidence로 기록했다.
 - worker interface를 고정해 scheduler logic이 dummy inference, ONNX Runtime,
   TensorRT-backed worker와 분리되도록 했다.
 - overload control 주장을 telemetry evidence로 뒷받침하기 위해 policy

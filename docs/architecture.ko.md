@@ -22,8 +22,8 @@ scheduling, bounded queue, load shedding, worker abstraction, telemetry로
 - `telemetry.py`는 scheduler decision을 설명하기 위한 operational evidence를
   기록한다.
 
-즉, 이 프로젝트는 범용 inference server가 아니라 scheduler 중심 edge
-runtime이다.
+즉, 이 프로젝트는 범용 inference server가 아니라 edge inference를 위한 runtime
+operation-control layer다.
 
 ## Runtime Flow
 
@@ -92,7 +92,8 @@ queue가 가득 찼을 때:
   `LoadSheddingPolicy`가 담당한다.
 
 drop은 조용히 사라지지 않는다. queue overflow나 policy-driven drop은 모두
-task, frame id, reason을 가진 `drop_events` telemetry로 남는다.
+task, frame id, reason을 가진 `drop_events` telemetry로 남아 run 이후에도
+overload behavior를 설명할 수 있게 한다.
 
 ## Load Shedding Policy
 
@@ -172,7 +173,8 @@ Jetson-specific `tegrastats` 연동은 smoke-test evidence로 다룬다.
 - `scripts/smoke_jetson_onnx.sh`는 Jetson에서 ONNX Runtime worker path를
   검증한다.
 
-현재 Jetson 기록은 smoke validation이지 GPU나 TensorRT benchmark가 아니다.
+현재 Jetson 기록은 smoke validation과 TensorRT-backed scheduler/load-shedding
+evidence이지 GPU나 TensorRT throughput benchmark가 아니다.
 
 ## InferEdge Integration Boundary
 
@@ -198,7 +200,8 @@ InferEdgeOrchestrator는 다음을 목표로 하지 않는다.
 - distributed serving platform.
 - Kubernetes 또는 cloud deployment orchestrator.
 - multi-device scheduler.
-- TensorRT performance benchmark.
+- TensorRT throughput/performance benchmark.
 
-프로젝트의 목표는 제한된 edge inference workload에서 명시적이고 테스트 가능한
-scheduling 및 overload-control behavior를 보여주는 것이다.
+프로젝트의 목표는 maximum-throughput serving이 아니다. 제한된 edge inference
+workload에서 inference behavior를 제어 가능하게 만들기 위해 명시적이고 테스트
+가능한 scheduling, load shedding, telemetry를 보여주는 것이다.

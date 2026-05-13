@@ -1,40 +1,40 @@
-# TensorRT / GPU Backend Plan
+# TensorRT / GPU Backend Status
 
 Language: English | [한국어](tensorrt_backend.ko.md)
 
-Status: schema, TensorRT engine deserialization, execution context creation,
-tensor metadata inspection, host/device buffer allocation, tensor address
-binding, TensorRT inference execution, and Jetson inference-smoke validation.
-The config schema, TensorRT worker deserialization/context/metadata/buffer/
-execution path, and `scripts/smoke_jetson_tensorrt.sh` are present. Jetson
-inference smoke reached `PASS_TENSORRT_INFERENCE` with a local
-`models/identity_fp16.plan` engine, but this document does not claim ONNX
-Runtime GPU provider execution or multi-task TensorRT scheduling evidence yet.
+Status: config schema, TensorRT engine deserialization, execution context
+creation, tensor metadata inspection, host/device buffer allocation, tensor
+address binding, TensorRT inference execution, Jetson inference smoke, and
+Jetson TensorRT-backed contention evidence are implemented. The schema,
+TensorRT worker execution path, `scripts/smoke_jetson_tensorrt.sh`,
+`scripts/smoke_jetson_tensorrt_contention.sh`, and
+`scripts/smoke_jetson_tensorrt_diverse_contention.sh` are present.
 
 InferEdgeOrchestrator already proves the scheduler, bounded queue, load
-shedding, telemetry, ONNX Runtime worker path, and Jetson smoke path. The
-TensorRT/GPU backend should extend that same operation-control story: it should
-show how a GPU-backed worker participates in multi-task scheduling and overload
-control on Jetson, not turn the project into a single-model benchmark.
+shedding, telemetry, ONNX Runtime worker path, and Jetson smoke path. TensorRT
+support extends that same runtime operation-control story: it shows how a
+TensorRT-backed worker participates in multi-task scheduling and overload
+control on Jetson without turning the project into a single-model throughput
+benchmark.
 
 ## Purpose
 
-The future backend should answer one question:
+The TensorRT-backed path answers one question:
 
-> When deployed inference tasks use GPU/TensorRT execution on a constrained
-> Jetson device, can the orchestrator still protect high-priority task latency
+> When deployed inference tasks use TensorRT-backed execution on a constrained
+> Jetson device, can the orchestrator keep overload behavior controllable
 > through explicit scheduling, bounded queues, load shedding, and telemetry?
 
 This keeps the project aligned with its portfolio position:
 
 - InferEdge validates deployment readiness before operation.
 - InferEdgeOrchestrator controls runtime operation after deployment.
-- TensorRT/GPU support is backend coverage for the worker layer, not a change to
-  the scheduler's purpose.
+- TensorRT support is backend coverage for the worker layer, not a change to the
+  runtime operation-control purpose.
 
 ## Non-Goals
 
-This extension must not become:
+This backend path must not become:
 
 - A TensorRT benchmark suite.
 - A replacement for Triton or DeepStream.
@@ -54,11 +54,11 @@ class Worker(Protocol):
         ...
 ```
 
-A TensorRT worker should plug into this interface without changing scheduler,
-queue, load-shedding, or telemetry top-level contracts. The scheduler should
-continue to choose tasks by priority and deadline. The worker should only be
-responsible for loading a backend-specific runtime, executing the selected
-task, and returning latency/result metadata.
+A TensorRT worker plugs into this interface without changing scheduler, queue,
+load-shedding, or telemetry top-level contracts. The scheduler continues to
+choose tasks by priority and deadline. The worker is responsible for loading a
+backend-specific runtime, executing the selected task, and returning
+latency/result metadata.
 
 ## Config Schema Status
 
@@ -176,11 +176,11 @@ Worker behavior currently enforces:
 - The same script also runs `OrchestratorRuntime` for one frame and validates
   that `result_events[].output` contains TensorRT backend metadata.
 
-Validation rules still to add:
+Remaining validation guardrails:
 
 - Fallback from TensorRT/GPU to CPU must be explicit in config and telemetry.
-- Broader TensorRT contention evidence should use more realistic model diversity
-  after the initial two-task identity-engine smoke.
+- Any future broader TensorRT scenario must continue to prove operation-control
+  behavior, not model throughput leadership.
 
 ## Jetson TensorRT Inference Smoke
 
@@ -218,8 +218,8 @@ Expected current behavior:
 - The script writes local reports under ignored `reports/`.
 
 This is TensorRT worker execution evidence for a tiny identity model. It is not
-a benchmark and it is not evidence that scheduler/load-shedding behavior has
-been validated under multi-task TensorRT contention.
+a throughput benchmark. Multi-task TensorRT-backed scheduler/load-shedding
+evidence is tracked separately in the contention smoke sections below.
 
 To create the small local engine used by this smoke path, see
 [`docs/tensorrt_engine_build.md`](tensorrt_engine_build.md).
@@ -250,53 +250,44 @@ This is TensorRT-backed scheduler/load-shedding evidence. It is intentionally
 not a throughput benchmark and it currently uses the same tiny identity engine
 for both tasks to keep the artifact local, small, and reproducible.
 
-## Model Diversity Decision
+## Model Diversity Status
 
-Decision for the v0.1.x line: keep the TensorRT contention evidence on the
-shared tiny identity engine. Do not add separate detector/classifier TensorRT
-engines in v0.1.x.
+The initial TensorRT contention smoke used the same tiny identity engine for
+both tasks to keep the first Jetson evidence local, small, and reproducible.
+The current repository also includes a distinct generated detector/classifier
+engine path:
 
-Rationale:
+- `scripts/create_tiny_onnx_models.py`
+- `scripts/build_jetson_tensorrt_diverse_engines.sh`
+- `scripts/smoke_jetson_tensorrt_individual_engines.sh`
+- `scripts/smoke_jetson_tensorrt_diverse_contention.sh`
+- `configs/jetson_tensorrt_diverse_contention.json`
+- `examples/telemetry/jetson_tensorrt_diverse_contention_sample.json`
 
-- The current goal is to prove runtime operation control: priority scheduling,
-  bounded queues, load shedding, overload events, and TensorRT backend telemetry.
-- The shared identity engine already exercises the TensorRT execution path while
-  keeping the repository lightweight and reproducible.
-- Adding detector/classifier engines now would introduce model acquisition,
-  conversion, engine-build, artifact-size, and licensing questions that belong
-  closer to InferEdge Forge or a later device-validation milestone.
-- Realistic model diversity risks shifting the portfolio message toward a
-  TensorRT benchmark, which is explicitly a non-goal.
+The diversified contention evidence confirms that distinct generated
+detector-like and classifier-like TensorRT engines can participate in the same
+scheduler/load-shedding telemetry shape. It remains runtime operation-control
+evidence, not a TensorRT throughput benchmark or production serving claim.
 
-When to revisit:
+Future model diversity work should only expand from this point if it keeps the
+same boundaries:
 
-- Use separate detector/classifier engines only after the TensorRT worker,
-  telemetry schema, and contention smoke remain stable across a patch release.
-- Require device-local engine build instructions, artifact exclusion rules,
-  and clear evidence boundaries before adding those engines.
-- Treat the first diversified-engine run as v0.2-level evidence unless a
-  release plan explicitly says otherwise.
+- source model license and generation path are documented
+- TensorRT engine binaries and large model files stay out of git
+- telemetry proves high-priority protection and low-priority limiting
+- documentation states that the result is operation-control evidence, not a
+  model-quality or throughput comparison
 
-Acceptance criteria for a future diversified scenario:
-
-- Two or more distinct local TensorRT engines are built on Jetson from
-  documented source models.
-- No engine binaries or large model files are committed.
-- Telemetry still demonstrates high-priority protection and low-priority
-  limiting, not just latency numbers.
-- Documentation states that the result is operation-control evidence, not a
-  throughput benchmark.
-
-The v0.2 milestone proposal for this work is tracked in
+The model-diversity proposal and current evidence record are tracked in
 [`docs/tensorrt_model_diversity.md`](tensorrt_model_diversity.md).
 
-## Telemetry Plan
+## Telemetry Contract
 
 The current telemetry top-level shape should remain stable. TensorRT/GPU support
 should add backend metadata inside worker result events rather than changing
 scheduler summaries.
 
-Planned worker metadata:
+Worker metadata includes or may include:
 
 - `worker`: `tensorrt`
 - `backend`: `tensorrt`
@@ -314,7 +305,7 @@ which task was protected, and whether overload decisions were recorded.
 
 ## Jetson Dependency Survey
 
-Before writing the real worker, capture a small dependency inventory on the
+The TensorRT worker path was preceded by a small dependency inventory on the
 target Jetson:
 
 ```bash
@@ -376,21 +367,23 @@ Interpretation:
 - Native TensorRT worker development is feasible on this Jetson because
   TensorRT Python bindings, TensorRT libraries, ONNX parser packages, PyCUDA,
   CUDA, cuDNN, and `tegrastats` are present.
-- A future smoke script should call `/usr/src/tensorrt/bin/trtexec` explicitly
-  or add `/usr/src/tensorrt/bin` to `PATH`.
-- A future smoke script should call `/usr/local/cuda/bin/nvcc` explicitly if it
-  needs compiler version evidence.
+- Smoke scripts should call `/usr/src/tensorrt/bin/trtexec` explicitly or add
+  `/usr/src/tensorrt/bin` to `PATH`.
+- Smoke scripts should call `/usr/local/cuda/bin/nvcc` explicitly if they need
+  compiler version evidence.
 - ONNX Runtime GPU provider validation is not ready from the current
   `yolo_env` because only `AzureExecutionProvider` and `CPUExecutionProvider`
   are exposed at runtime.
-- This is dependency inventory only. It does not prove TensorRT engine
-  execution, GPU provider execution, or scheduler behavior with TensorRT.
+- This survey is dependency inventory only. Later Jetson smoke records provide
+  TensorRT engine execution and TensorRT-backed scheduler/load-shedding
+  evidence. ONNX Runtime GPU provider validation remains separate.
 
-## Smoke Script Plan
+## Smoke Script Status
 
-A later script can be added as `scripts/smoke_jetson_tensorrt.sh`.
+The TensorRT smoke scripts are present and write local report artifacts under
+ignored `reports/` paths.
 
-Planned environment variables:
+Common environment variables:
 
 | Variable | Purpose |
 | --- | --- |
@@ -400,11 +393,11 @@ Planned environment variables:
 | `ENGINE_PATH` | Device-local TensorRT engine path. |
 | `CAPTURE_TEGRASTATS` | Optional `tegrastats` capture for smoke evidence. |
 
-The script should create local `reports/` artifacts, not tracked release
-artifacts. Curated summaries can be copied into docs or
-`examples/telemetry/` only after review.
+The scripts create local `reports/` artifacts, not tracked release artifacts.
+Curated summaries are copied into docs or `examples/telemetry/` only after
+review.
 
-## Recommended Implementation Sequence
+## Completed Implementation Sequence
 
 1. Add this backend design document and schema plan.
 2. Survey Jetson TensorRT, ONNX Runtime provider, and Python dependency state.
@@ -413,17 +406,20 @@ artifacts. Curated summaries can be copied into docs or
 5. Add a Jetson smoke script draft.
 6. Run a real TensorRT engine on Jetson over SSH.
 7. Record telemetry from a single TensorRT worker smoke.
-8. Run a multi-task scenario with TensorRT/GPU execution.
-9. Update validation evidence and README positioning with confirmed results.
+8. Run a multi-task scenario with TensorRT-backed execution.
+9. Add distinct generated detector/classifier TensorRT contention evidence.
+10. Update validation evidence and README positioning with confirmed results.
 
 ## Completion Criteria
 
-This extension is complete only when:
+This backend validation path is complete when:
 
 - Existing tests still pass.
 - Existing `dummy` and `onnxruntime` configs remain valid.
 - TensorRT config validation is explicit and documented.
-- Jetson smoke output proves TensorRT/GPU worker execution.
+- Jetson smoke output proves TensorRT worker execution.
+- Jetson contention smoke output proves TensorRT-backed scheduler/load-shedding
+  behavior.
 - Telemetry records backend metadata without breaking existing schema readers.
-- The README continues to describe the project as a lightweight edge scheduler,
-  not a benchmark or Triton/DeepStream replacement.
+- The README continues to describe the project as a runtime operation-control
+  layer, not a benchmark or Triton/DeepStream replacement.

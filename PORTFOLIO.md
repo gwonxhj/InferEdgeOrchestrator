@@ -8,10 +8,10 @@ Release: [v0.1.2](https://github.com/gwonxhj/InferEdgeOrchestrator/releases/tag/
 
 ## One-Line Summary
 
-InferEdgeOrchestrator is a lightweight edge inference runtime scheduler that
-keeps high-priority tasks responsive under multi-task overload using
-priority/deadline-aware scheduling, bounded queues, adaptive load shedding, and
-runtime telemetry.
+InferEdgeOrchestrator is a post-deployment runtime operation-control layer for
+edge inference. It keeps high-priority tasks responsive under multi-task
+overload using priority/deadline-aware scheduling, bounded queues, adaptive load
+shedding, and runtime telemetry.
 
 ## Problem
 
@@ -22,8 +22,8 @@ create queue backlog, stale frame processing, latency spikes, and budget
 violations for real-time tasks.
 
 The project focuses on the runtime operation problem after deployment: deciding
-which task should run, which frames can be dropped, and what evidence should be
-recorded when overload appears.
+which task should run, which frames can be dropped, which workload is being
+protected, and what evidence should be recorded when overload appears.
 
 ## Solution
 
@@ -65,6 +65,8 @@ frames when queue pressure grows.
   silently destroy real-time behavior.
 - Treat dropping low-priority frames as a deliberate stability policy, not as a
   failure condition.
+- Do not silently drop work; record overload decisions and scheduling behavior
+  as structured telemetry evidence.
 - Keep the worker interface stable so scheduler logic stays independent from
   dummy inference, ONNX Runtime, or TensorRT-backed workers.
 - Record policy decisions in telemetry so claims about overload control are
