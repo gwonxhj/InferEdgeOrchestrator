@@ -79,10 +79,11 @@ The scheduler's job is not to run every frame. It decides which task should run
 next, which frames are stale enough to drop, and when low-priority work should
 be limited so high-priority latency remains inside budget.
 
-## InferEdge Boundary
+## InferEdge Ecosystem Boundary
 
-InferEdge is the deployment validation pipeline. InferEdgeOrchestrator is the
-runtime operation control layer.
+InferEdge validates deployability. InferEdgeEnv records whether benchmark
+evidence can be trusted and compared. InferEdgeOrchestrator controls deployed
+workloads under load.
 
 ```mermaid
 flowchart LR
@@ -93,12 +94,17 @@ flowchart LR
         AIGuard["InferEdgeAIGuard\noptional anomaly/risk\nrecommendation"]
     end
 
+    subgraph Comparability["Experiment Hygiene / Comparability Layer"]
+        Env["InferEdgeEnv\nrun evidence registry\ncomparability judgement"]
+    end
+
     subgraph Operation["Operation Layer"]
         Orchestrator["InferEdgeOrchestrator\npriority scheduling\nload shedding\nruntime telemetry"]
     end
 
     Forge --> Runtime --> Lab
     Lab -. optional guard analysis .-> AIGuard
+    Runtime -. benchmark evidence .-> Env
     Lab -->|"deployable model + result.json"| Orchestrator
     AIGuard -. risk signals .-> Lab
 ```
@@ -106,8 +112,9 @@ flowchart LR
 The boundary is intentional:
 
 - InferEdge answers whether a model is safe and reasonable to deploy.
+- InferEdgeEnv answers whether benchmark evidence can be trusted and compared.
 - InferEdgeOrchestrator controls how deployed inference tasks behave together.
-- The integration is file-based through `result.json`, not direct imports.
+- Orchestrator integration is file-based through `result.json`, not direct imports.
 
 ## Implementation Map
 

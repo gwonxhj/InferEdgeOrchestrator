@@ -101,12 +101,14 @@ InferEdge와 InferEdgeOrchestrator는 서로 다른 lifecycle stage를 담당한
 | Validation | InferEdge-Runtime | device execution, `result.json` 생성 |
 | Validation | InferEdgeLab | result comparison, deployment decision |
 | Validation | InferEdgeAIGuard | optional anomaly/risk/recommendation analysis |
+| Comparability | InferEdgeEnv | `v0.1.5` v1-complete run evidence registry와 comparability judgement |
 | Operation | InferEdgeOrchestrator | 배포 이후 runtime scheduling, queue control, load shedding, telemetry |
 
 경계는 다음과 같다.
 
 ```text
 InferEdge = deployment validation pipeline
+InferEdgeEnv = benchmark evidence comparability layer
 InferEdgeOrchestrator = runtime operation control layer
 ```
 

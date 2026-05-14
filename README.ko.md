@@ -78,10 +78,11 @@ scheduler의 목적은 모든 frame을 끝까지 처리하는 것이 아니다. 
 task를 선택하고, stale frame을 drop하며, overload 상황에서 low-priority
 work를 제한해 high-priority latency가 budget 안에 머물도록 제어한다.
 
-## InferEdge Boundary
+## InferEdge Ecosystem Boundary
 
-InferEdge는 deployment validation pipeline이고, InferEdgeOrchestrator는
-runtime operation control layer다.
+InferEdge는 배포 가능성을 검증한다. InferEdgeEnv는 benchmark evidence가
+신뢰 및 비교 가능한지 기록한다. InferEdgeOrchestrator는 배포된 workload가
+overload 상황에서도 안정적으로 동작하도록 제어한다.
 
 ```mermaid
 flowchart LR
@@ -92,12 +93,17 @@ flowchart LR
         AIGuard["InferEdgeAIGuard\noptional anomaly/risk\nrecommendation"]
     end
 
+    subgraph Comparability["Experiment Hygiene / Comparability Layer"]
+        Env["InferEdgeEnv\nrun evidence registry\ncomparability judgement"]
+    end
+
     subgraph Operation["Operation Layer"]
         Orchestrator["InferEdgeOrchestrator\npriority scheduling\nload shedding\nruntime telemetry"]
     end
 
     Forge --> Runtime --> Lab
     Lab -. optional guard analysis .-> AIGuard
+    Runtime -. benchmark evidence .-> Env
     Lab -->|"deployable model + result.json"| Orchestrator
     AIGuard -. risk signals .-> Lab
 ```
@@ -105,8 +111,9 @@ flowchart LR
 이 경계는 의도적이다.
 
 - InferEdge는 모델이 배포 가능한지 판단한다.
+- InferEdgeEnv는 benchmark evidence가 신뢰 및 비교 가능한지 판단한다.
 - InferEdgeOrchestrator는 배포된 inference task들이 함께 실행될 때의 운영을 제어한다.
-- 두 프로젝트는 직접 import가 아니라 `result.json` 파일로만 연결된다.
+- Orchestrator 연동은 직접 import가 아니라 `result.json` 파일 기반으로 유지된다.
 
 ## Implementation Map
 
