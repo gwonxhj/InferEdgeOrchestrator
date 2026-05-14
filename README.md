@@ -46,7 +46,7 @@ Portfolio brief: [PORTFOLIO.md](PORTFOLIO.md) ([한국어](PORTFOLIO.ko.md))
 | Overload stability | Adaptive load shedding limits low-priority work to protect high-priority latency |
 | Worker abstraction | Shared worker interface with `dummy`, `onnxruntime`, and TensorRT-backed workers |
 | Runtime evidence | Telemetry JSON records executed/dropped counts, latency, backlog, result events, resource snapshots, and policy decisions |
-| Edge validation | Jetson Orin Nano smoke scripts validate CLI, telemetry, `tegrastats` parsing, ONNX Runtime execution, and TensorRT-backed contention |
+| Jetson smoke coverage | Jetson Orin Nano smoke scripts exercise CLI, telemetry, `tegrastats` parsing, ONNX Runtime execution, and TensorRT-backed contention |
 
 ## Runtime Model
 
