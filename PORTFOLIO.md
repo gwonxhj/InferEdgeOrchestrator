@@ -101,12 +101,14 @@ InferEdge and InferEdgeOrchestrator cover different lifecycle stages.
 | Validation | InferEdge-Runtime | Device execution and `result.json` creation |
 | Validation | InferEdgeLab | Result comparison and deployment decision |
 | Validation | InferEdgeAIGuard | Optional anomaly/risk/recommendation analysis |
+| Comparability | InferEdgeEnv | v0.1.5 v1-complete run evidence registry and comparability judgement |
 | Operation | InferEdgeOrchestrator | Runtime scheduling, queue control, load shedding, and telemetry after deployment |
 
 The boundary is:
 
 ```text
 InferEdge = deployment validation pipeline
+InferEdgeEnv = benchmark evidence comparability layer
 InferEdgeOrchestrator = runtime operation control layer
 ```
 
