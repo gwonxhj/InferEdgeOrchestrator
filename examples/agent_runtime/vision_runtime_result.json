@@ -1,0 +1,39 @@
+{
+  "schema_version": "inferedge-runtime-result-v1",
+  "compare_key": "vision_agent__b1__h224w224__fp32",
+  "backend_key": "onnxruntime__cpu",
+  "agent": {
+    "schema_version": "inferedge-runtime-agent-task-v1",
+    "source_contract": "inferedge-agent-manifest-v1",
+    "manifest_path": "examples/agent_runtime/vision_agent_manifest.json",
+    "manifest_applied": true,
+    "agent_id": "vision_agent",
+    "task_id": "task_vision_agent",
+    "agent_type": "vision",
+    "input_type": "frame",
+    "output_type": "detections",
+    "scheduled_priority": 90,
+    "latency_budget_ms": 33,
+    "deadline_ms": 40,
+    "deadline_missed": false,
+    "queue_wait_ms": null,
+    "execution_status": "success",
+    "fallback_used": false,
+    "fallback_policy": {
+      "mode": "drop_stale"
+    },
+    "runtime_artifact_path": "models/vision_agent.onnx",
+    "required_backend": "onnxruntime",
+    "device_target": "cpu",
+    "precision": "fp32",
+    "telemetry_contract_version": "inferedge-agent-telemetry-v1",
+    "telemetry_snapshot": {
+      "latency_mean_ms": 28.0,
+      "latency_p95_ms": 32.0,
+      "latency_p99_ms": 36.0,
+      "fps": 30.0,
+      "power_mode": "unknown",
+      "jetson_clocks": "unknown"
+    }
+  }
+}

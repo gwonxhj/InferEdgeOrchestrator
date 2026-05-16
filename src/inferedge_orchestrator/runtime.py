@@ -76,6 +76,7 @@ class OrchestratorRuntime:
         result = self.worker.run(task, frame)
         self.telemetry.record_execution(
             result,
+            frame=frame,
             backlog_after=self.queues.backlog(decision.task_name),
         )
         return True

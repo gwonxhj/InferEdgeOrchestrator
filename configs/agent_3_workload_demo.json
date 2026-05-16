@@ -1,0 +1,37 @@
+{
+  "run": {
+    "name": "agent_3_workload_demo",
+    "overload_backlog_threshold": 3,
+    "input_source": "dummy"
+  },
+  "tasks": [
+    {
+      "name": "safety_monitor_agent",
+      "agent_manifest_path": "examples/agent_runtime/safety_agent_manifest.json",
+      "target_fps": 10,
+      "queue_size": 2,
+      "drop_policy": "drop_oldest",
+      "worker": "dummy",
+      "simulated_latency_ms": 6
+    },
+    {
+      "name": "vision_agent",
+      "agent_manifest_path": "examples/agent_runtime/vision_agent_manifest.json",
+      "runtime_result_path": "examples/agent_runtime/vision_runtime_result.json",
+      "target_fps": 30,
+      "queue_size": 2,
+      "drop_policy": "drop_oldest",
+      "worker": "dummy",
+      "simulated_latency_ms": 45
+    },
+    {
+      "name": "voice_command_agent",
+      "agent_manifest_path": "examples/agent_runtime/voice_agent_manifest.json",
+      "target_fps": 5,
+      "queue_size": 2,
+      "drop_policy": "drop_newest",
+      "worker": "dummy",
+      "simulated_latency_ms": 80
+    }
+  ]
+}

@@ -28,6 +28,27 @@ def test_task_config_validates_required_policy_values() -> None:
     assert task.worker_options is None
 
 
+def test_task_config_loads_agent_manifest_and_runtime_agent_defaults() -> None:
+    task = TaskConfig.from_dict(
+        {
+            "name": "vision_agent",
+            "agent_manifest_path": "examples/agent_runtime/vision_agent_manifest.json",
+            "runtime_result_path": "examples/agent_runtime/vision_runtime_result.json",
+            "target_fps": 30,
+            "queue_size": 2,
+            "worker": "dummy",
+        }
+    )
+
+    assert task.agent_id == "vision_agent"
+    assert task.agent_task_id == "task_vision_agent"
+    assert task.agent_type == "vision"
+    assert task.priority == 90
+    assert task.latency_budget_ms == 33
+    assert task.model_path == "models/vision_agent.onnx"
+    assert task.fallback_policy == "drop_stale"
+
+
 def test_orchestrator_config_rejects_duplicate_task_names() -> None:
     task = {
         "name": "detector",
@@ -193,3 +214,22 @@ def test_jetson_tensorrt_diverse_contention_config_matches_reserved_schema() -> 
     assert config.tasks[1].worker_options["output_bindings"] == {
         "classifier_logits": [1, 4]
     }
+
+
+def test_agent_3_workload_demo_matches_agent_contract_inputs() -> None:
+    config_path = Path("configs/agent_3_workload_demo.json")
+    config = OrchestratorConfig.from_dict(
+        json.loads(config_path.read_text(encoding="utf-8"))
+    )
+
+    assert config.name == "agent_3_workload_demo"
+    assert [task.agent_id for task in config.tasks] == [
+        "safety_monitor_agent",
+        "vision_agent",
+        "voice_command_agent",
+    ]
+    assert [task.priority for task in config.tasks] == [100, 90, 50]
+    assert [task.latency_budget_ms for task in config.tasks] == [20, 33, 120]
+    assert config.tasks[1].runtime_result_path == (
+        "examples/agent_runtime/vision_runtime_result.json"
+    )

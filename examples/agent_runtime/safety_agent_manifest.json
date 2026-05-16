@@ -1,0 +1,18 @@
+{
+  "schema_version": "inferedge-agent-manifest-v1",
+  "agent_id": "safety_monitor_agent",
+  "agent_type": "safety",
+  "priority": 100,
+  "latency_budget_ms": 20,
+  "deadline_ms": 30,
+  "input_type": "telemetry",
+  "output_type": "risk_signal",
+  "required_backend": "dummy",
+  "device_target": "cpu",
+  "precision": "n/a",
+  "runtime_artifact_path": "models/safety_monitor.mock",
+  "fallback_policy": {
+    "mode": "protect"
+  },
+  "telemetry_contract_version": "inferedge-agent-telemetry-v1"
+}
