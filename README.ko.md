@@ -32,6 +32,8 @@ Portfolio brief: [PORTFOLIO.ko.md](PORTFOLIO.ko.md) ([English](PORTFOLIO.md))
   high-priority workload를 보호한다.
 - 작업을 조용히 버리지 않는다. overload decision, drop reason, 보호된 task를
   structured telemetry evidence로 남긴다.
+- Forge `agent_manifest.json`과 Runtime `result.agent` metadata를
+  `inferedge-orchestration-summary-v1` scheduling evidence contract로 연결한다.
 - Local pytest, GitHub Actions package/CLI smoke, synthetic overload comparison,
   Jetson dummy/ONNX smoke, Jetson TensorRT-backed contention evidence로 검증했다.
 
@@ -45,6 +47,7 @@ Portfolio brief: [PORTFOLIO.ko.md](PORTFOLIO.ko.md) ([English](PORTFOLIO.md))
 | Overload stability | low-priority work를 제한해 high-priority latency 보호 |
 | Worker abstraction | `dummy`, `onnxruntime`, TensorRT-backed worker를 같은 interface로 실행 |
 | Runtime evidence | executed/dropped count, latency, backlog, result event, resource snapshot, policy decision을 telemetry JSON으로 기록 |
+| Agent contract bridge | Forge agent manifest와 Runtime agent result를 task에서 optional 참조하고 orchestration summary evidence로 export |
 | Jetson smoke coverage | Jetson Orin Nano smoke script로 CLI, telemetry, `tegrastats` parsing, ONNX Runtime execution, TensorRT-backed contention 경로를 실행 |
 
 ## Runtime Model
@@ -124,6 +127,7 @@ flowchart LR
 | Phase 3: Overload Scenario | FIFO baseline과 scheduler/load-shedding 결과 비교 | `python3 -m inferedge_orchestrator compare-overload ...` |
 | Phase 4: Jetson Smoke | Jetson CLI smoke, telemetry 생성, resource snapshot, optional `tegrastats` parsing | `scripts/smoke_jetson_dummy.sh`, `scripts/smoke_jetson_onnx.sh` |
 | Phase 5: InferEdge Handoff | `result.json` latency signal을 Orchestrator task config로 변환 | `python3 -m inferedge_orchestrator from-inferedge ...` |
+| Agent Runtime Contract | Forge agent manifest와 Runtime `result.agent` 참조를 사용하는 Vision / Voice-Command / Safety-Monitor dummy workload | `configs/agent_3_workload_demo.json`, [`docs/agent_orchestration_summary_contract.ko.md`](docs/agent_orchestration_summary_contract.ko.md) |
 
 ## Validation Evidence
 

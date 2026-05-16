@@ -1,0 +1,18 @@
+{
+  "schema_version": "inferedge-agent-manifest-v1",
+  "agent_id": "voice_command_agent",
+  "agent_type": "voice",
+  "priority": 50,
+  "latency_budget_ms": 120,
+  "deadline_ms": 160,
+  "input_type": "text",
+  "output_type": "command",
+  "required_backend": "dummy",
+  "device_target": "cpu",
+  "precision": "n/a",
+  "runtime_artifact_path": "models/voice_command.mock",
+  "fallback_policy": {
+    "mode": "defer"
+  },
+  "telemetry_contract_version": "inferedge-agent-telemetry-v1"
+}

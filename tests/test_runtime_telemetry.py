@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from inferedge_orchestrator.config import OrchestratorConfig
 from inferedge_orchestrator.runtime import OrchestratorRuntime
@@ -56,3 +57,38 @@ def test_runtime_writes_telemetry_json(tmp_path) -> None:
     assert data["run"]["name"] == "test"
     assert set(data["tasks"]) == {"detector", "classifier"}
     assert "policy_decisions" in data
+
+
+def test_runtime_writes_agent_orchestration_summary_contract(tmp_path) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(Path("configs/agent_3_workload_demo.json").read_text(encoding="utf-8"))
+    )
+    output = tmp_path / "agent_orchestration_summary.json"
+
+    OrchestratorRuntime(config).run_to_file(frames=8, output=output)
+
+    data = json.loads(output.read_text(encoding="utf-8"))
+    assert data["schema_version"] == "inferedge-orchestration-summary-v1"
+    summary = data["agent_runtime_summary"]
+    assert summary["source_contracts"]["forge_agent_manifest"] == (
+        "inferedge-agent-manifest-v1"
+    )
+    assert summary["source_contracts"]["runtime_agent_result"] == (
+        "inferedge-runtime-agent-task-v1"
+    )
+    assert set(summary["agents"]) == {
+        "safety_monitor_agent",
+        "vision_agent",
+        "voice_command_agent",
+    }
+    assert summary["agents"]["vision_agent"]["agent_id"] == "vision_agent"
+    assert summary["agents"]["vision_agent"]["runtime_result_path"] == (
+        "examples/agent_runtime/vision_runtime_result.json"
+    )
+    assert summary["totals"]["executed_count"] > 0
+    assert summary["totals"]["dropped_count"] > 0
+    assert summary["totals"]["policy_decision_count"] > 0
+    assert data["policy_decision_log"] == data["policy_decisions"]
+    first_schedule = data["schedule_decisions"][0]
+    assert first_schedule["agent_id"] == "safety_monitor_agent"
+    assert first_schedule["scheduled_priority"] == 100

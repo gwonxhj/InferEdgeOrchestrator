@@ -32,6 +32,8 @@ Portfolio brief: [PORTFOLIO.md](PORTFOLIO.md) ([한국어](PORTFOLIO.ko.md))
   bounded queues, and adaptive load shedding.
 - Does not silently drop work: overload decisions, drop reasons, and protected
   tasks are recorded as structured telemetry evidence.
+- Connects Forge `agent_manifest.json` and Runtime `result.agent` metadata to
+  an `inferedge-orchestration-summary-v1` scheduling evidence contract.
 - Validated with local pytest, GitHub Actions package/CLI smoke, synthetic
   overload comparison, Jetson dummy/ONNX smoke, and Jetson TensorRT-backed
   contention evidence.
@@ -46,6 +48,7 @@ Portfolio brief: [PORTFOLIO.md](PORTFOLIO.md) ([한국어](PORTFOLIO.ko.md))
 | Overload stability | Adaptive load shedding limits low-priority work to protect high-priority latency |
 | Worker abstraction | Shared worker interface with `dummy`, `onnxruntime`, and TensorRT-backed workers |
 | Runtime evidence | Telemetry JSON records executed/dropped counts, latency, backlog, result events, resource snapshots, and policy decisions |
+| Agent contract bridge | Optional task references to Forge agent manifests and Runtime agent results, exported as orchestration summary evidence |
 | Jetson smoke coverage | Jetson Orin Nano smoke scripts exercise CLI, telemetry, `tegrastats` parsing, ONNX Runtime execution, and TensorRT-backed contention |
 
 ## Runtime Model
@@ -125,6 +128,7 @@ The boundary is intentional:
 | Phase 3: Overload Scenario | FIFO baseline vs scheduler/load-shedding comparison | `python3 -m inferedge_orchestrator compare-overload ...` |
 | Phase 4: Jetson Smoke | Jetson CLI smoke, telemetry generation, resource snapshots, optional `tegrastats` parsing | `scripts/smoke_jetson_dummy.sh`, `scripts/smoke_jetson_onnx.sh` |
 | Phase 5: InferEdge Handoff | `result.json` latency signal converted into Orchestrator task config | `python3 -m inferedge_orchestrator from-inferedge ...` |
+| Agent Runtime Contract | Vision / Voice-Command / Safety-Monitor dummy workload with Forge agent manifest and Runtime `result.agent` references | `configs/agent_3_workload_demo.json`, [`docs/agent_orchestration_summary_contract.md`](docs/agent_orchestration_summary_contract.md) |
 
 ## Validation Evidence
 
