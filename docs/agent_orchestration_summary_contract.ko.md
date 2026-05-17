@@ -146,6 +146,28 @@ policy decision이 들어갑니다. Runtime은 task execution/result layer로
 workload contention과 device-specific sustained validation은 별도 다음
 단계입니다.
 
+## Multi-Workload Sustained Starter
+
+다음 starter command는 기존 orchestration summary를 유지하면서
+`multi_workload_sustained_summary`와 optional `tegrastats_timeline`을
+추가합니다.
+
+```bash
+python3 -m inferedge_orchestrator run-multi-workload-sustained \
+  --config configs/agent_multi_workload_sustained_local.json \
+  --output reports/agent_multi_workload_sustained.json \
+  --frames 16
+```
+
+커밋된 config는 의도한 lightweight workload profile을 명시합니다.
+
+- frame queue 기반 YOLO-like vision loop
+- FastAPI-style concurrent request ingress 기반 Whisper-like command burst
+- optional tegrastats timeline evidence를 포함할 수 있는 safety/monitor loop
+
+기본 실행은 synthetic adapter를 사용하므로 model download, FastAPI server,
+Jetson-only telemetry 없이도 contract를 테스트할 수 있습니다.
+
 ## Compatibility Rules
 
 - `schema_version`은 `inferedge-orchestration-summary-v1`입니다.

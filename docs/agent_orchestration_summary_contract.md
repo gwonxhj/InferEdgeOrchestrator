@@ -146,6 +146,27 @@ This starter remains synthetic/dummy workload evidence; real lightweight
 workload contention and device-specific sustained validation are separate next
 steps.
 
+## Multi-Workload Sustained Starter
+
+The next starter command keeps the existing orchestration summary intact and
+adds `multi_workload_sustained_summary` plus optional `tegrastats_timeline`:
+
+```bash
+python3 -m inferedge_orchestrator run-multi-workload-sustained \
+  --config configs/agent_multi_workload_sustained_local.json \
+  --output reports/agent_multi_workload_sustained.json \
+  --frames 16
+```
+
+The committed config names the intended lightweight workload profiles:
+
+- YOLO-like vision loop through a frame queue
+- Whisper-like command burst through FastAPI-style concurrent request ingress
+- Safety/monitor loop with optional tegrastats timeline evidence
+
+Default execution still uses synthetic adapters so the contract can be tested
+without requiring model downloads, FastAPI servers, or Jetson-only telemetry.
+
 ## Compatibility Rules
 
 - `schema_version` is `inferedge-orchestration-summary-v1`.
