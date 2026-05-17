@@ -166,8 +166,12 @@ The committed config names the intended lightweight workload profiles:
 
 Default execution now uses lightweight local CPU profile adapters so the
 contract can exercise workload pressure without requiring model downloads,
-FastAPI servers, or Jetson-only telemetry. External YOLO, Whisper, FastAPI, and
-Jetson producers remain incremental integrations, not required dependencies.
+FastAPI servers, or Jetson-only telemetry. The first Vision producer step is
+[`configs/agent_multi_workload_sustained_vision_file.json`](../configs/agent_multi_workload_sustained_vision_file.json),
+which routes a tiny local image fixture into the Vision workload and records
+`producer_source=image_file`, input digest, and sampled byte statistics. External
+YOLO, Whisper, FastAPI, and Jetson producers remain incremental integrations,
+not required dependencies.
 
 ## Compatibility Rules
 
