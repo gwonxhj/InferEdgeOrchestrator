@@ -8,6 +8,7 @@ from typing import Any, Iterable
 
 DROP_POLICIES = {"drop_oldest", "drop_newest", "drop_low_priority"}
 INPUT_SOURCES = {"dummy", "image", "video"}
+SCENARIO_MODES = {"normal", "overload", "sustained_high_load"}
 WORKERS = {"dummy", "onnxruntime", "tensorrt"}
 
 
@@ -22,6 +23,7 @@ class TaskConfig:
     drop_policy: str = "drop_oldest"
     worker: str = "dummy"
     simulated_latency_ms: float = 1.0
+    emit_every_cycles: int = 1
     engine_path: str | None = None
     worker_options: dict[str, Any] | None = None
     agent_manifest_path: str | None = None
@@ -54,6 +56,7 @@ class TaskConfig:
             drop_policy=str(value.get("drop_policy", "drop_oldest")),
             worker=str(value.get("worker", "dummy")),
             simulated_latency_ms=float(value.get("simulated_latency_ms", 1.0)),
+            emit_every_cycles=int(value.get("emit_every_cycles", 1)),
             engine_path=(
                 None
                 if value.get("engine_path") is None
@@ -105,6 +108,8 @@ class TaskConfig:
             raise ValueError(f"{self.name}: unsupported worker {self.worker!r}")
         if self.simulated_latency_ms < 0:
             raise ValueError(f"{self.name}: simulated_latency_ms must be >= 0")
+        if self.emit_every_cycles <= 0:
+            raise ValueError(f"{self.name}: emit_every_cycles must be > 0")
         if self.engine_path is not None and not self.engine_path:
             raise ValueError(f"{self.name}: engine_path must not be empty when provided")
         if self.agent_id is not None and not self.agent_id:
@@ -141,7 +146,9 @@ class TaskConfig:
 class OrchestratorConfig:
     tasks: tuple[TaskConfig, ...]
     name: str = "default"
+    scenario_mode: str = "normal"
     overload_backlog_threshold: int = 8
+    frame_interval_ms: float = 1.0
     input_source: str = "dummy"
     input_path: str | None = None
 
@@ -152,7 +159,9 @@ class OrchestratorConfig:
         config = cls(
             tasks=tasks,
             name=str(run.get("name", "default")),
+            scenario_mode=str(run.get("scenario_mode", "normal")),
             overload_backlog_threshold=int(run.get("overload_backlog_threshold", 8)),
+            frame_interval_ms=float(run.get("frame_interval_ms", 1.0)),
             input_source=str(run.get("input_source", "dummy")),
             input_path=run.get("input_path"),
         )
@@ -167,6 +176,10 @@ class OrchestratorConfig:
             raise ValueError("task names must be unique")
         if self.overload_backlog_threshold <= 0:
             raise ValueError("overload_backlog_threshold must be > 0")
+        if self.scenario_mode not in SCENARIO_MODES:
+            raise ValueError(f"unsupported scenario_mode {self.scenario_mode!r}")
+        if self.frame_interval_ms <= 0:
+            raise ValueError("frame_interval_ms must be > 0")
         if self.input_source not in INPUT_SOURCES:
             raise ValueError(f"unsupported input_source {self.input_source!r}")
         if self.input_source in {"image", "video"} and not self.input_path:

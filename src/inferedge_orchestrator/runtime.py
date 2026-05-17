@@ -24,13 +24,18 @@ class OrchestratorRuntime:
             backlog_threshold=config.overload_backlog_threshold,
         )
         self.worker = WorkerPool(sleep_dummy=sleep_worker)
-        self.telemetry = TelemetryCollector(config.tasks, run_name=config.name)
+        self.telemetry = TelemetryCollector(
+            config.tasks,
+            run_name=config.name,
+            scenario_mode=config.scenario_mode,
+            frame_interval_ms=config.frame_interval_ms,
+        )
         self.monitor = ResourceMonitor()
 
     def run(self, *, frames: int, drain: bool = True) -> dict[str, object]:
         self.telemetry.record_resource_snapshot(self.monitor.capture(stage="start"))
         for cycle in range(frames):
-            now_ms = float(cycle)
+            now_ms = float(cycle) * self.config.frame_interval_ms
             for frame in self.source.frames_for_cycle(
                 self.config.tasks,
                 cycle=cycle,
@@ -39,14 +44,16 @@ class OrchestratorRuntime:
                 result = self.queues.enqueue(frame)
                 if result.dropped is not None:
                     self.telemetry.record_drop(result.dropped)
-            self._record_backlog_and_shed()
+            self._record_backlog_and_shed(cycle=cycle, stage="cycle")
             self._execute_one()
 
+        drain_cycle = frames
         if drain:
             while self.queues.total_backlog() > 0:
-                self._record_backlog_and_shed()
+                self._record_backlog_and_shed(cycle=drain_cycle, stage="drain")
                 if not self._execute_one():
                     break
+                drain_cycle += 1
 
         self.telemetry.record_resource_snapshot(self.monitor.capture(stage="end"))
         return self.telemetry.to_report()
@@ -55,14 +62,22 @@ class OrchestratorRuntime:
         self.run(frames=frames, drain=drain)
         self.telemetry.write_json(output)
 
-    def _record_backlog_and_shed(self) -> None:
-        self.telemetry.record_backlog(self.queues.snapshot_backlog())
+    def _record_backlog_and_shed(self, *, cycle: int, stage: str) -> None:
+        self.telemetry.record_backlog(
+            self.queues.snapshot_backlog(),
+            cycle=cycle,
+            stage=f"{stage}_before_policy",
+        )
         drops, decisions = self.policy.apply(self.queues)
         for drop in drops:
             self.telemetry.record_drop(drop)
         for decision in decisions:
             self.telemetry.record_policy_decision(decision)
-        self.telemetry.record_backlog(self.queues.snapshot_backlog())
+        self.telemetry.record_backlog(
+            self.queues.snapshot_backlog(),
+            cycle=cycle,
+            stage=f"{stage}_after_policy",
+        )
 
     def _execute_one(self) -> bool:
         decision = self.scheduler.choose_next(self.queues)

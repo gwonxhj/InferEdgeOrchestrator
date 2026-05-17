@@ -69,6 +69,15 @@ Top-level summary:
       "overload_event_count": 0
     }
   },
+  "sustained_runtime_summary": {
+    "schema_version": "inferedge-orchestrator-sustained-summary-v1",
+    "scenario_mode": "sustained_high_load",
+    "queue_depth_sample_count": 0,
+    "latency_sample_count": 0,
+    "max_total_queue_depth": 0
+  },
+  "queue_depth_timeline": [],
+  "latency_timeline": [],
   "policy_decision_log": []
 }
 ```
@@ -77,6 +86,8 @@ Existing telemetry fields remain available:
 
 - `tasks`
 - `overload_events`
+- `queue_depth_timeline`
+- `latency_timeline`
 - `policy_decisions`
 - `drop_events`
 - `result_events`
@@ -108,9 +119,35 @@ python3 -m inferedge_orchestrator run \
 
 The generated summary shows which agent tasks were scheduled, dropped, protected, or limited under synthetic backlog.
 
+## Sustained Scenario Starter
+
+The first sustained-demo step separates the 3-agent scenario into explicit
+modes:
+
+- [`configs/agent_3_workload_normal.json`](../configs/agent_3_workload_normal.json)
+- [`configs/agent_3_workload_overload.json`](../configs/agent_3_workload_overload.json)
+- [`configs/agent_3_workload_sustained_high_load.json`](../configs/agent_3_workload_sustained_high_load.json)
+
+Run the high-load mode:
+
+```bash
+python3 -m inferedge_orchestrator run \
+  --config configs/agent_3_workload_sustained_high_load.json \
+  --output reports/agent_sustained_high_load.json \
+  --frames 16
+```
+
+The generated summary includes `queue_depth_timeline`, `latency_timeline`,
+`sustained_runtime_summary`, and policy decisions with explicit
+`decision_reason`, `total_backlog_before`, `backlog_threshold`, and
+`queue_depth_snapshot` fields. This keeps Runtime as the task execution/result
+layer while Orchestrator owns scheduling, drop/fallback, and policy evidence.
+
 ## Compatibility Rules
 
 - `schema_version` is `inferedge-orchestration-summary-v1`.
 - `policy_decision_log` mirrors `policy_decisions` for downstream readers that expect an explicit log name.
 - Agent fields are additive; existing task telemetry remains readable.
+- Sustained telemetry fields are additive and do not replace the existing
+  `tasks`, `result_events`, or `policy_decision_log` fields.
 - Orchestrator provides scheduling evidence only. Lab remains the final deployment decision owner.

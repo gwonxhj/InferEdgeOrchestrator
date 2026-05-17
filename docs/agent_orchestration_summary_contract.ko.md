@@ -69,6 +69,15 @@ Top-level summary:
       "overload_event_count": 0
     }
   },
+  "sustained_runtime_summary": {
+    "schema_version": "inferedge-orchestrator-sustained-summary-v1",
+    "scenario_mode": "sustained_high_load",
+    "queue_depth_sample_count": 0,
+    "latency_sample_count": 0,
+    "max_total_queue_depth": 0
+  },
+  "queue_depth_timeline": [],
+  "latency_timeline": [],
   "policy_decision_log": []
 }
 ```
@@ -77,6 +86,8 @@ Top-level summary:
 
 - `tasks`
 - `overload_events`
+- `queue_depth_timeline`
+- `latency_timeline`
 - `policy_decisions`
 - `drop_events`
 - `result_events`
@@ -108,9 +119,35 @@ python3 -m inferedge_orchestrator run \
 
 생성된 summary는 synthetic backlog 상황에서 어떤 agent task가 실행, drop, 보호, 제한되었는지 보여줍니다.
 
+## Sustained Scenario Starter
+
+첫 sustained-demo 단계에서는 3-agent scenario를 명시적인 mode로 분리합니다.
+
+- [`configs/agent_3_workload_normal.json`](../configs/agent_3_workload_normal.json)
+- [`configs/agent_3_workload_overload.json`](../configs/agent_3_workload_overload.json)
+- [`configs/agent_3_workload_sustained_high_load.json`](../configs/agent_3_workload_sustained_high_load.json)
+
+high-load mode 실행:
+
+```bash
+python3 -m inferedge_orchestrator run \
+  --config configs/agent_3_workload_sustained_high_load.json \
+  --output reports/agent_sustained_high_load.json \
+  --frames 16
+```
+
+생성된 summary에는 `queue_depth_timeline`, `latency_timeline`,
+`sustained_runtime_summary`, 그리고 `decision_reason`,
+`total_backlog_before`, `backlog_threshold`, `queue_depth_snapshot`을 포함한
+policy decision이 들어갑니다. Runtime은 task execution/result layer로
+유지하고, scheduling/drop/fallback과 policy evidence는 Orchestrator가
+소유합니다.
+
 ## Compatibility Rules
 
 - `schema_version`은 `inferedge-orchestration-summary-v1`입니다.
 - `policy_decision_log`는 downstream reader를 위해 `policy_decisions`와 같은 내용을 명시적으로 제공합니다.
 - Agent field는 additive이며 기존 task telemetry는 계속 읽을 수 있습니다.
+- Sustained telemetry field도 additive이며 기존 `tasks`, `result_events`,
+  `policy_decision_log`를 대체하지 않습니다.
 - Orchestrator는 scheduling evidence provider입니다. 최종 deployment decision owner는 Lab입니다.

@@ -24,6 +24,7 @@ def test_task_config_validates_required_policy_values() -> None:
 
     assert task.name == "detector"
     assert task.priority == 100
+    assert task.emit_every_cycles == 1
     assert task.engine_path is None
     assert task.worker_options is None
 
@@ -156,6 +157,62 @@ def test_worker_option_allow_engine_build_must_be_boolean() -> None:
         )
 
 
+def test_task_config_rejects_invalid_emit_every_cycles() -> None:
+    with pytest.raises(ValueError, match="emit_every_cycles must be > 0"):
+        TaskConfig.from_dict(
+            {
+                "name": "detector",
+                "model_path": "",
+                "priority": 1,
+                "target_fps": 1,
+                "latency_budget_ms": 1,
+                "queue_size": 1,
+                "emit_every_cycles": 0,
+            }
+        )
+
+
+def test_orchestrator_config_accepts_sustained_scenario_metadata() -> None:
+    config = OrchestratorConfig.from_dict(
+        {
+            "run": {
+                "name": "sustained",
+                "scenario_mode": "sustained_high_load",
+                "frame_interval_ms": 5,
+            },
+            "tasks": [
+                {
+                    "name": "detector",
+                    "model_path": "",
+                    "priority": 1,
+                    "target_fps": 1,
+                    "latency_budget_ms": 1,
+                    "queue_size": 1,
+                }
+            ],
+        }
+    )
+
+    assert config.scenario_mode == "sustained_high_load"
+    assert config.frame_interval_ms == 5
+
+
+def test_orchestrator_config_rejects_unknown_scenario_mode() -> None:
+    task = {
+        "name": "detector",
+        "model_path": "",
+        "priority": 1,
+        "target_fps": 1,
+        "latency_budget_ms": 1,
+        "queue_size": 1,
+    }
+
+    with pytest.raises(ValueError, match="unsupported scenario_mode"):
+        OrchestratorConfig.from_dict(
+            {"run": {"scenario_mode": "ai_os"}, "tasks": [task]}
+        )
+
+
 def test_jetson_tensorrt_smoke_config_matches_reserved_schema() -> None:
     config_path = Path("configs/jetson_tensorrt_smoke.json")
     config = OrchestratorConfig.from_dict(
@@ -233,3 +290,23 @@ def test_agent_3_workload_demo_matches_agent_contract_inputs() -> None:
     assert config.tasks[1].runtime_result_path == (
         "examples/agent_runtime/vision_runtime_result.json"
     )
+
+
+def test_agent_3_workload_scenario_configs_are_separated() -> None:
+    expected = {
+        "configs/agent_3_workload_normal.json": "normal",
+        "configs/agent_3_workload_overload.json": "overload",
+        "configs/agent_3_workload_sustained_high_load.json": "sustained_high_load",
+    }
+
+    for path, scenario_mode in expected.items():
+        config = OrchestratorConfig.from_dict(
+            json.loads(Path(path).read_text(encoding="utf-8"))
+        )
+        assert config.scenario_mode == scenario_mode
+        assert [task.agent_id for task in config.tasks] == [
+            "safety_monitor_agent",
+            "vision_agent",
+            "voice_command_agent",
+        ]
+        assert all(task.emit_every_cycles >= 1 for task in config.tasks)
