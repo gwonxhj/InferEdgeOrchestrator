@@ -32,6 +32,10 @@ def test_multi_workload_sustained_config_loads_profiles() -> None:
         "whisper_command_burst",
     ]
     assert config.tasks[2].worker_options is not None
+    assert all(
+        task.worker_options and task.worker_options["implementation"] == "local_profile_adapter"
+        for task in config.tasks
+    )
     assert config.tasks[2].worker_options["ingress_profile"] == (
         "fastapi_concurrent_request"
     )
@@ -65,15 +69,29 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     summary = report["multi_workload_sustained_summary"]
     assert summary["schema_version"] == MULTI_WORKLOAD_SCHEMA
     assert summary["scenario_mode"] == "sustained_high_load"
-    assert summary["observed_runtime_signals"]["max_total_queue_depth"] > 0
-    assert summary["observed_runtime_signals"]["tegrastats_sample_count"] == 1
+    signals = summary["observed_runtime_signals"]
+    assert signals["max_total_queue_depth"] > 0
+    assert signals["tegrastats_sample_count"] == 1
+    assert signals["local_profile_adapter_count"] > 0
+    assert signals["local_profile_elapsed_ms"] > 0
+    assert set(signals["local_profile_kinds"]) == {
+        "safety_monitor_loop",
+        "vision_frame_loop",
+        "voice_command_burst",
+    }
 
     profiles = {profile["agent_id"]: profile for profile in summary["workload_profiles"]}
     assert profiles["vision_agent"]["runtime_loop"] == "yolo_detection_loop"
+    assert profiles["vision_agent"]["implementation"] == "local_profile_adapter"
+    assert profiles["vision_agent"]["profile_work_units"] == 24000
     assert profiles["voice_command_agent"]["runtime_loop"] == "whisper_command_burst"
     assert profiles["voice_command_agent"]["ingress_profile"] == (
         "fastapi_concurrent_request"
     )
+    outputs = [event["output"] for event in report["result_events"]]
+    assert any(output.get("profile_kind") == "vision_frame_loop" for output in outputs)
+    assert any(output.get("profile_kind") == "voice_command_burst" for output in outputs)
+    assert any(output.get("profile_kind") == "safety_monitor_loop" for output in outputs)
     assert report["tegrastats_timeline"]["summary"]["max_gpu_percent"] == 42
     assert report["tegrastats_timeline"]["summary"]["max_temperature_c"] == 45.5
 

@@ -96,8 +96,8 @@ def _multi_workload_summary(
         "schema_version": MULTI_WORKLOAD_SCHEMA,
         "scenario_mode": config.scenario_mode,
         "evidence_scope": (
-            "local sustained workload profiles with synthetic adapters; "
-            "external YOLO/Whisper/FastAPI integrations remain optional"
+            "local sustained workload profiles with lightweight CPU profile "
+            "adapters; external YOLO/Whisper/FastAPI integrations remain optional"
         ),
         "workload_profiles": [_workload_profile(task, report) for task in config.tasks],
         "observed_runtime_signals": {
@@ -109,9 +109,10 @@ def _multi_workload_summary(
             "policy_decision_count": totals.get("policy_decision_count", 0),
             "policy_decision_reasons": reasons,
             "tegrastats_sample_count": tegrastats.get("sample_count", 0),
+            **_local_profile_signals(report),
         },
         "next_validation_step": (
-            "replace synthetic adapters with device-local lightweight YOLO, "
+            "replace local CPU profile adapters with device-local lightweight YOLO, "
             "Whisper, FastAPI ingress, or tegrastats producers one at a time"
         ),
     }
@@ -128,6 +129,7 @@ def _workload_profile(task: TaskConfig, report: dict[str, Any]) -> dict[str, Any
         "runtime_loop": str(options.get("runtime_loop", _default_runtime_loop(task))),
         "ingress_profile": str(options.get("ingress_profile", _default_ingress(task))),
         "implementation": str(options.get("implementation", "synthetic_adapter")),
+        "profile_work_units": options.get("profile_work_units"),
         "expected_runtime_mode": str(
             options.get("expected_runtime_mode", "sustained")
         ),
@@ -170,6 +172,33 @@ def _default_ingress(task: TaskConfig) -> str:
     if task.agent_type == "safety":
         return "periodic_monitor"
     return "scheduled_task"
+
+
+def _local_profile_signals(report: dict[str, Any]) -> dict[str, Any]:
+    profiled_events = []
+    profile_kinds: list[str] = []
+    elapsed_total = 0.0
+    for event in report.get("result_events", []):
+        if not isinstance(event, dict):
+            continue
+        output = event.get("output")
+        if not isinstance(output, dict):
+            continue
+        if output.get("implementation") != "local_profile_adapter":
+            continue
+        profiled_events.append(output)
+        kind = output.get("profile_kind")
+        if isinstance(kind, str) and kind not in profile_kinds:
+            profile_kinds.append(kind)
+        elapsed = output.get("profile_elapsed_ms")
+        if isinstance(elapsed, int | float):
+            elapsed_total += float(elapsed)
+
+    return {
+        "local_profile_adapter_count": len(profiled_events),
+        "local_profile_elapsed_ms": round(elapsed_total, 3),
+        "local_profile_kinds": profile_kinds,
+    }
 
 
 def _policy_decision_reasons(report: dict[str, Any]) -> list[str]:
