@@ -142,6 +142,9 @@ python3 -m inferedge_orchestrator run \
 policy decision이 들어갑니다. Runtime은 task execution/result layer로
 유지하고, scheduling/drop/fallback과 policy evidence는 Orchestrator가
 소유합니다.
+이 starter는 synthetic/dummy workload evidence이며, 실제 lightweight
+workload contention과 device-specific sustained validation은 별도 다음
+단계입니다.
 
 ## Compatibility Rules
 

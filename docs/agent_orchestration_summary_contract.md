@@ -142,6 +142,9 @@ The generated summary includes `queue_depth_timeline`, `latency_timeline`,
 `decision_reason`, `total_backlog_before`, `backlog_threshold`, and
 `queue_depth_snapshot` fields. This keeps Runtime as the task execution/result
 layer while Orchestrator owns scheduling, drop/fallback, and policy evidence.
+This starter remains synthetic/dummy workload evidence; real lightweight
+workload contention and device-specific sustained validation are separate next
+steps.
 
 ## Compatibility Rules
 
