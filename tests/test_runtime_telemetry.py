@@ -92,3 +92,43 @@ def test_runtime_writes_agent_orchestration_summary_contract(tmp_path) -> None:
     first_schedule = data["schedule_decisions"][0]
     assert first_schedule["agent_id"] == "safety_monitor_agent"
     assert first_schedule["scheduled_priority"] == 100
+
+
+def test_sustained_high_load_records_timeline_and_policy_reasons(tmp_path) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_3_workload_sustained_high_load.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    output = tmp_path / "sustained_summary.json"
+
+    OrchestratorRuntime(config).run_to_file(frames=16, output=output)
+
+    data = json.loads(output.read_text(encoding="utf-8"))
+    assert data["run"]["scenario_mode"] == "sustained_high_load"
+    assert data["run"]["frame_interval_ms"] == 5
+
+    sustained = data["sustained_runtime_summary"]
+    assert sustained["schema_version"] == (
+        "inferedge-orchestrator-sustained-summary-v1"
+    )
+    assert sustained["queue_depth_sample_count"] == len(data["queue_depth_timeline"])
+    assert sustained["latency_sample_count"] == len(data["latency_timeline"])
+    assert sustained["max_total_queue_depth"] > 0
+    assert sustained["policy_decision_count"] > 0
+
+    first_policy = data["policy_decision_log"][0]
+    assert first_policy["decision_reason"] == "queue_backlog_threshold_exceeded"
+    assert first_policy["total_backlog_before"] > first_policy["backlog_threshold"]
+    assert isinstance(first_policy["queue_depth_snapshot"], dict)
+
+    first_queue_sample = data["queue_depth_timeline"][0]
+    assert set(first_queue_sample) == {
+        "cycle",
+        "stage",
+        "queue_depth",
+        "total_queue_depth",
+    }
+    assert data["latency_timeline"]

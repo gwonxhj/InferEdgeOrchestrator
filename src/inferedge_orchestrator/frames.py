@@ -31,6 +31,8 @@ class DummyFrameSource:
     ) -> list[FrameEnvelope]:
         frames: list[FrameEnvelope] = []
         for task in tasks:
+            if cycle % task.emit_every_cycles != 0:
+                continue
             self._sequence += 1
             frames.append(
                 FrameEnvelope(
@@ -62,6 +64,8 @@ class FileFrameSource:
     ) -> list[FrameEnvelope]:
         frames: list[FrameEnvelope] = []
         for task in tasks:
+            if cycle % task.emit_every_cycles != 0:
+                continue
             self._sequence += 1
             frames.append(
                 FrameEnvelope(

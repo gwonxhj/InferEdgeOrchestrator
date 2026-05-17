@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from inferedge_orchestrator.config import TaskConfig, sorted_tasks_by_priority
 from inferedge_orchestrator.task_queue import BoundedTaskQueues, DropRecord
@@ -13,6 +13,9 @@ class PolicyDecision:
     protected_task: str | None
     limited_task: str
     dropped_frames: int
+    total_backlog_before: int = 0
+    backlog_threshold: int = 0
+    queue_depth_snapshot: dict[str, int] = field(default_factory=dict)
 
 
 class LoadSheddingPolicy:
@@ -31,6 +34,8 @@ class LoadSheddingPolicy:
         decisions: list[PolicyDecision] = []
 
         for task in self._tasks_low_first:
+            snapshot = queues.snapshot_backlog()
+            total_backlog_before = sum(snapshot.values())
             if queues.total_backlog() <= self._backlog_threshold:
                 break
             if protected_task is not None and task.name == protected_task:
@@ -49,6 +54,9 @@ class LoadSheddingPolicy:
                     protected_task=protected_task,
                     limited_task=task.name,
                     dropped_frames=1,
+                    total_backlog_before=total_backlog_before,
+                    backlog_threshold=self._backlog_threshold,
+                    queue_depth_snapshot=snapshot,
                 )
             )
 

@@ -129,6 +129,7 @@ The boundary is intentional:
 | Phase 4: Jetson Smoke | Jetson CLI smoke, telemetry generation, resource snapshots, optional `tegrastats` parsing | `scripts/smoke_jetson_dummy.sh`, `scripts/smoke_jetson_onnx.sh` |
 | Phase 5: InferEdge Handoff | `result.json` latency signal converted into Orchestrator task config | `python3 -m inferedge_orchestrator from-inferedge ...` |
 | Agent Runtime Contract | Vision / Voice-Command / Safety-Monitor dummy workload with Forge agent manifest and Runtime `result.agent` references | `configs/agent_3_workload_demo.json`, [`docs/agent_orchestration_summary_contract.md`](docs/agent_orchestration_summary_contract.md) |
+| Sustained Agent Scenario Starter | Normal / overload / sustained-high-load 3-agent modes with queue-depth timeline, latency timeline, and policy decision reasons | `configs/agent_3_workload_sustained_high_load.json` |
 
 ## Validation Evidence
 

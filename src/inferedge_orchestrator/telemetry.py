@@ -38,12 +38,23 @@ class TaskTelemetry:
 
 
 class TelemetryCollector:
-    def __init__(self, tasks: tuple[TaskConfig, ...], *, run_name: str) -> None:
+    def __init__(
+        self,
+        tasks: tuple[TaskConfig, ...],
+        *,
+        run_name: str,
+        scenario_mode: str = "normal",
+        frame_interval_ms: float = 1.0,
+    ) -> None:
         self.run_name = run_name
+        self.scenario_mode = scenario_mode
+        self.frame_interval_ms = frame_interval_ms
         self._task_config = {task.name: task for task in tasks}
         self.tasks: dict[str, TaskTelemetry] = {
             task.name: TaskTelemetry() for task in tasks
         }
+        self.queue_depth_timeline: list[dict[str, Any]] = []
+        self.latency_timeline: list[dict[str, Any]] = []
         self.schedule_decisions: list[dict[str, Any]] = []
         self.policy_decisions: list[dict[str, Any]] = []
         self.overload_events: list[dict[str, Any]] = []
@@ -51,12 +62,26 @@ class TelemetryCollector:
         self.result_events: list[dict[str, Any]] = []
         self.resource_snapshots: list[dict[str, object]] = []
 
-    def record_backlog(self, backlog: dict[str, int]) -> None:
+    def record_backlog(
+        self,
+        backlog: dict[str, int],
+        *,
+        cycle: int | None = None,
+        stage: str = "snapshot",
+    ) -> None:
         for task_name, value in backlog.items():
             self.tasks[task_name].max_queue_backlog = max(
                 self.tasks[task_name].max_queue_backlog,
                 value,
             )
+        self.queue_depth_timeline.append(
+            {
+                "cycle": cycle,
+                "stage": stage,
+                "queue_depth": backlog,
+                "total_queue_depth": sum(backlog.values()),
+            }
+        )
 
     def record_drop(self, drop: DropRecord) -> None:
         self.tasks[drop.task_name].dropped += 1
@@ -106,6 +131,18 @@ class TelemetryCollector:
                 "output": result.output,
             }
         )
+        self.latency_timeline.append(
+            {
+                "task": result.task_name,
+                **self._agent_event_fields(result.task_name),
+                "frame_id": result.frame_id,
+                "cycle": _frame_cycle(frame),
+                "latency_ms": _rounded(result.latency_ms),
+                "latency_budget_ms": _rounded(task_config.latency_budget_ms),
+                "deadline_missed": deadline_missed,
+                "backlog_after": backlog_after,
+            }
+        )
 
     def record_policy_decision(self, decision: PolicyDecision) -> None:
         limited_task = self._task_config[decision.limited_task]
@@ -117,11 +154,15 @@ class TelemetryCollector:
         event = {
             "event": decision.event,
             "reason": decision.reason,
+            "decision_reason": decision.reason,
             "protected_task": decision.protected_task,
             "protected_agent_id": self._agent_id(decision.protected_task),
             "limited_task": decision.limited_task,
             **self._agent_event_fields(decision.limited_task),
             "dropped_frames": decision.dropped_frames,
+            "total_backlog_before": decision.total_backlog_before,
+            "backlog_threshold": decision.backlog_threshold,
+            "queue_depth_snapshot": decision.queue_depth_snapshot,
             "fallback_used": fallback_used,
             "fallback_policy": limited_task.fallback_policy,
         }
@@ -136,7 +177,11 @@ class TelemetryCollector:
         agent_totals = self._agent_totals()
         return {
             "schema_version": "inferedge-orchestration-summary-v1",
-            "run": {"name": self.run_name},
+            "run": {
+                "name": self.run_name,
+                "scenario_mode": self.scenario_mode,
+                "frame_interval_ms": _rounded(self.frame_interval_ms),
+            },
             "agent_runtime_summary": {
                 "schema_version": "inferedge-orchestration-summary-v1",
                 "source_contracts": {
@@ -146,6 +191,7 @@ class TelemetryCollector:
                 "agents": self._agent_summary(),
                 "totals": agent_totals,
             },
+            "sustained_runtime_summary": self._sustained_runtime_summary(agent_totals),
             "tasks": {
                 name: {
                     "agent": self._agent_task_summary(name),
@@ -160,6 +206,8 @@ class TelemetryCollector:
                 for name, task in self.tasks.items()
             },
             "overload_events": self.overload_events,
+            "queue_depth_timeline": self.queue_depth_timeline,
+            "latency_timeline": self.latency_timeline,
             "policy_decisions": self.policy_decisions,
             "policy_decision_log": self.policy_decisions,
             "drop_events": self.drop_events,
@@ -211,6 +259,26 @@ class TelemetryCollector:
             "overload_event_count": len(self.overload_events),
         }
 
+    def _sustained_runtime_summary(self, agent_totals: dict[str, int]) -> dict[str, Any]:
+        max_total_queue_depth = 0
+        if self.queue_depth_timeline:
+            max_total_queue_depth = max(
+                int(sample["total_queue_depth"])
+                for sample in self.queue_depth_timeline
+            )
+        return {
+            "schema_version": "inferedge-orchestrator-sustained-summary-v1",
+            "scenario_mode": self.scenario_mode,
+            "queue_depth_sample_count": len(self.queue_depth_timeline),
+            "latency_sample_count": len(self.latency_timeline),
+            "max_total_queue_depth": max_total_queue_depth,
+            "deadline_missed_count": agent_totals["deadline_missed_count"],
+            "dropped_count": agent_totals["dropped_count"],
+            "fallback_count": agent_totals["fallback_count"],
+            "policy_decision_count": agent_totals["policy_decision_count"],
+            "overload_event_count": agent_totals["overload_event_count"],
+        }
+
     def _agent_event_fields(self, task_name: str) -> dict[str, object]:
         task = self._task_config[task_name]
         return {
@@ -231,3 +299,11 @@ def _rounded(value: float | None) -> float | None:
     if value is None:
         return None
     return round(value, 3)
+
+
+def _frame_cycle(frame: FrameEnvelope) -> int | None:
+    if isinstance(frame.payload, dict):
+        cycle = frame.payload.get("cycle")
+        if isinstance(cycle, int):
+            return cycle
+    return None
