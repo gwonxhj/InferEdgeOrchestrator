@@ -130,6 +130,7 @@ The boundary is intentional:
 | Phase 5: InferEdge Handoff | `result.json` latency signal converted into Orchestrator task config | `python3 -m inferedge_orchestrator from-inferedge ...` |
 | Agent Runtime Contract | Vision / Voice-Command / Safety-Monitor dummy workload with Forge agent manifest and Runtime `result.agent` references | `configs/agent_3_workload_demo.json`, [`docs/agent_orchestration_summary_contract.md`](docs/agent_orchestration_summary_contract.md) |
 | Sustained Agent Scenario Starter | Normal / overload / sustained-high-load 3-agent modes with queue-depth timeline, latency timeline, and policy decision reasons | `configs/agent_3_workload_sustained_high_load.json` |
+| Lightweight Sustained Workload Starter | Profiled local sustained scenario for YOLO-like vision, Whisper-like command burst, FastAPI-style ingress, and optional tegrastats timeline | `python3 -m inferedge_orchestrator run-multi-workload-sustained ...` |
 
 ## Validation Evidence
 
@@ -192,6 +193,31 @@ python3 -m inferedge_orchestrator compare-overload \
 This is the core runtime operation-control story: low-priority classifier work
 is intentionally dropped under overload so the high-priority detector stays
 within latency budget, and the reason is visible in telemetry.
+
+### Multi-Workload Sustained Starter
+
+```bash
+python3 -m inferedge_orchestrator run-multi-workload-sustained \
+  --config configs/agent_multi_workload_sustained_local.json \
+  --output reports/agent_multi_workload_sustained.json \
+  --frames 16
+```
+
+This starter keeps the same local-first contract boundary while adding
+workload-profile evidence for a YOLO-like vision loop, Whisper-like command
+burst, FastAPI-style request ingress, and optional `tegrastats` timeline:
+
+```bash
+python3 -m inferedge_orchestrator run-multi-workload-sustained \
+  --config configs/agent_multi_workload_sustained_local.json \
+  --output reports/agent_multi_workload_sustained.json \
+  --frames 16 \
+  --tegrastats-log reports/tegrastats.log
+```
+
+The default implementation uses synthetic adapters so CI and local laptops do
+not need YOLO, Whisper, FastAPI, or Jetson dependencies. Device-local producers
+can be attached later one at a time.
 
 ### InferEdge Handoff
 

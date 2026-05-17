@@ -128,6 +128,7 @@ flowchart LR
 | Phase 4: Jetson Smoke | Jetson CLI smoke, telemetry 생성, resource snapshot, optional `tegrastats` parsing | `scripts/smoke_jetson_dummy.sh`, `scripts/smoke_jetson_onnx.sh` |
 | Phase 5: InferEdge Handoff | `result.json` latency signal을 Orchestrator task config로 변환 | `python3 -m inferedge_orchestrator from-inferedge ...` |
 | Agent Runtime Contract | Forge agent manifest와 Runtime `result.agent` 참조를 사용하는 Vision / Voice-Command / Safety-Monitor dummy workload | `configs/agent_3_workload_demo.json`, [`docs/agent_orchestration_summary_contract.ko.md`](docs/agent_orchestration_summary_contract.ko.md) |
+| Lightweight Sustained Workload Starter | YOLO-like vision, Whisper-like command burst, FastAPI-style ingress, optional tegrastats timeline을 위한 profiled local sustained scenario | `python3 -m inferedge_orchestrator run-multi-workload-sustained ...` |
 
 ## Validation Evidence
 
@@ -248,6 +249,19 @@ telemetry summary 출력:
 ```bash
 python3 -m inferedge_orchestrator report --input reports/phase1_demo.json
 ```
+
+multi-workload sustained starter 실행:
+
+```bash
+python3 -m inferedge_orchestrator run-multi-workload-sustained \
+  --config configs/agent_multi_workload_sustained_local.json \
+  --output reports/agent_multi_workload_sustained.json \
+  --frames 16
+```
+
+기본 구현은 synthetic adapter를 사용하므로 YOLO, Whisper, FastAPI, Jetson
+dependency를 기본 CI에 강제하지 않는다. 실제 device-local producer는 이후
+하나씩 붙이는 구조로 남긴다.
 
 자세한 문서:
 

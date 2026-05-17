@@ -8,6 +8,7 @@ from inferedge_orchestrator.config import load_config
 from inferedge_orchestrator.inferedge_adapter import write_config_from_inferedge_result
 from inferedge_orchestrator.runtime import OrchestratorRuntime
 from inferedge_orchestrator.scenarios import write_overload_comparison
+from inferedge_orchestrator.sustained import write_multi_workload_sustained
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -24,6 +25,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="sleep for simulated dummy latency",
     )
     run_parser.set_defaults(func=_run)
+
+    sustained_parser = subparsers.add_parser(
+        "run-multi-workload-sustained",
+        help="run the sustained multi-workload profile demo",
+    )
+    sustained_parser.add_argument("--config", required=True, help="path to JSON config")
+    sustained_parser.add_argument("--output", required=True, help="telemetry JSON output path")
+    sustained_parser.add_argument("--frames", type=int, default=16, help="frame cycles")
+    sustained_parser.add_argument(
+        "--tegrastats-log",
+        help="optional tegrastats log to parse into the sustained timeline",
+    )
+    sustained_parser.add_argument(
+        "--sleep-worker",
+        action="store_true",
+        help="sleep for simulated dummy latency",
+    )
+    sustained_parser.set_defaults(func=_run_multi_workload_sustained)
 
     report_parser = subparsers.add_parser("report", help="summarize telemetry JSON")
     report_parser.add_argument("--input", required=True, help="telemetry JSON input path")
@@ -75,6 +94,28 @@ def _run(args: argparse.Namespace) -> int:
     runtime = OrchestratorRuntime(config, sleep_worker=args.sleep_worker)
     runtime.run_to_file(frames=args.frames, output=args.output)
     print(f"wrote telemetry: {args.output}")
+    return 0
+
+
+def _run_multi_workload_sustained(args: argparse.Namespace) -> int:
+    config = load_config(args.config)
+    report = write_multi_workload_sustained(
+        config,
+        output=args.output,
+        frames=args.frames,
+        tegrastats_log=args.tegrastats_log,
+        sleep_worker=args.sleep_worker,
+    )
+    summary = report["multi_workload_sustained_summary"]
+    signals = summary["observed_runtime_signals"]
+    print(f"wrote sustained telemetry: {args.output}")
+    print(
+        "multi-workload sustained: "
+        f"max_queue={signals['max_total_queue_depth']} "
+        f"dropped={signals['dropped_count']} "
+        f"fallback={signals['fallback_count']} "
+        f"tegrastats_samples={signals['tegrastats_sample_count']}"
+    )
     return 0
 
 
