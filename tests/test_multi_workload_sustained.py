@@ -96,6 +96,42 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     assert report["tegrastats_timeline"]["summary"]["max_temperature_c"] == 45.5
 
 
+def test_run_multi_workload_sustained_profiles_local_image_input(tmp_path) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_vision_file.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    output = tmp_path / "multi_workload_sustained_vision_file.json"
+
+    report = write_multi_workload_sustained(config, output=output, frames=8)
+
+    assert config.input_source == "image"
+    assert config.input_path == "examples/inputs/vision_frame.ppm"
+    assert output.exists()
+    summary = report["multi_workload_sustained_summary"]
+    signals = summary["observed_runtime_signals"]
+    assert "vision_frame_loop" in signals["local_profile_kinds"]
+
+    vision_outputs = [
+        event["output"]
+        for event in report["result_events"]
+        if event["task"] == "vision_agent"
+        and event["output"].get("profile_kind") == "vision_frame_loop"
+    ]
+    assert vision_outputs
+    first_output = vision_outputs[0]
+    assert first_output["producer_source"] == "image_file"
+    assert first_output["frame_source"] == "image"
+    assert first_output["input_path"] == "examples/inputs/vision_frame.ppm"
+    assert first_output["input_bytes"] > 0
+    assert first_output["sampled_bytes"] > 0
+    assert first_output["input_digest"]
+    assert first_output["contention_signal"] == "vision_file_cpu_profile"
+
+
 def test_missing_tegrastats_log_is_explicit() -> None:
     timeline = load_tegrastats_timeline(None)
 

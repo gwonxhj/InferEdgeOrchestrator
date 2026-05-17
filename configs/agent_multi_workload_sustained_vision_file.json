@@ -1,0 +1,73 @@
+{
+  "run": {
+    "name": "agent_multi_workload_sustained_vision_file",
+    "scenario_mode": "sustained_high_load",
+    "overload_backlog_threshold": 4,
+    "frame_interval_ms": 5,
+    "input_source": "image",
+    "input_path": "examples/inputs/vision_frame.ppm"
+  },
+  "tasks": [
+    {
+      "name": "safety_monitor_agent",
+      "agent_manifest_path": "examples/agent_runtime/safety_agent_manifest.json",
+      "target_fps": 10,
+      "queue_size": 2,
+      "drop_policy": "drop_oldest",
+      "worker": "dummy",
+      "simulated_latency_ms": 6,
+      "emit_every_cycles": 2,
+      "worker_options": {
+        "workload_type": "telemetry_monitor",
+        "runtime_loop": "safety_monitor_loop",
+        "ingress_profile": "periodic_monitor",
+        "implementation": "local_profile_adapter",
+        "expected_runtime_mode": "periodic",
+        "preferred_device": "cpu",
+        "profile_work_units": 6000
+      }
+    },
+    {
+      "name": "vision_agent",
+      "agent_manifest_path": "examples/agent_runtime/vision_agent_manifest.json",
+      "runtime_result_path": "examples/agent_runtime/vision_runtime_result.json",
+      "target_fps": 30,
+      "queue_size": 3,
+      "drop_policy": "drop_oldest",
+      "worker": "dummy",
+      "simulated_latency_ms": 72,
+      "emit_every_cycles": 1,
+      "worker_options": {
+        "workload_type": "realtime_vision",
+        "runtime_loop": "yolo_detection_loop",
+        "ingress_profile": "frame_queue",
+        "implementation": "local_profile_adapter",
+        "expected_runtime_mode": "sustained",
+        "preferred_device": "gpu",
+        "profile_work_units": 24000,
+        "profile_sample_bytes": 512
+      }
+    },
+    {
+      "name": "voice_command_agent",
+      "agent_manifest_path": "examples/agent_runtime/voice_agent_manifest.json",
+      "target_fps": 8,
+      "queue_size": 2,
+      "drop_policy": "drop_newest",
+      "worker": "dummy",
+      "simulated_latency_ms": 135,
+      "emit_every_cycles": 2,
+      "worker_options": {
+        "workload_type": "voice_command",
+        "runtime_loop": "whisper_command_burst",
+        "ingress_profile": "fastapi_concurrent_request",
+        "implementation": "local_profile_adapter",
+        "expected_runtime_mode": "burst",
+        "preferred_device": "cpu",
+        "profile_work_units": 16000,
+        "profile_request_count": 3,
+        "sample_command": "inspect queue backlog and summarize edge runtime status"
+      }
+    }
+  ]
+}

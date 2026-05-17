@@ -4,7 +4,7 @@ import hashlib
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 from inferedge_orchestrator.config import TaskConfig
 from inferedge_orchestrator.frames import FrameEnvelope
@@ -128,17 +128,26 @@ def _profile_vision(
     work_units: int,
     options: dict[str, object],
 ) -> tuple[str, dict[str, object]]:
-    accumulator = frame.sequence + len(task.name)
+    file_profile, sample = _vision_file_sample(frame, options)
+    accumulator = frame.sequence + len(task.name) + sum(sample[:128])
     bright_pixels = 0
     edge_votes = 0
+    sample_size = len(sample)
     for index in range(work_units):
-        pixel = (index * 37 + frame.sequence * 17 + accumulator) & 0xFF
-        neighbor = ((index + 1) * 29 + frame.sequence * 11) & 0xFF
+        if sample_size:
+            pixel = sample[index % sample_size]
+            neighbor = sample[(index + 1) % sample_size]
+        else:
+            pixel = (index * 37 + frame.sequence * 17 + accumulator) & 0xFF
+            neighbor = ((index + 1) * 29 + frame.sequence * 11) & 0xFF
         bright_pixels += 1 if pixel > 180 else 0
         edge_votes += 1 if abs(pixel - neighbor) > 48 else 0
         accumulator = ((accumulator << 5) ^ pixel ^ neighbor ^ index) & 0xFFFFFFFF
     detections = max(1, (edge_votes // max(1, work_units // 16)) % 24)
-    digest = hashlib.sha1(f"vision:{accumulator}:{edge_votes}".encode()).hexdigest()[:12]
+    digest_seed = file_profile.get("input_digest", "synthetic")
+    digest = hashlib.sha1(
+        f"vision:{digest_seed}:{accumulator}:{edge_votes}".encode()
+    ).hexdigest()[:12]
     return digest, {
         "profile_kind": "vision_frame_loop",
         "frame_source": _payload_value(frame, "source", "dummy"),
@@ -146,8 +155,63 @@ def _profile_vision(
         "bright_pixel_ratio": round(bright_pixels / work_units, 4),
         "edge_vote_ratio": round(edge_votes / work_units, 4),
         "stale_frame_policy": task.drop_policy,
-        "contention_signal": "frame_queue_cpu_profile",
+        "contention_signal": (
+            "vision_file_cpu_profile" if file_profile else "frame_queue_cpu_profile"
+        ),
+        **file_profile,
     }
+
+
+def _vision_file_sample(
+    frame: FrameEnvelope,
+    options: dict[str, object],
+) -> tuple[dict[str, object], bytes]:
+    source = _payload_value(frame, "source", "dummy")
+    path_value = _payload_value(frame, "path", None)
+    if source not in {"image", "video"} or path_value is None:
+        return {}, b""
+
+    path = Path(str(path_value))
+    if not path.exists():
+        raise FileNotFoundError(f"vision input path does not exist: {path}")
+    if not path.is_file():
+        raise ValueError(f"vision input path is not a file: {path}")
+
+    sample_limit = _positive_int(options.get("profile_sample_bytes"), default=4096)
+    with path.open("rb") as handle:
+        sample = handle.read(sample_limit)
+
+    size = path.stat().st_size
+    digest = hashlib.sha1(sample).hexdigest()[:12] if sample else "empty"
+    return {
+        "producer_source": f"{source}_file",
+        "input_path": str(path),
+        "input_bytes": size,
+        "sampled_bytes": len(sample),
+        "input_digest": digest,
+        "byte_mean": _byte_mean(sample),
+        "byte_stddev": _byte_stddev(sample),
+    }, sample
+
+
+def _positive_int(value: Any, *, default: int) -> int:
+    if value is None:
+        return default
+    return max(1, int(value))
+
+
+def _byte_mean(sample: bytes) -> float:
+    if not sample:
+        return 0.0
+    return round(sum(sample) / len(sample), 3)
+
+
+def _byte_stddev(sample: bytes) -> float:
+    if not sample:
+        return 0.0
+    mean = sum(sample) / len(sample)
+    variance = sum((value - mean) ** 2 for value in sample) / len(sample)
+    return round(variance**0.5, 3)
 
 
 def _profile_voice(

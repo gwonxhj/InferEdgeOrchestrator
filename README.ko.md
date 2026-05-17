@@ -128,7 +128,7 @@ flowchart LR
 | Phase 4: Jetson Smoke | Jetson CLI smoke, telemetry 생성, resource snapshot, optional `tegrastats` parsing | `scripts/smoke_jetson_dummy.sh`, `scripts/smoke_jetson_onnx.sh` |
 | Phase 5: InferEdge Handoff | `result.json` latency signal을 Orchestrator task config로 변환 | `python3 -m inferedge_orchestrator from-inferedge ...` |
 | Agent Runtime Contract | Forge agent manifest와 Runtime `result.agent` 참조를 사용하는 Vision / Voice-Command / Safety-Monitor dummy workload | `configs/agent_3_workload_demo.json`, [`docs/agent_orchestration_summary_contract.ko.md`](docs/agent_orchestration_summary_contract.ko.md) |
-| Lightweight Sustained Workload Starter | YOLO-like vision, Whisper-like command burst, FastAPI-style ingress, optional tegrastats timeline을 위한 profiled local sustained scenario | `python3 -m inferedge_orchestrator run-multi-workload-sustained ...` |
+| Lightweight Sustained Workload Starter | YOLO-like vision, Whisper-like command burst, FastAPI-style ingress, optional tegrastats timeline, Vision local-file producer starter를 포함한 profiled local sustained scenario | `python3 -m inferedge_orchestrator run-multi-workload-sustained ...` |
 
 ## Validation Evidence
 
@@ -259,9 +259,19 @@ python3 -m inferedge_orchestrator run-multi-workload-sustained \
   --frames 16
 ```
 
-기본 구현은 synthetic adapter를 사용하므로 YOLO, Whisper, FastAPI, Jetson
-dependency를 기본 CI에 강제하지 않는다. 실제 device-local producer는 이후
-하나씩 붙이는 구조로 남긴다.
+기본 구현은 lightweight local CPU profile adapter를 사용하므로 YOLO, Whisper,
+FastAPI, Jetson dependency를 기본 CI에 강제하지 않는다. Vision starter는 local
+image fixture를 읽는 producer도 제공한다.
+
+```bash
+python3 -m inferedge_orchestrator run-multi-workload-sustained \
+  --config configs/agent_multi_workload_sustained_vision_file.json \
+  --output reports/agent_multi_workload_sustained_vision_file.json \
+  --frames 16
+```
+
+이 경로는 `producer_source=image_file`, input digest, sampled bytes, Vision
+workload pressure를 기록하며 ONNX/YOLO integration은 후속 단계로 둔다.
 
 자세한 문서:
 
