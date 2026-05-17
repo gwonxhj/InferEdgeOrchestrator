@@ -142,9 +142,9 @@ The generated summary includes `queue_depth_timeline`, `latency_timeline`,
 `decision_reason`, `total_backlog_before`, `backlog_threshold`, and
 `queue_depth_snapshot` fields. This keeps Runtime as the task execution/result
 layer while Orchestrator owns scheduling, drop/fallback, and policy evidence.
-This starter remains synthetic/dummy workload evidence; real lightweight
-workload contention and device-specific sustained validation are separate next
-steps.
+This starter remains profiled local workload evidence rather than full external
+YOLO/Whisper/FastAPI integration. Device-specific sustained validation remains a
+separate next step.
 
 ## Multi-Workload Sustained Starter
 
@@ -164,8 +164,10 @@ The committed config names the intended lightweight workload profiles:
 - Whisper-like command burst through FastAPI-style concurrent request ingress
 - Safety/monitor loop with optional tegrastats timeline evidence
 
-Default execution still uses synthetic adapters so the contract can be tested
-without requiring model downloads, FastAPI servers, or Jetson-only telemetry.
+Default execution now uses lightweight local CPU profile adapters so the
+contract can exercise workload pressure without requiring model downloads,
+FastAPI servers, or Jetson-only telemetry. External YOLO, Whisper, FastAPI, and
+Jetson producers remain incremental integrations, not required dependencies.
 
 ## Compatibility Rules
 

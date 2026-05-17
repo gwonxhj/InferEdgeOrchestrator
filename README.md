@@ -130,7 +130,7 @@ The boundary is intentional:
 | Phase 5: InferEdge Handoff | `result.json` latency signal converted into Orchestrator task config | `python3 -m inferedge_orchestrator from-inferedge ...` |
 | Agent Runtime Contract | Vision / Voice-Command / Safety-Monitor dummy workload with Forge agent manifest and Runtime `result.agent` references | `configs/agent_3_workload_demo.json`, [`docs/agent_orchestration_summary_contract.md`](docs/agent_orchestration_summary_contract.md) |
 | Sustained Agent Scenario Starter | Normal / overload / sustained-high-load 3-agent modes with queue-depth timeline, latency timeline, and policy decision reasons | `configs/agent_3_workload_sustained_high_load.json` |
-| Lightweight Sustained Workload Starter | Profiled local sustained scenario for YOLO-like vision, Whisper-like command burst, FastAPI-style ingress, and optional tegrastats timeline | `python3 -m inferedge_orchestrator run-multi-workload-sustained ...` |
+| Lightweight Sustained Workload Starter | Profiled local sustained scenario for YOLO-like vision, Whisper-like command burst, FastAPI-style ingress, and optional tegrastats timeline using local CPU profile adapters | `python3 -m inferedge_orchestrator run-multi-workload-sustained ...` |
 
 ## Validation Evidence
 
@@ -215,9 +215,10 @@ python3 -m inferedge_orchestrator run-multi-workload-sustained \
   --tegrastats-log reports/tegrastats.log
 ```
 
-The default implementation uses synthetic adapters so CI and local laptops do
-not need YOLO, Whisper, FastAPI, or Jetson dependencies. Device-local producers
-can be attached later one at a time.
+The default implementation uses lightweight local CPU profile adapters so CI
+and local laptops can exercise workload pressure without YOLO, Whisper, FastAPI,
+or Jetson dependencies. Device-local producers can be attached later one at a
+time.
 
 ### InferEdge Handoff
 

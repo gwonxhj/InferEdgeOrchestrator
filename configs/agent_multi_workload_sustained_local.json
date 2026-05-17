@@ -15,14 +15,15 @@
       "drop_policy": "drop_oldest",
       "worker": "dummy",
       "simulated_latency_ms": 6,
-      "emit_every_cycles": 1,
+      "emit_every_cycles": 2,
       "worker_options": {
         "workload_type": "telemetry_monitor",
         "runtime_loop": "safety_monitor_loop",
         "ingress_profile": "periodic_monitor",
-        "implementation": "synthetic_adapter",
+        "implementation": "local_profile_adapter",
         "expected_runtime_mode": "periodic",
-        "preferred_device": "cpu"
+        "preferred_device": "cpu",
+        "profile_work_units": 6000
       }
     },
     {
@@ -39,9 +40,10 @@
         "workload_type": "realtime_vision",
         "runtime_loop": "yolo_detection_loop",
         "ingress_profile": "frame_queue",
-        "implementation": "synthetic_adapter",
+        "implementation": "local_profile_adapter",
         "expected_runtime_mode": "sustained",
-        "preferred_device": "gpu"
+        "preferred_device": "gpu",
+        "profile_work_units": 24000
       }
     },
     {
@@ -57,9 +59,12 @@
         "workload_type": "voice_command",
         "runtime_loop": "whisper_command_burst",
         "ingress_profile": "fastapi_concurrent_request",
-        "implementation": "synthetic_adapter",
+        "implementation": "local_profile_adapter",
         "expected_runtime_mode": "burst",
-        "preferred_device": "cpu"
+        "preferred_device": "cpu",
+        "profile_work_units": 16000,
+        "profile_request_count": 3,
+        "sample_command": "inspect queue backlog and summarize edge runtime status"
       }
     }
   ]

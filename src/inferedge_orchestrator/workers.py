@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -38,6 +39,10 @@ class DummyWorker:
         self._sleep = sleep
 
     def run(self, task: TaskConfig, frame: FrameEnvelope) -> WorkerResult:
+        options = task.worker_options or {}
+        if options.get("implementation") == "local_profile_adapter":
+            return self._run_local_profile(task, frame, options)
+
         started = time.perf_counter()
         if self._sleep and task.simulated_latency_ms > 0:
             time.sleep(task.simulated_latency_ms / 1000.0)
@@ -50,6 +55,165 @@ class DummyWorker:
             latency_ms=latency_ms,
             output={"worker": "dummy", "sequence": frame.sequence},
         )
+
+    def _run_local_profile(
+        self,
+        task: TaskConfig,
+        frame: FrameEnvelope,
+        options: dict[str, object],
+    ) -> WorkerResult:
+        started = time.perf_counter()
+        workload_type = str(options.get("workload_type", "utility"))
+        work_units = _profile_work_units(options, workload_type)
+        digest, profile = _profile_workload(
+            workload_type=workload_type,
+            task=task,
+            frame=frame,
+            work_units=work_units,
+            options=options,
+        )
+        latency_ms = (time.perf_counter() - started) * 1000.0
+        return WorkerResult(
+            task_name=task.name,
+            frame_id=frame.frame_id,
+            latency_ms=latency_ms,
+            output={
+                "worker": "dummy",
+                "implementation": "local_profile_adapter",
+                "profile_adapter": "local_cpu_profile",
+                "workload_type": workload_type,
+                "runtime_loop": options.get("runtime_loop"),
+                "ingress_profile": options.get("ingress_profile"),
+                "preferred_device": options.get("preferred_device"),
+                "profile_work_units": work_units,
+                "profile_elapsed_ms": round(latency_ms, 3),
+                "profile_digest": digest,
+                **profile,
+            },
+        )
+
+
+def _profile_work_units(options: dict[str, object], workload_type: str) -> int:
+    raw_value = options.get("profile_work_units")
+    if raw_value is not None:
+        return max(1, int(raw_value))
+    defaults = {
+        "realtime_vision": 18_000,
+        "voice_command": 12_000,
+        "telemetry_monitor": 4_000,
+    }
+    return defaults.get(workload_type, 6_000)
+
+
+def _profile_workload(
+    *,
+    workload_type: str,
+    task: TaskConfig,
+    frame: FrameEnvelope,
+    work_units: int,
+    options: dict[str, object],
+) -> tuple[str, dict[str, object]]:
+    if workload_type == "realtime_vision":
+        return _profile_vision(task, frame, work_units, options)
+    if workload_type == "voice_command":
+        return _profile_voice(task, frame, work_units, options)
+    if workload_type == "telemetry_monitor":
+        return _profile_safety_monitor(task, frame, work_units, options)
+    return _profile_utility(task, frame, work_units, options)
+
+
+def _profile_vision(
+    task: TaskConfig,
+    frame: FrameEnvelope,
+    work_units: int,
+    options: dict[str, object],
+) -> tuple[str, dict[str, object]]:
+    accumulator = frame.sequence + len(task.name)
+    bright_pixels = 0
+    edge_votes = 0
+    for index in range(work_units):
+        pixel = (index * 37 + frame.sequence * 17 + accumulator) & 0xFF
+        neighbor = ((index + 1) * 29 + frame.sequence * 11) & 0xFF
+        bright_pixels += 1 if pixel > 180 else 0
+        edge_votes += 1 if abs(pixel - neighbor) > 48 else 0
+        accumulator = ((accumulator << 5) ^ pixel ^ neighbor ^ index) & 0xFFFFFFFF
+    detections = max(1, (edge_votes // max(1, work_units // 16)) % 24)
+    digest = hashlib.sha1(f"vision:{accumulator}:{edge_votes}".encode()).hexdigest()[:12]
+    return digest, {
+        "profile_kind": "vision_frame_loop",
+        "frame_source": _payload_value(frame, "source", "dummy"),
+        "estimated_detections": detections,
+        "bright_pixel_ratio": round(bright_pixels / work_units, 4),
+        "edge_vote_ratio": round(edge_votes / work_units, 4),
+        "stale_frame_policy": task.drop_policy,
+        "contention_signal": "frame_queue_cpu_profile",
+    }
+
+
+def _profile_voice(
+    task: TaskConfig,
+    frame: FrameEnvelope,
+    work_units: int,
+    options: dict[str, object],
+) -> tuple[str, dict[str, object]]:
+    command = str(options.get("sample_command", "inspect queue backlog and summarize status"))
+    tokens = command.split()
+    digest_bytes = f"{task.name}:{frame.sequence}:{command}".encode()
+    for index in range(work_units):
+        digest_bytes = hashlib.blake2b(
+            digest_bytes + str(index % max(1, len(tokens))).encode(),
+            digest_size=16,
+        ).digest()
+    digest = digest_bytes.hex()[:12]
+    return digest, {
+        "profile_kind": "voice_command_burst",
+        "token_count": len(tokens),
+        "request_count": int(options.get("profile_request_count", 1)),
+        "burst_profile": options.get("expected_runtime_mode", "burst"),
+        "contention_signal": "cpu_text_command_profile",
+    }
+
+
+def _profile_safety_monitor(
+    task: TaskConfig,
+    frame: FrameEnvelope,
+    work_units: int,
+    options: dict[str, object],
+) -> tuple[str, dict[str, object]]:
+    risk_score = 0
+    for index in range(work_units):
+        risk_score = (risk_score + ((index * 13 + frame.sequence * 7) % 97)) % 10_000
+    normalized = risk_score / 10_000
+    digest = hashlib.sha1(f"monitor:{task.name}:{frame.sequence}:{risk_score}".encode()).hexdigest()[:12]
+    return digest, {
+        "profile_kind": "safety_monitor_loop",
+        "sampled_metrics": ["queue_depth", "deadline_miss", "fallback_count"],
+        "runtime_degradation_score": round(normalized, 4),
+        "fallback_watch_enabled": bool(task.fallback_policy),
+        "contention_signal": "telemetry_monitor_profile",
+    }
+
+
+def _profile_utility(
+    task: TaskConfig,
+    frame: FrameEnvelope,
+    work_units: int,
+    options: dict[str, object],
+) -> tuple[str, dict[str, object]]:
+    accumulator = 0
+    for index in range(work_units):
+        accumulator ^= (index + frame.sequence + len(task.name)) & 0xFFFF
+    digest = hashlib.sha1(f"utility:{accumulator}".encode()).hexdigest()[:12]
+    return digest, {
+        "profile_kind": "utility_loop",
+        "contention_signal": "generic_local_profile",
+    }
+
+
+def _payload_value(frame: FrameEnvelope, key: str, default: object) -> object:
+    if isinstance(frame.payload, dict):
+        return frame.payload.get(key, default)
+    return default
 
 
 class OnnxRuntimeWorker:
