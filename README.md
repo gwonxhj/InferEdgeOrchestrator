@@ -240,7 +240,18 @@ python3 -m inferedge_orchestrator run-multi-workload-sustained \
 
 This records `producer_source=fastapi_request_fixture`, selected routes, request
 digest, and Voice burst pressure without starting a real FastAPI server or
-Whisper backend.
+Whisper backend. A Safety monitor starter can also read local resource snapshots:
+
+```bash
+python3 -m inferedge_orchestrator run-multi-workload-sustained \
+  --config configs/agent_multi_workload_sustained_safety_resource.json \
+  --output reports/agent_multi_workload_sustained_safety_resource.json \
+  --frames 16
+```
+
+This records `producer_source=resource_snapshot_fixture`, CPU/memory/temperature
+signals, fallback/deadline signals, and a deterministic degradation score while
+keeping live device monitor integration as a later step.
 
 ### InferEdge Handoff
 

@@ -173,9 +173,13 @@ which routes a tiny local image fixture into the Vision workload and records
 first Voice ingress producer step is
 [`configs/agent_multi_workload_sustained_voice_ingress.json`](../configs/agent_multi_workload_sustained_voice_ingress.json),
 which routes a small FastAPI-style request fixture into the Voice workload and
-records selected routes, request digest, and burst evidence. External YOLO,
-Whisper, FastAPI, and Jetson producers remain incremental integrations, not
-required dependencies.
+records selected routes, request digest, and burst evidence. The first Safety
+monitor producer step is
+[`configs/agent_multi_workload_sustained_safety_resource.json`](../configs/agent_multi_workload_sustained_safety_resource.json),
+which routes a small resource snapshot fixture into the Safety workload and
+records CPU, memory, temperature, fallback, deadline, and degradation evidence.
+External YOLO, Whisper, FastAPI, live monitor, and Jetson producers remain
+incremental integrations, not required dependencies.
 
 ## Compatibility Rules
 

@@ -175,6 +175,50 @@ def test_run_multi_workload_sustained_profiles_voice_ingress_fixture(tmp_path) -
     assert first_output["contention_signal"] == "fastapi_request_cpu_profile"
 
 
+def test_run_multi_workload_sustained_profiles_safety_resource_fixture(tmp_path) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_safety_resource.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    output = tmp_path / "multi_workload_sustained_safety_resource.json"
+
+    report = write_multi_workload_sustained(config, output=output, frames=8)
+
+    assert output.exists()
+    safety_task = next(
+        task for task in config.tasks if task.name == "safety_monitor_agent"
+    )
+    assert safety_task.worker_options is not None
+    assert safety_task.worker_options["resource_snapshot_path"] == (
+        "examples/inputs/safety_resource_snapshots.json"
+    )
+
+    safety_outputs = [
+        event["output"]
+        for event in report["result_events"]
+        if event["task"] == "safety_monitor_agent"
+        and event["output"].get("profile_kind") == "safety_monitor_loop"
+    ]
+    assert safety_outputs
+    first_output = safety_outputs[0]
+    assert first_output["producer_source"] == "resource_snapshot_fixture"
+    assert first_output["resource_snapshot_path"] == (
+        "examples/inputs/safety_resource_snapshots.json"
+    )
+    assert first_output["resource_snapshot_id"]
+    assert first_output["cpu_percent"] >= 0
+    assert first_output["memory_used_ratio"] >= 0
+    assert first_output["temperature_c"] >= 0
+    assert first_output["resource_degradation_score"] >= 0
+    assert first_output["resource_digest"]
+    assert first_output["contention_signal"] == "resource_monitor_profile"
+    assert "cpu_percent" in first_output["sampled_metrics"]
+    assert "fallback_signal" in first_output["sampled_metrics"]
+
+
 def test_missing_tegrastats_log_is_explicit() -> None:
     timeline = load_tegrastats_timeline(None)
 

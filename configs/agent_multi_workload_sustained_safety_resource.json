@@ -1,0 +1,75 @@
+{
+  "run": {
+    "frame_interval_ms": 5,
+    "input_path": "examples/inputs/vision_frame.ppm",
+    "input_source": "image",
+    "name": "agent_multi_workload_sustained_safety_resource",
+    "overload_backlog_threshold": 4,
+    "scenario_mode": "sustained_high_load"
+  },
+  "tasks": [
+    {
+      "agent_manifest_path": "examples/agent_runtime/safety_agent_manifest.json",
+      "drop_policy": "drop_oldest",
+      "emit_every_cycles": 2,
+      "name": "safety_monitor_agent",
+      "queue_size": 2,
+      "simulated_latency_ms": 6,
+      "target_fps": 10,
+      "worker": "dummy",
+      "worker_options": {
+        "expected_runtime_mode": "periodic",
+        "implementation": "local_profile_adapter",
+        "ingress_profile": "periodic_monitor",
+        "preferred_device": "cpu",
+        "profile_work_units": 6000,
+        "resource_snapshot_path": "examples/inputs/safety_resource_snapshots.json",
+        "runtime_loop": "safety_monitor_loop",
+        "workload_type": "telemetry_monitor"
+      }
+    },
+    {
+      "agent_manifest_path": "examples/agent_runtime/vision_agent_manifest.json",
+      "drop_policy": "drop_oldest",
+      "emit_every_cycles": 1,
+      "name": "vision_agent",
+      "queue_size": 3,
+      "runtime_result_path": "examples/agent_runtime/vision_runtime_result.json",
+      "simulated_latency_ms": 72,
+      "target_fps": 30,
+      "worker": "dummy",
+      "worker_options": {
+        "expected_runtime_mode": "sustained",
+        "implementation": "local_profile_adapter",
+        "ingress_profile": "frame_queue",
+        "preferred_device": "gpu",
+        "profile_sample_bytes": 512,
+        "profile_work_units": 24000,
+        "runtime_loop": "yolo_detection_loop",
+        "workload_type": "realtime_vision"
+      }
+    },
+    {
+      "agent_manifest_path": "examples/agent_runtime/voice_agent_manifest.json",
+      "drop_policy": "drop_newest",
+      "emit_every_cycles": 2,
+      "name": "voice_command_agent",
+      "queue_size": 2,
+      "simulated_latency_ms": 135,
+      "target_fps": 8,
+      "worker": "dummy",
+      "worker_options": {
+        "expected_runtime_mode": "burst",
+        "implementation": "local_profile_adapter",
+        "ingress_payload_path": "examples/inputs/voice_ingress_requests.json",
+        "ingress_profile": "fastapi_concurrent_request",
+        "preferred_device": "cpu",
+        "profile_request_count": 2,
+        "profile_work_units": 16000,
+        "runtime_loop": "whisper_command_burst",
+        "sample_command": "inspect queue backlog and summarize edge runtime status",
+        "workload_type": "voice_command"
+      }
+    }
+  ]
+}
