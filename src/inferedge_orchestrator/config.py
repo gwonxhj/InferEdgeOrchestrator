@@ -8,7 +8,7 @@ from typing import Any, Iterable
 
 DROP_POLICIES = {"drop_oldest", "drop_newest", "drop_low_priority"}
 INPUT_SOURCES = {"dummy", "image", "video"}
-SCENARIO_MODES = {"normal", "overload", "sustained_high_load"}
+SCENARIO_MODES = {"normal", "overload", "sustained_high_load", "device_local"}
 WORKERS = {"dummy", "onnxruntime", "tensorrt"}
 
 

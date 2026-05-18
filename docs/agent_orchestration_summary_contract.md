@@ -178,8 +178,13 @@ monitor producer step is
 [`configs/agent_multi_workload_sustained_safety_resource.json`](../configs/agent_multi_workload_sustained_safety_resource.json),
 which routes a small resource snapshot fixture into the Safety workload and
 records CPU, memory, temperature, fallback, deadline, and degradation evidence.
-External YOLO, Whisper, FastAPI, live monitor, and Jetson producers remain
-incremental integrations, not required dependencies.
+The explicit device-local starter is
+[`configs/agent_multi_workload_sustained_device_local.json`](../configs/agent_multi_workload_sustained_device_local.json),
+which runs the committed Vision image, Voice request, and Safety resource
+producers in `scenario_mode=device_local` and records `producer_sources` plus
+`device_local_producer_count` in `multi_workload_sustained_summary`. External
+YOLO, Whisper, FastAPI, live monitor, and Jetson producers remain incremental
+integrations, not required dependencies.
 
 ## Compatibility Rules
 

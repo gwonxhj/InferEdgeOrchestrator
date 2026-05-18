@@ -297,6 +297,7 @@ def test_agent_3_workload_scenario_configs_are_separated() -> None:
         "configs/agent_3_workload_normal.json": "normal",
         "configs/agent_3_workload_overload.json": "overload",
         "configs/agent_3_workload_sustained_high_load.json": "sustained_high_load",
+        "configs/agent_multi_workload_sustained_device_local.json": "device_local",
     }
 
     for path, scenario_mode in expected.items():

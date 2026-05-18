@@ -130,7 +130,8 @@ The boundary is intentional:
 | Phase 5: InferEdge Handoff | `result.json` latency signal converted into Orchestrator task config | `python3 -m inferedge_orchestrator from-inferedge ...` |
 | Agent Runtime Contract | Vision / Voice-Command / Safety-Monitor dummy workload with Forge agent manifest and Runtime `result.agent` references | `configs/agent_3_workload_demo.json`, [`docs/agent_orchestration_summary_contract.md`](docs/agent_orchestration_summary_contract.md) |
 | Sustained Agent Scenario Starter | Normal / overload / sustained-high-load 3-agent modes with queue-depth timeline, latency timeline, and policy decision reasons | `configs/agent_3_workload_sustained_high_load.json` |
-| Lightweight Sustained Workload Starter | Profiled local sustained scenario for YOLO-like vision, Whisper-like command burst, FastAPI-style ingress, optional tegrastats timeline, and a Vision local-file producer starter | `python3 -m inferedge_orchestrator run-multi-workload-sustained ...` |
+| Lightweight Sustained Workload Starter | Profiled local sustained scenario for YOLO-like vision, Whisper-like command burst, FastAPI-style ingress, optional tegrastats timeline, and producer-backed starters | `python3 -m inferedge_orchestrator run-multi-workload-sustained ...` |
+| Device-Local Sustained Starter | Device-local mode using committed image, request, and resource snapshot producers before live device integrations | `configs/agent_multi_workload_sustained_device_local.json` |
 
 ## Validation Evidence
 
@@ -252,6 +253,21 @@ python3 -m inferedge_orchestrator run-multi-workload-sustained \
 This records `producer_source=resource_snapshot_fixture`, CPU/memory/temperature
 signals, fallback/deadline signals, and a deterministic degradation score while
 keeping live device monitor integration as a later step.
+
+Run the device-local sustained starter when you want the three committed local
+producer fixtures in one explicit `device_local` mode:
+
+```bash
+python3 -m inferedge_orchestrator run-multi-workload-sustained \
+  --config configs/agent_multi_workload_sustained_device_local.json \
+  --output reports/agent_multi_workload_sustained_device_local.json \
+  --frames 16
+```
+
+This records `producer_sources`, `device_local_producer_count`, and the same
+Vision image, Voice request, and Safety resource evidence while keeping live
+YOLO/ONNX, FastAPI, tegrastats, and Jetson/RPi producers as follow-up
+integrations.
 
 ### InferEdge Handoff
 
