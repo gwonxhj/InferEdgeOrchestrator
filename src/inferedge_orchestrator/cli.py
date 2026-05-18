@@ -46,6 +46,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="optional local image/video path to use for the Vision producer",
     )
     sustained_parser.add_argument(
+        "--vision-onnx-model",
+        help=(
+            "optional ONNX model path for the Vision producer probe; requires "
+            "optional onnxruntime dependencies"
+        ),
+    )
+    sustained_parser.add_argument(
         "--voice-ingress-payload",
         help="optional local JSON request payload path for the Voice producer",
     )
@@ -139,6 +146,7 @@ def _run_multi_workload_sustained(args: argparse.Namespace) -> int:
     config = apply_device_local_input_overrides(
         config,
         vision_input=args.vision_input,
+        vision_onnx_model=args.vision_onnx_model,
         voice_ingress_payload=args.voice_ingress_payload,
         resource_snapshot=resource_snapshot,
         resource_snapshot_source=resource_snapshot_source,

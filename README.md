@@ -285,7 +285,22 @@ python3 -m inferedge_orchestrator run-multi-workload-sustained \
 For a minimal process-backed Safety input, use
 `--capture-process-resource-snapshot` instead of `--resource-snapshot`. The CLI
 writes a small process resource snapshot next to the output JSON and routes it
-through the Safety producer.
+through the Safety producer. If optional ONNX Runtime dependencies and a local
+model file are available, the Vision producer can also run a small
+ONNX Runtime probe while preserving the same producer-backed sustained contract:
+
+```bash
+python3 -m inferedge_orchestrator run-multi-workload-sustained \
+  --config configs/agent_multi_workload_sustained_device_local.json \
+  --output reports/agent_multi_workload_sustained_device_local.json \
+  --frames 16 \
+  --vision-input /path/to/frame.ppm \
+  --vision-onnx-model /path/to/vision_model.onnx
+```
+
+This records `vision_inference_backend=onnxruntime`, input/output shapes,
+provider, and probe latency as runtime operation evidence. It is a lightweight
+device-local producer step, not a full live YOLO service.
 
 ### InferEdge Handoff
 
