@@ -17,6 +17,7 @@ def apply_device_local_input_overrides(
     config: OrchestratorConfig,
     *,
     vision_input: str | Path | None = None,
+    vision_onnx_model: str | Path | None = None,
     voice_ingress_payload: str | Path | None = None,
     resource_snapshot: str | Path | None = None,
     resource_snapshot_source: str | None = None,
@@ -30,6 +31,7 @@ def apply_device_local_input_overrides(
 
     if (
         vision_input is None
+        and vision_onnx_model is None
         and voice_ingress_payload is None
         and resource_snapshot is None
     ):
@@ -48,6 +50,11 @@ def apply_device_local_input_overrides(
         if vision_input is not None and task.agent_type == "vision":
             options["device_local_validation"] = True
             options["producer_stage"] = "device_local_cli_override"
+        if vision_onnx_model is not None and task.agent_type == "vision":
+            options["device_local_validation"] = True
+            options["producer_stage"] = "device_local_cli_override"
+            options["vision_inference_backend"] = "onnxruntime"
+            options["vision_model_path"] = str(Path(vision_onnx_model))
         if voice_ingress_payload is not None and task.agent_type == "voice":
             options["device_local_validation"] = True
             options["producer_stage"] = "device_local_cli_override"
@@ -222,6 +229,8 @@ def _workload_profile(task: TaskConfig, report: dict[str, Any]) -> dict[str, Any
             options.get("expected_runtime_mode", "sustained")
         ),
         "preferred_device": options.get("preferred_device"),
+        "vision_inference_backend": options.get("vision_inference_backend"),
+        "vision_model_path": options.get("vision_model_path"),
         "executed": task_report.get("executed", 0),
         "dropped": task_report.get("dropped", 0),
         "deadline_missed": task_report.get("deadline_missed", 0),
@@ -306,6 +315,7 @@ def _estimated_memory_total_mb(
 def _local_profile_signals(report: dict[str, Any]) -> dict[str, Any]:
     profiled_events = []
     profile_kinds: list[str] = []
+    vision_inference_backends: list[str] = []
     elapsed_total = 0.0
     for event in report.get("result_events", []):
         if not isinstance(event, dict):
@@ -319,6 +329,12 @@ def _local_profile_signals(report: dict[str, Any]) -> dict[str, Any]:
         kind = output.get("profile_kind")
         if isinstance(kind, str) and kind not in profile_kinds:
             profile_kinds.append(kind)
+        vision_backend = output.get("vision_inference_backend")
+        if (
+            isinstance(vision_backend, str)
+            and vision_backend not in vision_inference_backends
+        ):
+            vision_inference_backends.append(vision_backend)
         elapsed = output.get("profile_elapsed_ms")
         if isinstance(elapsed, int | float):
             elapsed_total += float(elapsed)
@@ -327,6 +343,8 @@ def _local_profile_signals(report: dict[str, Any]) -> dict[str, Any]:
         "local_profile_adapter_count": len(profiled_events),
         "local_profile_elapsed_ms": round(elapsed_total, 3),
         "local_profile_kinds": profile_kinds,
+        "vision_inference_backend_count": len(vision_inference_backends),
+        "vision_inference_backends": vision_inference_backends,
     }
 
 

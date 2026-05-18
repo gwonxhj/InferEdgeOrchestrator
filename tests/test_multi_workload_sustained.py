@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 from inferedge_orchestrator.config import OrchestratorConfig
 from inferedge_orchestrator.sustained import (
@@ -379,6 +383,91 @@ def test_device_local_input_overrides_use_local_paths(tmp_path) -> None:
         for event in report["runtime_event_timeline"]
         if event["event_type"] == "execution"
     )
+
+
+def test_device_local_vision_can_run_optional_onnx_probe(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    np = pytest.importorskip("numpy")
+
+    class FakeInput:
+        name = "images"
+        shape = [1, 3, 2, 2]
+
+    class FakeSession:
+        def __init__(self, model_path, providers):
+            self.model_path = model_path
+            self.providers = providers
+
+        def get_inputs(self):
+            return [FakeInput()]
+
+        def get_providers(self):
+            return self.providers
+
+        def run(self, output_names, feed):
+            assert output_names is None
+            assert list(feed) == ["images"]
+            assert feed["images"].shape == (1, 3, 2, 2)
+            return [np.ones((1, 1, 6), dtype=np.float32)]
+
+    monkeypatch.setitem(
+        sys.modules,
+        "onnxruntime",
+        SimpleNamespace(InferenceSession=FakeSession),
+    )
+
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_device_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    image = tmp_path / "frame.ppm"
+    image.write_bytes(b"P6\n1 1\n255\n\xff\x00\x00")
+    model = tmp_path / "vision_probe.onnx"
+    model.write_bytes(b"fake onnx model for mocked session")
+    overridden = apply_device_local_input_overrides(
+        config,
+        vision_input=image,
+        vision_onnx_model=model,
+    )
+    report = write_multi_workload_sustained(
+        overridden,
+        output=tmp_path / "device_local_vision_onnx_probe.json",
+        frames=4,
+    )
+
+    vision_profile = next(
+        profile
+        for profile in report["multi_workload_sustained_summary"]["workload_profiles"]
+        if profile["agent_id"] == "vision_agent"
+    )
+    assert vision_profile["vision_inference_backend"] == "onnxruntime"
+    assert vision_profile["vision_model_path"] == str(model)
+    signals = report["multi_workload_sustained_summary"]["observed_runtime_signals"]
+    assert signals["vision_inference_backend_count"] == 1
+    assert signals["vision_inference_backends"] == ["onnxruntime"]
+
+    vision_outputs = [
+        event["output"]
+        for event in report["result_events"]
+        if event["task"] == "vision_agent"
+    ]
+    assert vision_outputs
+    first_output = vision_outputs[0]
+    assert first_output["producer_source"] == "image_file"
+    assert first_output["contention_signal"] == "vision_onnxruntime_probe"
+    assert first_output["vision_inference_backend"] == "onnxruntime"
+    assert first_output["vision_inference_mode"] == "probe"
+    assert first_output["vision_model_path"] == str(model)
+    assert first_output["vision_provider"] == "CPUExecutionProvider"
+    assert first_output["vision_input_shapes"] == {"images": [1, 3, 2, 2]}
+    assert first_output["vision_output_shapes"] == [[1, 1, 6]]
+    assert first_output["vision_output_count"] == 1
+    assert first_output["vision_probe_elapsed_ms"] >= 0
 
 
 def test_process_resource_snapshot_can_feed_device_local_safety(tmp_path) -> None:

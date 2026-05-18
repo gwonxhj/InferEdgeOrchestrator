@@ -38,6 +38,7 @@ class TensorRtBuffer:
 class DummyWorker:
     def __init__(self, *, sleep: bool = False) -> None:
         self._sleep = sleep
+        self._vision_probe_sessions: dict[tuple[str, tuple[str, ...]], object] = {}
 
     def run(self, task: TaskConfig, frame: FrameEnvelope) -> WorkerResult:
         options = task.worker_options or {}
@@ -72,6 +73,7 @@ class DummyWorker:
             frame=frame,
             work_units=work_units,
             options=options,
+            vision_probe_sessions=self._vision_probe_sessions,
         )
         latency_ms = (time.perf_counter() - started) * 1000.0
         return WorkerResult(
@@ -113,9 +115,16 @@ def _profile_workload(
     frame: FrameEnvelope,
     work_units: int,
     options: dict[str, object],
+    vision_probe_sessions: dict[tuple[str, tuple[str, ...]], object] | None = None,
 ) -> tuple[str, dict[str, object]]:
     if workload_type == "realtime_vision":
-        return _profile_vision(task, frame, work_units, options)
+        return _profile_vision(
+            task,
+            frame,
+            work_units,
+            options,
+            sessions=vision_probe_sessions,
+        )
     if workload_type == "voice_command":
         return _profile_voice(task, frame, work_units, options)
     if workload_type == "telemetry_monitor":
@@ -128,8 +137,17 @@ def _profile_vision(
     frame: FrameEnvelope,
     work_units: int,
     options: dict[str, object],
+    *,
+    sessions: dict[tuple[str, tuple[str, ...]], object] | None = None,
 ) -> tuple[str, dict[str, object]]:
     file_profile, sample = _vision_file_sample(frame, options)
+    inference_profile = _vision_inference_probe(
+        task,
+        frame,
+        sample,
+        options,
+        sessions=sessions,
+    )
     accumulator = frame.sequence + len(task.name) + sum(sample[:128])
     bright_pixels = 0
     edge_votes = 0
@@ -157,9 +175,14 @@ def _profile_vision(
         "edge_vote_ratio": round(edge_votes / work_units, 4),
         "stale_frame_policy": task.drop_policy,
         "contention_signal": (
-            "vision_file_cpu_profile" if file_profile else "frame_queue_cpu_profile"
+            "vision_onnxruntime_probe"
+            if inference_profile
+            else "vision_file_cpu_profile"
+            if file_profile
+            else "frame_queue_cpu_profile"
         ),
         **file_profile,
+        **inference_profile,
     }
 
 
@@ -193,6 +216,113 @@ def _vision_file_sample(
         "byte_mean": _byte_mean(sample),
         "byte_stddev": _byte_stddev(sample),
     }, sample
+
+
+def _vision_inference_probe(
+    task: TaskConfig,
+    frame: FrameEnvelope,
+    sample: bytes,
+    options: dict[str, object],
+    *,
+    sessions: dict[tuple[str, tuple[str, ...]], object] | None = None,
+) -> dict[str, object]:
+    backend = options.get("vision_inference_backend")
+    if backend is None:
+        return {}
+    if str(backend) != "onnxruntime":
+        raise ValueError(
+            f"{task.name}: unsupported vision_inference_backend {backend!r}"
+        )
+
+    model_value = options.get("vision_model_path") or task.model_path
+    if not model_value:
+        raise ValueError(
+            f"{task.name}: vision_inference_backend=onnxruntime requires "
+            "worker_options.vision_model_path or task.model_path"
+        )
+    model_path = Path(str(model_value))
+    if not model_path.exists():
+        raise FileNotFoundError(f"vision ONNX model path does not exist: {model_path}")
+    if not model_path.is_file():
+        raise ValueError(f"vision ONNX model path is not a file: {model_path}")
+
+    try:
+        import numpy as np
+        import onnxruntime as ort
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "vision ONNX producer probe requires optional numpy and onnxruntime "
+            "dependencies. Install inferedge-orchestrator[onnx]."
+        ) from exc
+
+    providers = options.get("providers") or ["CPUExecutionProvider"]
+    provider_tuple = tuple(str(provider) for provider in providers)
+    session_key = (str(model_path), provider_tuple)
+    if sessions is not None and session_key in sessions:
+        session = sessions[session_key]
+    else:
+        session = ort.InferenceSession(str(model_path), providers=providers)
+        if sessions is not None:
+            sessions[session_key] = session
+    inputs = session.get_inputs()
+    if not inputs:
+        raise RuntimeError(f"{task.name}: vision ONNX model has no inputs")
+
+    feed: dict[str, object] = {}
+    input_shapes: dict[str, list[int]] = {}
+    for model_input in inputs:
+        shape = _concrete_shape(model_input.shape)
+        input_shapes[model_input.name] = list(shape)
+        feed[model_input.name] = _vision_probe_array(
+            shape=shape,
+            sample=sample,
+            frame=frame,
+            np=np,
+        )
+
+    started = time.perf_counter()
+    outputs = session.run(None, feed)
+    elapsed_ms = (time.perf_counter() - started) * 1000.0
+    output_shapes = [list(getattr(output, "shape", ())) for output in outputs]
+    return {
+        "vision_inference_backend": "onnxruntime",
+        "vision_inference_mode": "probe",
+        "vision_model_path": str(model_path),
+        "vision_provider": _session_provider(session, providers),
+        "vision_input_shapes": input_shapes,
+        "vision_output_count": len(outputs),
+        "vision_output_shapes": output_shapes,
+        "vision_probe_elapsed_ms": round(elapsed_ms, 3),
+    }
+
+
+def _vision_probe_array(
+    *,
+    shape: tuple[int, ...],
+    sample: bytes,
+    frame: FrameEnvelope,
+    np: object,
+) -> object:
+    array = np.zeros(shape, dtype=np.float32)
+    if array.size == 0:
+        return array
+    if sample:
+        values = np.frombuffer(sample, dtype=np.uint8).astype(np.float32) / 255.0
+    else:
+        values = np.asarray([frame.sequence % 255], dtype=np.float32) / 255.0
+    array[...] = np.resize(values, array.size).reshape(shape)
+    return array
+
+
+def _session_provider(session: object, providers: object) -> str:
+    get_providers = getattr(session, "get_providers", None)
+    if callable(get_providers):
+        available = get_providers()
+        if available:
+            return str(available[0])
+    if isinstance(providers, list) and providers:
+        return str(providers[0])
+    return "unknown"
 
 
 def _positive_int(value: Any, *, default: int) -> int:
