@@ -45,10 +45,12 @@ class TelemetryCollector:
         run_name: str,
         scenario_mode: str = "normal",
         frame_interval_ms: float = 1.0,
+        overload_backlog_threshold: int = 0,
     ) -> None:
         self.run_name = run_name
         self.scenario_mode = scenario_mode
         self.frame_interval_ms = frame_interval_ms
+        self.overload_backlog_threshold = overload_backlog_threshold
         self._task_config = {task.name: task for task in tasks}
         self.tasks: dict[str, TaskTelemetry] = {
             task.name: TaskTelemetry() for task in tasks
@@ -60,6 +62,7 @@ class TelemetryCollector:
         self.overload_events: list[dict[str, Any]] = []
         self.drop_events: list[dict[str, Any]] = []
         self.result_events: list[dict[str, Any]] = []
+        self.runtime_event_timeline: list[dict[str, Any]] = []
         self.resource_snapshots: list[dict[str, object]] = []
 
     def record_backlog(
@@ -74,13 +77,22 @@ class TelemetryCollector:
                 self.tasks[task_name].max_queue_backlog,
                 value,
             )
+        total_queue_depth = sum(backlog.values())
         self.queue_depth_timeline.append(
             {
                 "cycle": cycle,
                 "stage": stage,
                 "queue_depth": backlog,
-                "total_queue_depth": sum(backlog.values()),
+                "total_queue_depth": total_queue_depth,
             }
+        )
+        self._record_runtime_event(
+            "queue_snapshot",
+            cycle=cycle,
+            stage=stage,
+            reason=_queue_state_reason(total_queue_depth),
+            queue_depth=backlog,
+            total_queue_depth=total_queue_depth,
         )
 
     def record_drop(self, drop: DropRecord) -> None:
@@ -93,6 +105,13 @@ class TelemetryCollector:
                 "reason": drop.reason,
             }
         )
+        self._record_runtime_event(
+            "drop",
+            task=drop.task_name,
+            **self._agent_event_fields(drop.task_name),
+            frame_id=drop.frame_id,
+            reason=drop.reason,
+        )
 
     def record_schedule(self, decision: ScheduleDecision) -> None:
         self.schedule_decisions.append(
@@ -101,6 +120,12 @@ class TelemetryCollector:
                 **self._agent_event_fields(decision.task_name),
                 "reason": decision.reason,
             }
+        )
+        self._record_runtime_event(
+            "schedule",
+            task=decision.task_name,
+            **self._agent_event_fields(decision.task_name),
+            reason=decision.reason,
         )
 
     def record_execution(
@@ -118,30 +143,45 @@ class TelemetryCollector:
         if deadline_missed:
             task.deadline_missed += 1
         task.max_queue_backlog = max(task.max_queue_backlog, backlog_after)
-        self.result_events.append(
-            {
-                "task": result.task_name,
-                **self._agent_event_fields(result.task_name),
-                "frame_id": result.frame_id,
-                "latency_ms": _rounded(result.latency_ms),
-                "latency_budget_ms": _rounded(task_config.latency_budget_ms),
-                "deadline_missed": deadline_missed,
-                "queue_wait_ms": _rounded(max(0.0, frame.created_at_ms - frame.created_at_ms)),
-                "fallback_used": False,
-                "output": result.output,
-            }
-        )
-        self.latency_timeline.append(
-            {
-                "task": result.task_name,
-                **self._agent_event_fields(result.task_name),
-                "frame_id": result.frame_id,
-                "cycle": _frame_cycle(frame),
-                "latency_ms": _rounded(result.latency_ms),
-                "latency_budget_ms": _rounded(task_config.latency_budget_ms),
-                "deadline_missed": deadline_missed,
-                "backlog_after": backlog_after,
-            }
+        execution_event = {
+            "task": result.task_name,
+            **self._agent_event_fields(result.task_name),
+            "frame_id": result.frame_id,
+            "latency_ms": _rounded(result.latency_ms),
+            "latency_budget_ms": _rounded(task_config.latency_budget_ms),
+            "deadline_missed": deadline_missed,
+            "queue_wait_ms": _rounded(max(0.0, frame.created_at_ms - frame.created_at_ms)),
+            "fallback_used": False,
+            "output": result.output,
+        }
+        self.result_events.append(execution_event)
+        latency_event = {
+            "task": result.task_name,
+            **self._agent_event_fields(result.task_name),
+            "frame_id": result.frame_id,
+            "cycle": _frame_cycle(frame),
+            "latency_ms": _rounded(result.latency_ms),
+            "latency_budget_ms": _rounded(task_config.latency_budget_ms),
+            "deadline_missed": deadline_missed,
+            "backlog_after": backlog_after,
+        }
+        self.latency_timeline.append(latency_event)
+        self._record_runtime_event(
+            "execution",
+            **{
+                key: value
+                for key, value in execution_event.items()
+                if key != "output"
+            },
+            cycle=_frame_cycle(frame),
+            reason=(
+                "deadline_missed"
+                if deadline_missed
+                else "completed_within_latency_budget"
+            ),
+            worker=result.output.get("worker") if isinstance(result.output, dict) else None,
+            backend=result.output.get("backend") if isinstance(result.output, dict) else None,
+            queue_depth_after=backlog_after,
         )
 
     def record_policy_decision(self, decision: PolicyDecision) -> None:
@@ -169,9 +209,19 @@ class TelemetryCollector:
         self.policy_decisions.append(event)
         if decision.event == "load_shedding":
             self.overload_events.append(event)
+        self._record_runtime_event("policy_decision", **event)
 
     def record_resource_snapshot(self, snapshot: ResourceSnapshot) -> None:
-        self.resource_snapshots.append(snapshot.to_dict())
+        snapshot_dict = snapshot.to_dict()
+        self.resource_snapshots.append(snapshot_dict)
+        self._record_runtime_event(
+            "resource_snapshot",
+            stage=snapshot_dict.get("stage"),
+            reason="resource_health_sample",
+            cpu_percent=snapshot_dict.get("cpu_percent"),
+            memory_percent=snapshot_dict.get("memory_percent"),
+            process_rss_mb=snapshot_dict.get("process_rss_mb"),
+        )
 
     def to_report(self) -> dict[str, Any]:
         agent_totals = self._agent_totals()
@@ -192,6 +242,9 @@ class TelemetryCollector:
                 "totals": agent_totals,
             },
             "sustained_runtime_summary": self._sustained_runtime_summary(agent_totals),
+            "queue_state_summary": self._queue_state_summary(),
+            "worker_health_snapshot": self._worker_health_snapshot(),
+            "runtime_event_summary": self._runtime_event_summary(),
             "tasks": {
                 name: {
                     "agent": self._agent_task_summary(name),
@@ -212,6 +265,7 @@ class TelemetryCollector:
             "policy_decision_log": self.policy_decisions,
             "drop_events": self.drop_events,
             "result_events": self.result_events,
+            "runtime_event_timeline": self.runtime_event_timeline,
             "resource_snapshots": self.resource_snapshots,
             "schedule_decisions": self.schedule_decisions,
         }
@@ -279,6 +333,96 @@ class TelemetryCollector:
             "overload_event_count": agent_totals["overload_event_count"],
         }
 
+    def _queue_state_summary(self) -> dict[str, Any]:
+        final_queue_depth: dict[str, int] = {name: 0 for name in self.tasks}
+        max_queue_depth_by_task: dict[str, int] = {name: 0 for name in self.tasks}
+        total_depths: list[int] = []
+
+        for sample in self.queue_depth_timeline:
+            queue_depth = sample.get("queue_depth")
+            if isinstance(queue_depth, dict):
+                final_queue_depth = {
+                    name: int(value)
+                    for name, value in queue_depth.items()
+                    if isinstance(value, int)
+                }
+                for name, value in final_queue_depth.items():
+                    max_queue_depth_by_task[name] = max(
+                        max_queue_depth_by_task.get(name, 0),
+                        value,
+                    )
+            total_queue_depth = sample.get("total_queue_depth")
+            if isinstance(total_queue_depth, int):
+                total_depths.append(total_queue_depth)
+
+        max_total_queue_depth = max(total_depths) if total_depths else 0
+        average_total_queue_depth = (
+            round(sum(total_depths) / len(total_depths), 3) if total_depths else 0.0
+        )
+        return {
+            "schema_version": "inferedge-orchestrator-queue-state-v1",
+            "sample_count": len(self.queue_depth_timeline),
+            "overload_backlog_threshold": self._overload_backlog_threshold(),
+            "max_total_queue_depth": max_total_queue_depth,
+            "average_total_queue_depth": average_total_queue_depth,
+            "final_queue_depth": final_queue_depth,
+            "max_queue_depth_by_task": max_queue_depth_by_task,
+            "queue_pressure_state": _queue_pressure_state(
+                max_total_queue_depth,
+                self._overload_backlog_threshold(),
+            ),
+        }
+
+    def _worker_health_snapshot(self) -> dict[str, Any]:
+        return {
+            "schema_version": "inferedge-orchestrator-worker-health-v1",
+            "workers": {
+                name: self._worker_health_for_task(name, telemetry)
+                for name, telemetry in self.tasks.items()
+            },
+        }
+
+    def _worker_health_for_task(
+        self,
+        task_name: str,
+        telemetry: TaskTelemetry,
+    ) -> dict[str, Any]:
+        task_config = self._task_config[task_name]
+        return {
+            "task": task_name,
+            **self._agent_event_fields(task_name),
+            "worker": task_config.worker,
+            "health_state": _worker_health_state(telemetry),
+            "executed_count": telemetry.executed,
+            "dropped_count": telemetry.dropped,
+            "deadline_missed_count": telemetry.deadline_missed,
+            "fallback_count": telemetry.fallback_used,
+            "mean_latency_ms": _rounded(telemetry.mean_latency_ms()),
+            "p95_latency_ms": _rounded(telemetry.p95_latency_ms()),
+            "latency_budget_ms": _rounded(task_config.latency_budget_ms),
+            "max_queue_backlog": telemetry.max_queue_backlog,
+            "queue_size": task_config.queue_size,
+            "queue_pressure_ratio": _rounded(
+                telemetry.max_queue_backlog / task_config.queue_size
+            ),
+        }
+
+    def _runtime_event_summary(self) -> dict[str, Any]:
+        counts: dict[str, int] = {}
+        for event in self.runtime_event_timeline:
+            event_type = event.get("event_type")
+            if not isinstance(event_type, str):
+                continue
+            counts[event_type] = counts.get(event_type, 0) + 1
+        return {
+            "schema_version": "inferedge-orchestrator-runtime-event-summary-v1",
+            "event_count": len(self.runtime_event_timeline),
+            "event_type_counts": counts,
+        }
+
+    def _overload_backlog_threshold(self) -> int:
+        return self.overload_backlog_threshold
+
     def _agent_event_fields(self, task_name: str) -> dict[str, object]:
         task = self._task_config[task_name]
         return {
@@ -294,6 +438,15 @@ class TelemetryCollector:
             return None
         return self._task_config[task_name].agent_id
 
+    def _record_runtime_event(self, event_type: str, **fields: Any) -> None:
+        self.runtime_event_timeline.append(
+            {
+                "event_index": len(self.runtime_event_timeline),
+                "event_type": event_type,
+                **fields,
+            }
+        )
+
 
 def _rounded(value: float | None) -> float | None:
     if value is None:
@@ -307,3 +460,29 @@ def _frame_cycle(frame: FrameEnvelope) -> int | None:
         if isinstance(cycle, int):
             return cycle
     return None
+
+
+def _queue_state_reason(total_queue_depth: int) -> str:
+    if total_queue_depth <= 0:
+        return "queue_empty"
+    return "queue_depth_sampled"
+
+
+def _queue_pressure_state(max_total_queue_depth: int, threshold: int) -> str:
+    if threshold <= 0:
+        return "unknown"
+    if max_total_queue_depth > threshold:
+        return "overloaded"
+    if max_total_queue_depth >= max(1, math.ceil(threshold * 0.75)):
+        return "elevated"
+    return "nominal"
+
+
+def _worker_health_state(telemetry: TaskTelemetry) -> str:
+    if telemetry.fallback_used > 0 or telemetry.deadline_missed > 0:
+        return "degraded"
+    if telemetry.dropped > 0:
+        return "constrained"
+    if telemetry.executed > 0:
+        return "healthy"
+    return "idle"

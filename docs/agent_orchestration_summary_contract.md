@@ -76,8 +76,22 @@ Top-level summary:
     "latency_sample_count": 0,
     "max_total_queue_depth": 0
   },
+  "queue_state_summary": {
+    "schema_version": "inferedge-orchestrator-queue-state-v1",
+    "queue_pressure_state": "nominal"
+  },
+  "worker_health_snapshot": {
+    "schema_version": "inferedge-orchestrator-worker-health-v1",
+    "workers": {}
+  },
+  "runtime_event_summary": {
+    "schema_version": "inferedge-orchestrator-runtime-event-summary-v1",
+    "event_count": 0,
+    "event_type_counts": {}
+  },
   "queue_depth_timeline": [],
   "latency_timeline": [],
+  "runtime_event_timeline": [],
   "policy_decision_log": []
 }
 ```
@@ -91,8 +105,20 @@ Existing telemetry fields remain available:
 - `policy_decisions`
 - `drop_events`
 - `result_events`
+- `runtime_event_timeline`
 - `resource_snapshots`
 - `schedule_decisions`
+
+Additive operation-health fields:
+
+- `queue_state_summary`: summarizes queue pressure, maximum total backlog,
+  final queue depth, per-task maximum queue depth, and the overload threshold.
+- `worker_health_snapshot`: summarizes per-task worker health as `healthy`,
+  `constrained`, `degraded`, or `idle` using executed/drop/deadline/fallback
+  evidence.
+- `runtime_event_summary`: counts runtime event types.
+- `runtime_event_timeline`: ordered event log for queue snapshots, drops,
+  scheduler selections, executions, policy decisions, and resource snapshots.
 
 ## 3-Agent Demo
 

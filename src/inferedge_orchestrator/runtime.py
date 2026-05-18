@@ -29,6 +29,7 @@ class OrchestratorRuntime:
             run_name=config.name,
             scenario_mode=config.scenario_mode,
             frame_interval_ms=config.frame_interval_ms,
+            overload_backlog_threshold=config.overload_backlog_threshold,
         )
         self.monitor = ResourceMonitor()
 

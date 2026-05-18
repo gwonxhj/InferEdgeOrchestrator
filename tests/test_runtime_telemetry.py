@@ -57,6 +57,18 @@ def test_runtime_writes_telemetry_json(tmp_path) -> None:
     assert data["run"]["name"] == "test"
     assert set(data["tasks"]) == {"detector", "classifier"}
     assert "policy_decisions" in data
+    assert data["queue_state_summary"]["schema_version"] == (
+        "inferedge-orchestrator-queue-state-v1"
+    )
+    assert data["queue_state_summary"]["overload_backlog_threshold"] == 2
+    assert data["worker_health_snapshot"]["schema_version"] == (
+        "inferedge-orchestrator-worker-health-v1"
+    )
+    assert set(data["worker_health_snapshot"]["workers"]) == {"detector", "classifier"}
+    assert data["runtime_event_summary"]["schema_version"] == (
+        "inferedge-orchestrator-runtime-event-summary-v1"
+    )
+    assert data["runtime_event_timeline"]
 
 
 def test_runtime_writes_agent_orchestration_summary_contract(tmp_path) -> None:
@@ -132,3 +144,32 @@ def test_sustained_high_load_records_timeline_and_policy_reasons(tmp_path) -> No
         "total_queue_depth",
     }
     assert data["latency_timeline"]
+
+    queue_summary = data["queue_state_summary"]
+    assert queue_summary["queue_pressure_state"] == "overloaded"
+    assert queue_summary["max_total_queue_depth"] == sustained["max_total_queue_depth"]
+    assert queue_summary["final_queue_depth"]
+    assert queue_summary["max_queue_depth_by_task"]
+
+    worker_health = data["worker_health_snapshot"]["workers"]
+    assert worker_health["voice_command_agent"]["health_state"] in {
+        "constrained",
+        "degraded",
+    }
+    assert worker_health["voice_command_agent"]["worker"] == "dummy"
+    assert worker_health["voice_command_agent"]["queue_pressure_ratio"] is not None
+
+    event_summary = data["runtime_event_summary"]
+    assert event_summary["event_type_counts"]["queue_snapshot"] > 0
+    assert event_summary["event_type_counts"]["policy_decision"] > 0
+    assert event_summary["event_type_counts"]["drop"] > 0
+    assert event_summary["event_type_counts"]["execution"] > 0
+
+    runtime_events = data["runtime_event_timeline"]
+    assert any(event["event_type"] == "policy_decision" for event in runtime_events)
+    assert any(event["event_type"] == "drop" for event in runtime_events)
+    assert any(
+        event["event_type"] == "execution"
+        and event["reason"] in {"completed_within_latency_budget", "deadline_missed"}
+        for event in runtime_events
+    )
