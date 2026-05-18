@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -220,9 +221,10 @@ def _profile_voice(
     work_units: int,
     options: dict[str, object],
 ) -> tuple[str, dict[str, object]]:
-    command = str(options.get("sample_command", "inspect queue backlog and summarize status"))
+    command, ingress_profile = _voice_ingress_profile(frame, options)
     tokens = command.split()
-    digest_bytes = f"{task.name}:{frame.sequence}:{command}".encode()
+    digest_seed = ingress_profile.get("request_digest", command)
+    digest_bytes = f"{task.name}:{frame.sequence}:{digest_seed}".encode()
     for index in range(work_units):
         digest_bytes = hashlib.blake2b(
             digest_bytes + str(index % max(1, len(tokens))).encode(),
@@ -232,10 +234,77 @@ def _profile_voice(
     return digest, {
         "profile_kind": "voice_command_burst",
         "token_count": len(tokens),
-        "request_count": int(options.get("profile_request_count", 1)),
+        "request_count": int(ingress_profile.get("ingress_request_count", 1)),
         "burst_profile": options.get("expected_runtime_mode", "burst"),
-        "contention_signal": "cpu_text_command_profile",
+        "contention_signal": (
+            "fastapi_request_cpu_profile"
+            if ingress_profile
+            else "cpu_text_command_profile"
+        ),
+        **ingress_profile,
     }
+
+
+def _voice_ingress_profile(
+    frame: FrameEnvelope,
+    options: dict[str, object],
+) -> tuple[str, dict[str, object]]:
+    path_value = options.get("ingress_payload_path") or options.get(
+        "request_payload_path"
+    )
+    if path_value is None:
+        command = str(
+            options.get("sample_command", "inspect queue backlog and summarize status")
+        )
+        return command, {}
+
+    path = Path(str(path_value))
+    if not path.exists():
+        raise FileNotFoundError(f"voice ingress payload path does not exist: {path}")
+    if not path.is_file():
+        raise ValueError(f"voice ingress payload path is not a file: {path}")
+
+    loaded = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(loaded, list) or not loaded:
+        raise ValueError("voice ingress payload must be a non-empty list")
+    if not all(isinstance(request, dict) for request in loaded):
+        raise ValueError("voice ingress payload entries must be objects")
+
+    request_count = min(
+        len(loaded),
+        _positive_int(options.get("profile_request_count"), default=1),
+    )
+    start = frame.sequence % len(loaded)
+    selected = [loaded[(start + offset) % len(loaded)] for offset in range(request_count)]
+    commands = [_request_command(request) for request in selected]
+    command = " ".join(commands)
+    serialized = json.dumps(selected, sort_keys=True, separators=(",", ":"))
+    digest = hashlib.sha1(serialized.encode()).hexdigest()[:12]
+    return command, {
+        "producer_source": "fastapi_request_fixture",
+        "ingress_payload_path": str(path),
+        "available_request_count": len(loaded),
+        "ingress_request_count": len(selected),
+        "selected_request_ids": [
+            str(request.get("request_id", "")) for request in selected
+        ],
+        "selected_routes": [
+            str(request.get("path", "/agent/command")) for request in selected
+        ],
+        "selected_methods": [
+            str(request.get("method", "POST")) for request in selected
+        ],
+        "command_char_count": len(command),
+        "request_digest": digest,
+    }
+
+
+def _request_command(request: dict[str, object]) -> str:
+    for key in ("command", "text", "prompt"):
+        value = request.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return json.dumps(request, sort_keys=True)
 
 
 def _profile_safety_monitor(

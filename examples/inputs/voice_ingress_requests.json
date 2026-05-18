@@ -1,0 +1,23 @@
+[
+  {
+    "command": "inspect queue backlog and summarize runtime status",
+    "method": "POST",
+    "path": "/agent/command",
+    "priority_hint": "medium",
+    "request_id": "cmd-001"
+  },
+  {
+    "command": "check whether fallback policy should stay enabled",
+    "method": "POST",
+    "path": "/agent/command",
+    "priority_hint": "medium",
+    "request_id": "cmd-002"
+  },
+  {
+    "command": "report deadline misses and stale frame drops",
+    "method": "POST",
+    "path": "/agent/command",
+    "priority_hint": "medium",
+    "request_id": "cmd-003"
+  }
+]

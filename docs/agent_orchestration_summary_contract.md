@@ -169,9 +169,13 @@ contract can exercise workload pressure without requiring model downloads,
 FastAPI servers, or Jetson-only telemetry. The first Vision producer step is
 [`configs/agent_multi_workload_sustained_vision_file.json`](../configs/agent_multi_workload_sustained_vision_file.json),
 which routes a tiny local image fixture into the Vision workload and records
-`producer_source=image_file`, input digest, and sampled byte statistics. External
-YOLO, Whisper, FastAPI, and Jetson producers remain incremental integrations,
-not required dependencies.
+`producer_source=image_file`, input digest, and sampled byte statistics. The
+first Voice ingress producer step is
+[`configs/agent_multi_workload_sustained_voice_ingress.json`](../configs/agent_multi_workload_sustained_voice_ingress.json),
+which routes a small FastAPI-style request fixture into the Voice workload and
+records selected routes, request digest, and burst evidence. External YOLO,
+Whisper, FastAPI, and Jetson producers remain incremental integrations, not
+required dependencies.
 
 ## Compatibility Rules
 

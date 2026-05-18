@@ -132,6 +132,49 @@ def test_run_multi_workload_sustained_profiles_local_image_input(tmp_path) -> No
     assert first_output["contention_signal"] == "vision_file_cpu_profile"
 
 
+def test_run_multi_workload_sustained_profiles_voice_ingress_fixture(tmp_path) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_voice_ingress.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    output = tmp_path / "multi_workload_sustained_voice_ingress.json"
+
+    report = write_multi_workload_sustained(config, output=output, frames=8)
+
+    assert output.exists()
+    voice_task = next(
+        task for task in config.tasks if task.name == "voice_command_agent"
+    )
+    assert voice_task.worker_options is not None
+    assert voice_task.worker_options["ingress_payload_path"] == (
+        "examples/inputs/voice_ingress_requests.json"
+    )
+
+    voice_outputs = [
+        event["output"]
+        for event in report["result_events"]
+        if event["task"] == "voice_command_agent"
+        and event["output"].get("profile_kind") == "voice_command_burst"
+    ]
+    assert voice_outputs
+    first_output = voice_outputs[0]
+    assert first_output["producer_source"] == "fastapi_request_fixture"
+    assert first_output["ingress_payload_path"] == (
+        "examples/inputs/voice_ingress_requests.json"
+    )
+    assert first_output["available_request_count"] == 3
+    assert first_output["ingress_request_count"] == 2
+    assert first_output["selected_request_ids"]
+    assert first_output["selected_routes"] == ["/agent/command", "/agent/command"]
+    assert first_output["selected_methods"] == ["POST", "POST"]
+    assert first_output["request_digest"]
+    assert first_output["command_char_count"] > 0
+    assert first_output["contention_signal"] == "fastapi_request_cpu_profile"
+
+
 def test_missing_tegrastats_log_is_explicit() -> None:
     timeline = load_tegrastats_timeline(None)
 
