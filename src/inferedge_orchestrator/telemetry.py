@@ -23,6 +23,8 @@ class TaskTelemetry:
     max_queue_backlog: int = 0
     deadline_missed: int = 0
     fallback_used: int = 0
+    producer_sources: list[str] = field(default_factory=list)
+    producer_event_count: int = 0
 
     def mean_latency_ms(self) -> float | None:
         if not self.latencies_ms:
@@ -143,6 +145,12 @@ class TelemetryCollector:
         if deadline_missed:
             task.deadline_missed += 1
         task.max_queue_backlog = max(task.max_queue_backlog, backlog_after)
+        producer_context = _producer_context(result.output)
+        producer_source = producer_context.get("producer_source")
+        if isinstance(producer_source, str) and producer_source:
+            task.producer_event_count += 1
+            if producer_source not in task.producer_sources:
+                task.producer_sources.append(producer_source)
         execution_event = {
             "task": result.task_name,
             **self._agent_event_fields(result.task_name),
@@ -152,6 +160,7 @@ class TelemetryCollector:
             "deadline_missed": deadline_missed,
             "queue_wait_ms": _rounded(max(0.0, frame.created_at_ms - frame.created_at_ms)),
             "fallback_used": False,
+            "producer_context": producer_context,
             "output": result.output,
         }
         self.result_events.append(execution_event)
@@ -367,6 +376,16 @@ class TelemetryCollector:
             "average_total_queue_depth": average_total_queue_depth,
             "final_queue_depth": final_queue_depth,
             "max_queue_depth_by_task": max_queue_depth_by_task,
+            "device_local_task_count": sum(
+                1
+                for task in self._task_config.values()
+                if bool((task.worker_options or {}).get("device_local_validation"))
+            ),
+            "device_local_tasks": [
+                name
+                for name, task in self._task_config.items()
+                if bool((task.worker_options or {}).get("device_local_validation"))
+            ],
             "queue_pressure_state": _queue_pressure_state(
                 max_total_queue_depth,
                 self._overload_backlog_threshold(),
@@ -405,6 +424,15 @@ class TelemetryCollector:
             "queue_pressure_ratio": _rounded(
                 telemetry.max_queue_backlog / task_config.queue_size
             ),
+            "device_local_validation": bool(
+                (task_config.worker_options or {}).get("device_local_validation")
+            ),
+            "producer_stage": (task_config.worker_options or {}).get("producer_stage"),
+            "producer_sources": list(telemetry.producer_sources),
+            "producer_event_count": telemetry.producer_event_count,
+            "workload_type": (task_config.worker_options or {}).get("workload_type"),
+            "runtime_loop": (task_config.worker_options or {}).get("runtime_loop"),
+            "ingress_profile": (task_config.worker_options or {}).get("ingress_profile"),
         }
 
     def _runtime_event_summary(self) -> dict[str, Any]:
@@ -486,3 +514,23 @@ def _worker_health_state(telemetry: TaskTelemetry) -> str:
     if telemetry.executed > 0:
         return "healthy"
     return "idle"
+
+
+def _producer_context(output: dict[str, object]) -> dict[str, object]:
+    if not isinstance(output, dict):
+        return {}
+    keys = (
+        "producer_source",
+        "input_path",
+        "ingress_payload_path",
+        "resource_snapshot_path",
+        "resource_snapshot_id",
+        "input_digest",
+        "request_digest",
+        "resource_digest",
+        "contention_signal",
+        "profile_kind",
+        "runtime_degradation_score",
+        "resource_degradation_score",
+    )
+    return {key: output[key] for key in keys if key in output}

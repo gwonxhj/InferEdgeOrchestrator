@@ -254,6 +254,40 @@ def test_run_multi_workload_sustained_device_local_starter(tmp_path) -> None:
     assert profiles["vision_agent"]["device_local_validation"] is True
     assert profiles["voice_command_agent"]["producer_stage"] == "device_local_starter"
     assert profiles["safety_monitor_agent"]["producer_stage"] == "device_local_starter"
+    queue_summary = report["queue_state_summary"]
+    assert queue_summary["device_local_task_count"] == 3
+    assert set(queue_summary["device_local_tasks"]) == {
+        "safety_monitor_agent",
+        "vision_agent",
+        "voice_command_agent",
+    }
+    workers = report["worker_health_snapshot"]["workers"]
+    assert workers["vision_agent"]["device_local_validation"] is True
+    assert workers["vision_agent"]["producer_stage"] == "device_local_starter"
+    assert "image_file" in workers["vision_agent"]["producer_sources"]
+    assert workers["voice_command_agent"]["producer_sources"] == [
+        "fastapi_request_fixture"
+    ]
+    assert workers["safety_monitor_agent"]["producer_sources"] == [
+        "resource_snapshot_fixture"
+    ]
+    execution_events = [
+        event
+        for event in report["runtime_event_timeline"]
+        if event["event_type"] == "execution"
+    ]
+    assert any(
+        event["producer_context"].get("producer_source") == "image_file"
+        for event in execution_events
+    )
+    assert any(
+        event["producer_context"].get("producer_source") == "fastapi_request_fixture"
+        for event in execution_events
+    )
+    assert any(
+        event["producer_context"].get("producer_source") == "resource_snapshot_fixture"
+        for event in execution_events
+    )
 
 
 def test_device_local_input_overrides_use_local_paths(tmp_path) -> None:
@@ -331,6 +365,20 @@ def test_device_local_input_overrides_use_local_paths(tmp_path) -> None:
         "fastapi_request_fixture",
         "resource_snapshot_fixture",
     }
+    workers = report["worker_health_snapshot"]["workers"]
+    assert "image_file" in workers["vision_agent"]["producer_sources"]
+    assert workers["vision_agent"]["producer_stage"] == "device_local_cli_override"
+    assert workers["voice_command_agent"]["producer_sources"] == [
+        "fastapi_request_fixture"
+    ]
+    assert workers["safety_monitor_agent"]["producer_sources"] == [
+        "resource_snapshot_fixture"
+    ]
+    assert any(
+        event["producer_context"].get("input_path") == str(image)
+        for event in report["runtime_event_timeline"]
+        if event["event_type"] == "execution"
+    )
 
 
 def test_process_resource_snapshot_can_feed_device_local_safety(tmp_path) -> None:
@@ -364,6 +412,15 @@ def test_process_resource_snapshot_can_feed_device_local_safety(tmp_path) -> Non
     assert safety_outputs[0]["resource_snapshot_id"] == "device_local_process_0"
     signals = report["multi_workload_sustained_summary"]["observed_runtime_signals"]
     assert "process_resource_snapshot" in signals["producer_sources"]
+    workers = report["worker_health_snapshot"]["workers"]
+    assert workers["safety_monitor_agent"]["producer_sources"] == [
+        "process_resource_snapshot"
+    ]
+    assert any(
+        event["producer_context"].get("producer_source") == "process_resource_snapshot"
+        for event in report["runtime_event_timeline"]
+        if event["event_type"] == "execution"
+    )
 
 
 def test_missing_tegrastats_log_is_explicit() -> None:
