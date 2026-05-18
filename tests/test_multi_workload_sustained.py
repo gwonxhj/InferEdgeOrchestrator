@@ -6,8 +6,10 @@ from pathlib import Path
 from inferedge_orchestrator.config import OrchestratorConfig
 from inferedge_orchestrator.sustained import (
     MULTI_WORKLOAD_SCHEMA,
+    apply_device_local_input_overrides,
     load_tegrastats_timeline,
     write_multi_workload_sustained,
+    write_process_resource_snapshot,
 )
 
 
@@ -252,6 +254,116 @@ def test_run_multi_workload_sustained_device_local_starter(tmp_path) -> None:
     assert profiles["vision_agent"]["device_local_validation"] is True
     assert profiles["voice_command_agent"]["producer_stage"] == "device_local_starter"
     assert profiles["safety_monitor_agent"]["producer_stage"] == "device_local_starter"
+
+
+def test_device_local_input_overrides_use_local_paths(tmp_path) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_device_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    image = tmp_path / "frame.ppm"
+    image.write_bytes(b"P6\n1 1\n255\n\xff\x00\x00")
+    requests = tmp_path / "requests.json"
+    requests.write_text(
+        json.dumps(
+            [
+                {
+                    "request_id": "local-command-1",
+                    "method": "POST",
+                    "path": "/agent/command",
+                    "command": "inspect local backlog",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    resources = tmp_path / "resources.json"
+    resources.write_text(
+        json.dumps(
+            {
+                "snapshots": [
+                    {
+                        "snapshot_id": "local-process-1",
+                        "cpu_percent": 37.5,
+                        "memory_used_mb": 256,
+                        "memory_total_mb": 1024,
+                        "temperature_c": 42.0,
+                        "queue_depth": 4,
+                        "fallback_count": 1,
+                        "deadline_missed_count": 1,
+                        "dropped_count": 2,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    overridden = apply_device_local_input_overrides(
+        config,
+        vision_input=image,
+        voice_ingress_payload=requests,
+        resource_snapshot=resources,
+    )
+    report = write_multi_workload_sustained(
+        overridden,
+        output=tmp_path / "device_local_overrides.json",
+        frames=4,
+    )
+
+    assert overridden.input_source == "image"
+    assert overridden.input_path == str(image)
+    outputs = [event["output"] for event in report["result_events"]]
+    assert any(output.get("input_path") == str(image) for output in outputs)
+    assert any(
+        output.get("ingress_payload_path") == str(requests) for output in outputs
+    )
+    assert any(
+        output.get("resource_snapshot_path") == str(resources) for output in outputs
+    )
+    summary = report["multi_workload_sustained_summary"]
+    signals = summary["observed_runtime_signals"]
+    assert set(signals["producer_sources"]) == {
+        "image_file",
+        "fastapi_request_fixture",
+        "resource_snapshot_fixture",
+    }
+
+
+def test_process_resource_snapshot_can_feed_device_local_safety(tmp_path) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_device_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    snapshot = write_process_resource_snapshot(tmp_path / "process_snapshot.json")
+    overridden = apply_device_local_input_overrides(
+        config,
+        resource_snapshot=snapshot,
+        resource_snapshot_source="process_resource_snapshot",
+    )
+    report = write_multi_workload_sustained(
+        overridden,
+        output=tmp_path / "device_local_process_snapshot.json",
+        frames=4,
+    )
+
+    safety_outputs = [
+        event["output"]
+        for event in report["result_events"]
+        if event["task"] == "safety_monitor_agent"
+    ]
+    assert safety_outputs
+    assert safety_outputs[0]["producer_source"] == "process_resource_snapshot"
+    assert safety_outputs[0]["resource_snapshot_path"] == str(snapshot)
+    assert safety_outputs[0]["resource_snapshot_id"] == "device_local_process_0"
+    signals = report["multi_workload_sustained_summary"]["observed_runtime_signals"]
+    assert "process_resource_snapshot" in signals["producer_sources"]
 
 
 def test_missing_tegrastats_log_is_explicit() -> None:

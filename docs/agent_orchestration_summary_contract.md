@@ -186,6 +186,12 @@ producers in `scenario_mode=device_local` and records `producer_sources` plus
 YOLO, Whisper, FastAPI, live monitor, and Jetson producers remain incremental
 integrations, not required dependencies.
 
+The CLI can override the committed device-local producer fixtures at run time
+with `--vision-input`, `--voice-ingress-payload`, and `--resource-snapshot`.
+For a minimal local process signal, `--capture-process-resource-snapshot` writes
+a small process resource snapshot next to the output report and routes it into
+the Safety workload with `producer_source=process_resource_snapshot`.
+
 ## Compatibility Rules
 
 - `schema_version` is `inferedge-orchestration-summary-v1`.

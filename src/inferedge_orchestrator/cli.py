@@ -8,7 +8,11 @@ from inferedge_orchestrator.config import load_config
 from inferedge_orchestrator.inferedge_adapter import write_config_from_inferedge_result
 from inferedge_orchestrator.runtime import OrchestratorRuntime
 from inferedge_orchestrator.scenarios import write_overload_comparison
-from inferedge_orchestrator.sustained import write_multi_workload_sustained
+from inferedge_orchestrator.sustained import (
+    apply_device_local_input_overrides,
+    write_multi_workload_sustained,
+    write_process_resource_snapshot,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -36,6 +40,26 @@ def build_parser() -> argparse.ArgumentParser:
     sustained_parser.add_argument(
         "--tegrastats-log",
         help="optional tegrastats log to parse into the sustained timeline",
+    )
+    sustained_parser.add_argument(
+        "--vision-input",
+        help="optional local image/video path to use for the Vision producer",
+    )
+    sustained_parser.add_argument(
+        "--voice-ingress-payload",
+        help="optional local JSON request payload path for the Voice producer",
+    )
+    sustained_parser.add_argument(
+        "--resource-snapshot",
+        help="optional local JSON resource snapshot path for the Safety producer",
+    )
+    sustained_parser.add_argument(
+        "--capture-process-resource-snapshot",
+        action="store_true",
+        help=(
+            "capture the current process resource snapshot next to --output and "
+            "use it for the Safety producer"
+        ),
     )
     sustained_parser.add_argument(
         "--sleep-worker",
@@ -99,6 +123,26 @@ def _run(args: argparse.Namespace) -> int:
 
 def _run_multi_workload_sustained(args: argparse.Namespace) -> int:
     config = load_config(args.config)
+    if args.resource_snapshot and args.capture_process_resource_snapshot:
+        raise ValueError(
+            "use either --resource-snapshot or --capture-process-resource-snapshot"
+        )
+    resource_snapshot = args.resource_snapshot
+    resource_snapshot_source = None
+    if args.capture_process_resource_snapshot:
+        resource_snapshot = str(
+            write_process_resource_snapshot(
+                Path(args.output).with_suffix(".process_resource_snapshot.json")
+            )
+        )
+        resource_snapshot_source = "process_resource_snapshot"
+    config = apply_device_local_input_overrides(
+        config,
+        vision_input=args.vision_input,
+        voice_ingress_payload=args.voice_ingress_payload,
+        resource_snapshot=resource_snapshot,
+        resource_snapshot_source=resource_snapshot_source,
+    )
     report = write_multi_workload_sustained(
         config,
         output=args.output,

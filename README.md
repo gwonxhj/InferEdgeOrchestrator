@@ -269,6 +269,24 @@ Vision image, Voice request, and Safety resource evidence while keeping live
 YOLO/ONNX, FastAPI, tegrastats, and Jetson/RPi producers as follow-up
 integrations.
 
+You can replace those committed producer fixtures at run time without editing
+the config:
+
+```bash
+python3 -m inferedge_orchestrator run-multi-workload-sustained \
+  --config configs/agent_multi_workload_sustained_device_local.json \
+  --output reports/agent_multi_workload_sustained_device_local.json \
+  --frames 16 \
+  --vision-input /path/to/frame.ppm \
+  --voice-ingress-payload /path/to/requests.json \
+  --resource-snapshot /path/to/resources.json
+```
+
+For a minimal process-backed Safety input, use
+`--capture-process-resource-snapshot` instead of `--resource-snapshot`. The CLI
+writes a small process resource snapshot next to the output JSON and routes it
+through the Safety producer.
+
 ### InferEdge Handoff
 
 ```bash

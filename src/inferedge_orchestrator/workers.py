@@ -383,7 +383,9 @@ def _safety_resource_profile(
     )
     serialized = json.dumps(snapshot, sort_keys=True, separators=(",", ":"))
     return {
-        "producer_source": "resource_snapshot_fixture",
+        "producer_source": str(
+            options.get("resource_snapshot_source", "resource_snapshot_fixture")
+        ),
         "resource_snapshot_path": str(path),
         "resource_snapshot_index": index,
         "resource_snapshot_id": str(snapshot.get("snapshot_id", index)),
