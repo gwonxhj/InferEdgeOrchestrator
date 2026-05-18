@@ -170,8 +170,12 @@ download, FastAPI server, Jetson-only telemetry 없이도 workload pressure를
 테스트할 수 있습니다. 첫 Vision producer 단계는
 [`configs/agent_multi_workload_sustained_vision_file.json`](../configs/agent_multi_workload_sustained_vision_file.json)이며,
 작은 local image fixture를 Vision workload로 전달하고 `producer_source=image_file`,
-input digest, sampled byte statistics를 기록합니다. 외부 YOLO, Whisper, FastAPI,
-Jetson producer는 선택적 후속 integration입니다.
+input digest, sampled byte statistics를 기록합니다. 첫 Voice ingress producer
+단계는
+[`configs/agent_multi_workload_sustained_voice_ingress.json`](../configs/agent_multi_workload_sustained_voice_ingress.json)이며,
+작은 FastAPI-style request fixture를 Voice workload로 전달하고 selected routes,
+request digest, burst evidence를 기록합니다. 외부 YOLO, Whisper, FastAPI, Jetson
+producer는 선택적 후속 integration입니다.
 
 ## Compatibility Rules
 

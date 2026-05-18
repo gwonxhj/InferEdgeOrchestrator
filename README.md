@@ -228,6 +228,19 @@ python3 -m inferedge_orchestrator run-multi-workload-sustained \
 
 This records `producer_source=image_file`, input digest, sampled bytes, and
 Vision workload pressure while keeping ONNX/Yolo integration as a later step.
+A Voice ingress starter can additionally read a local FastAPI-style request
+fixture:
+
+```bash
+python3 -m inferedge_orchestrator run-multi-workload-sustained \
+  --config configs/agent_multi_workload_sustained_voice_ingress.json \
+  --output reports/agent_multi_workload_sustained_voice_ingress.json \
+  --frames 16
+```
+
+This records `producer_source=fastapi_request_fixture`, selected routes, request
+digest, and Voice burst pressure without starting a real FastAPI server or
+Whisper backend.
 
 ### InferEdge Handoff
 
