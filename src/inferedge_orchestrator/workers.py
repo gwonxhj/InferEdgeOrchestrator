@@ -313,18 +313,124 @@ def _profile_safety_monitor(
     work_units: int,
     options: dict[str, object],
 ) -> tuple[str, dict[str, object]]:
+    resource_profile = _safety_resource_profile(frame, options)
     risk_score = 0
     for index in range(work_units):
         risk_score = (risk_score + ((index * 13 + frame.sequence * 7) % 97)) % 10_000
     normalized = risk_score / 10_000
-    digest = hashlib.sha1(f"monitor:{task.name}:{frame.sequence}:{risk_score}".encode()).hexdigest()[:12]
+    resource_score = float(resource_profile.get("resource_degradation_score", 0.0))
+    combined_score = max(normalized, resource_score)
+    digest_seed = resource_profile.get("resource_digest", risk_score)
+    digest = hashlib.sha1(
+        f"monitor:{task.name}:{frame.sequence}:{digest_seed}:{risk_score}".encode()
+    ).hexdigest()[:12]
     return digest, {
         "profile_kind": "safety_monitor_loop",
-        "sampled_metrics": ["queue_depth", "deadline_miss", "fallback_count"],
-        "runtime_degradation_score": round(normalized, 4),
+        "sampled_metrics": [
+            "queue_depth",
+            "deadline_miss",
+            "fallback_count",
+            *resource_profile.get("resource_metrics", []),
+        ],
+        "runtime_degradation_score": round(combined_score, 4),
         "fallback_watch_enabled": bool(task.fallback_policy),
-        "contention_signal": "telemetry_monitor_profile",
+        "contention_signal": (
+            "resource_monitor_profile"
+            if resource_profile
+            else "telemetry_monitor_profile"
+        ),
+        **resource_profile,
     }
+
+
+def _safety_resource_profile(
+    frame: FrameEnvelope,
+    options: dict[str, object],
+) -> dict[str, object]:
+    path_value = options.get("resource_snapshot_path") or options.get(
+        "telemetry_snapshot_path"
+    )
+    if path_value is None:
+        return {}
+
+    path = Path(str(path_value))
+    if not path.exists():
+        raise FileNotFoundError(f"resource snapshot path does not exist: {path}")
+    if not path.is_file():
+        raise ValueError(f"resource snapshot path is not a file: {path}")
+
+    loaded = json.loads(path.read_text(encoding="utf-8"))
+    snapshots = _resource_snapshots(loaded)
+    index = frame.sequence % len(snapshots)
+    snapshot = snapshots[index]
+    memory_total_mb = _float_value(snapshot.get("memory_total_mb"), default=0.0)
+    memory_used_mb = _float_value(snapshot.get("memory_used_mb"), default=0.0)
+    memory_ratio = memory_used_mb / memory_total_mb if memory_total_mb > 0 else 0.0
+    cpu_percent = _float_value(snapshot.get("cpu_percent"), default=0.0)
+    temperature_c = _float_value(snapshot.get("temperature_c"), default=0.0)
+    queue_depth = _int_value(snapshot.get("queue_depth"), default=0)
+    fallback_count = _int_value(snapshot.get("fallback_count"), default=0)
+    deadline_missed_count = _int_value(snapshot.get("deadline_missed_count"), default=0)
+    dropped_count = _int_value(snapshot.get("dropped_count"), default=0)
+    degradation_score = max(
+        cpu_percent / 100.0,
+        memory_ratio,
+        max(0.0, (temperature_c - 45.0) / 40.0),
+        min(1.0, queue_depth / 10.0),
+        min(1.0, fallback_count / 5.0),
+        min(1.0, deadline_missed_count / 5.0),
+        min(1.0, dropped_count / 8.0),
+    )
+    serialized = json.dumps(snapshot, sort_keys=True, separators=(",", ":"))
+    return {
+        "producer_source": "resource_snapshot_fixture",
+        "resource_snapshot_path": str(path),
+        "resource_snapshot_index": index,
+        "resource_snapshot_id": str(snapshot.get("snapshot_id", index)),
+        "cpu_percent": round(cpu_percent, 3),
+        "memory_used_mb": round(memory_used_mb, 3),
+        "memory_total_mb": round(memory_total_mb, 3),
+        "memory_used_ratio": round(memory_ratio, 4),
+        "temperature_c": round(temperature_c, 3),
+        "queue_depth_signal": queue_depth,
+        "fallback_signal": fallback_count,
+        "deadline_missed_signal": deadline_missed_count,
+        "dropped_signal": dropped_count,
+        "resource_degradation_score": round(degradation_score, 4),
+        "resource_metrics": [
+            "cpu_percent",
+            "memory_used_ratio",
+            "temperature_c",
+            "queue_depth_signal",
+            "fallback_signal",
+            "deadline_missed_signal",
+        ],
+        "resource_digest": hashlib.sha1(serialized.encode()).hexdigest()[:12],
+    }
+
+
+def _resource_snapshots(loaded: object) -> list[dict[str, object]]:
+    if isinstance(loaded, dict) and isinstance(loaded.get("snapshots"), list):
+        loaded = loaded["snapshots"]
+    if not isinstance(loaded, list) or not loaded:
+        raise ValueError("resource snapshot payload must be a non-empty list")
+    if not all(isinstance(snapshot, dict) for snapshot in loaded):
+        raise ValueError("resource snapshot entries must be objects")
+    return loaded
+
+
+def _float_value(value: object, *, default: float) -> float:
+    if isinstance(value, int | float):
+        return float(value)
+    return default
+
+
+def _int_value(value: object, *, default: int) -> int:
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    return default
 
 
 def _profile_utility(

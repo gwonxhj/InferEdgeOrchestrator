@@ -283,7 +283,19 @@ python3 -m inferedge_orchestrator run-multi-workload-sustained \
 
 이 경로는 실제 FastAPI server나 Whisper backend를 실행하지 않고
 `producer_source=fastapi_request_fixture`, selected routes, request digest, Voice
-burst pressure를 기록한다.
+burst pressure를 기록한다. Safety monitor starter는 local resource snapshot도 읽을
+수 있다.
+
+```bash
+python3 -m inferedge_orchestrator run-multi-workload-sustained \
+  --config configs/agent_multi_workload_sustained_safety_resource.json \
+  --output reports/agent_multi_workload_sustained_safety_resource.json \
+  --frames 16
+```
+
+이 경로는 `producer_source=resource_snapshot_fixture`, CPU/memory/temperature
+signal, fallback/deadline signal, deterministic degradation score를 기록하며 live
+device monitor integration은 후속 단계로 둔다.
 
 자세한 문서:
 

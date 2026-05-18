@@ -1,0 +1,38 @@
+{
+  "schema_version": "inferedge-orchestrator-resource-snapshot-fixture-v1",
+  "snapshots": [
+    {
+      "cpu_percent": 36.0,
+      "deadline_missed_count": 0,
+      "dropped_count": 0,
+      "fallback_count": 0,
+      "memory_total_mb": 8192,
+      "memory_used_mb": 2048,
+      "queue_depth": 1,
+      "snapshot_id": "safe-001",
+      "temperature_c": 43.5
+    },
+    {
+      "cpu_percent": 82.5,
+      "deadline_missed_count": 2,
+      "dropped_count": 4,
+      "fallback_count": 1,
+      "memory_total_mb": 8192,
+      "memory_used_mb": 6144,
+      "queue_depth": 7,
+      "snapshot_id": "pressure-002",
+      "temperature_c": 69.2
+    },
+    {
+      "cpu_percent": 58.0,
+      "deadline_missed_count": 1,
+      "dropped_count": 1,
+      "fallback_count": 1,
+      "memory_total_mb": 8192,
+      "memory_used_mb": 4096,
+      "queue_depth": 3,
+      "snapshot_id": "recovery-003",
+      "temperature_c": 54.0
+    }
+  ]
+}

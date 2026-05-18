@@ -174,8 +174,11 @@ input digest, sampled byte statistics를 기록합니다. 첫 Voice ingress prod
 단계는
 [`configs/agent_multi_workload_sustained_voice_ingress.json`](../configs/agent_multi_workload_sustained_voice_ingress.json)이며,
 작은 FastAPI-style request fixture를 Voice workload로 전달하고 selected routes,
-request digest, burst evidence를 기록합니다. 외부 YOLO, Whisper, FastAPI, Jetson
-producer는 선택적 후속 integration입니다.
+request digest, burst evidence를 기록합니다. 첫 Safety monitor producer 단계는
+[`configs/agent_multi_workload_sustained_safety_resource.json`](../configs/agent_multi_workload_sustained_safety_resource.json)이며,
+작은 resource snapshot fixture를 Safety workload로 전달하고 CPU, memory,
+temperature, fallback, deadline, degradation evidence를 기록합니다. 외부 YOLO,
+Whisper, FastAPI, live monitor, Jetson producer는 선택적 후속 integration입니다.
 
 ## Compatibility Rules
 
