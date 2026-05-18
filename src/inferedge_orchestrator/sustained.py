@@ -1,15 +1,106 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 from inferedge_orchestrator.config import OrchestratorConfig, TaskConfig
-from inferedge_orchestrator.monitor import parse_tegrastats_line
+from inferedge_orchestrator.monitor import ResourceMonitor, parse_tegrastats_line
 from inferedge_orchestrator.runtime import OrchestratorRuntime
 
 
 MULTI_WORKLOAD_SCHEMA = "inferedge-orchestrator-multi-workload-sustained-v1"
+
+
+def apply_device_local_input_overrides(
+    config: OrchestratorConfig,
+    *,
+    vision_input: str | Path | None = None,
+    voice_ingress_payload: str | Path | None = None,
+    resource_snapshot: str | Path | None = None,
+    resource_snapshot_source: str | None = None,
+) -> OrchestratorConfig:
+    """Return a config that points device-local producers at local inputs.
+
+    The committed config remains the stable starter. These overrides let a local
+    run replace the tiny fixtures with user-provided files without changing the
+    JSON contract or requiring live service dependencies.
+    """
+
+    if (
+        vision_input is None
+        and voice_ingress_payload is None
+        and resource_snapshot is None
+    ):
+        return config
+
+    input_source = config.input_source
+    input_path = config.input_path
+    if vision_input is not None:
+        path = Path(vision_input)
+        input_source = _vision_input_source(path)
+        input_path = str(path)
+
+    tasks = []
+    for task in config.tasks:
+        options = dict(task.worker_options or {})
+        if vision_input is not None and task.agent_type == "vision":
+            options["device_local_validation"] = True
+            options["producer_stage"] = "device_local_cli_override"
+        if voice_ingress_payload is not None and task.agent_type == "voice":
+            options["device_local_validation"] = True
+            options["producer_stage"] = "device_local_cli_override"
+            options["ingress_payload_path"] = str(Path(voice_ingress_payload))
+        if resource_snapshot is not None and task.agent_type == "safety":
+            options["device_local_validation"] = True
+            options["producer_stage"] = "device_local_cli_override"
+            options["resource_snapshot_path"] = str(Path(resource_snapshot))
+            if resource_snapshot_source is not None:
+                options["resource_snapshot_source"] = resource_snapshot_source
+        tasks.append(replace(task, worker_options=options))
+
+    overridden = replace(
+        config,
+        input_source=input_source,
+        input_path=input_path,
+        tasks=tuple(tasks),
+    )
+    overridden.validate()
+    return overridden
+
+
+def write_process_resource_snapshot(path: str | Path) -> Path:
+    """Write a small current-process resource snapshot for Safety producer input."""
+
+    output = Path(path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    snapshot = ResourceMonitor().capture(stage="device_local_process")
+    memory_used_mb = snapshot.process_rss_mb or 0.0
+    memory_total_mb = _estimated_memory_total_mb(
+        memory_used_mb=memory_used_mb,
+        memory_percent=snapshot.memory_percent,
+    )
+    payload = {
+        "snapshots": [
+            {
+                "snapshot_id": "device_local_process_0",
+                "source": "process_resource_snapshot",
+                "stage": snapshot.stage,
+                "platform": snapshot.platform,
+                "cpu_percent": snapshot.cpu_percent or 0.0,
+                "memory_used_mb": memory_used_mb,
+                "memory_total_mb": memory_total_mb,
+                "temperature_c": 0.0,
+                "queue_depth": 0,
+                "fallback_count": 0,
+                "deadline_missed_count": 0,
+                "dropped_count": 0,
+            }
+        ]
+    }
+    output.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    return output
 
 
 def run_multi_workload_sustained(
@@ -196,6 +287,22 @@ def _next_validation_step(config: OrchestratorConfig) -> str:
     )
 
 
+def _vision_input_source(path: Path) -> str:
+    if path.suffix.lower() in {".mp4", ".mov", ".mkv", ".avi", ".webm"}:
+        return "video"
+    return "image"
+
+
+def _estimated_memory_total_mb(
+    *,
+    memory_used_mb: float,
+    memory_percent: float | None,
+) -> float:
+    if memory_percent and memory_percent > 0:
+        return round(memory_used_mb / (memory_percent / 100.0), 3)
+    return max(memory_used_mb, 1.0)
+
+
 def _local_profile_signals(report: dict[str, Any]) -> dict[str, Any]:
     profiled_events = []
     profile_kinds: list[str] = []
@@ -231,6 +338,7 @@ def _producer_source_signals(report: dict[str, Any]) -> dict[str, Any]:
         "video_file",
         "fastapi_request_fixture",
         "resource_snapshot_fixture",
+        "process_resource_snapshot",
     }
     for event in report.get("result_events", []):
         if not isinstance(event, dict):

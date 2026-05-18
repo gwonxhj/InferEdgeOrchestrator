@@ -70,4 +70,6 @@ Tracked evidence samples live under
 - `agent_multi_workload_sustained_device_local.json` is the explicit
   `device_local` starter. It keeps the run dependency-free while grouping the
   committed Vision image, Voice request, and Safety resource producers in one
-  sustained validation path.
+  sustained validation path. The CLI can override those inputs at run time with
+  `--vision-input`, `--voice-ingress-payload`, `--resource-snapshot`, or
+  `--capture-process-resource-snapshot`.

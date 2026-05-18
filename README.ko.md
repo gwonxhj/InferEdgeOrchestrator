@@ -311,6 +311,24 @@ python3 -m inferedge_orchestrator run-multi-workload-sustained \
 request, Safety resource evidence를 기록하며 live YOLO/ONNX, FastAPI,
 tegrastats, Jetson/RPi producer는 후속 integration으로 둔다.
 
+config를 수정하지 않고 실행 시점에 committed producer fixture를 로컬 입력으로
+교체할 수도 있다.
+
+```bash
+python3 -m inferedge_orchestrator run-multi-workload-sustained \
+  --config configs/agent_multi_workload_sustained_device_local.json \
+  --output reports/agent_multi_workload_sustained_device_local.json \
+  --frames 16 \
+  --vision-input /path/to/frame.ppm \
+  --voice-ingress-payload /path/to/requests.json \
+  --resource-snapshot /path/to/resources.json
+```
+
+Safety producer에 현재 프로세스 리소스 스냅샷을 최소 입력으로 넣고 싶다면
+`--resource-snapshot` 대신 `--capture-process-resource-snapshot`을 사용한다. CLI는
+output JSON 옆에 작은 process resource snapshot을 생성하고 이를 Safety producer에
+연결한다.
+
 자세한 문서:
 
 - `CHANGELOG.ko.md` ([English](CHANGELOG.md))

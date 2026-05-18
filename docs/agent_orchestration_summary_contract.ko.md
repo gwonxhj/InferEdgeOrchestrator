@@ -185,6 +185,13 @@ committed Vision image, Voice request, Safety resource producer를
 `producer_sources`와 `device_local_producer_count`를 기록합니다. 외부 YOLO,
 Whisper, FastAPI, live monitor, Jetson producer는 선택적 후속 integration입니다.
 
+CLI에서는 committed device-local producer fixture를 실행 시점에
+`--vision-input`, `--voice-ingress-payload`, `--resource-snapshot`으로 교체할 수
+있습니다. 최소 local process signal이 필요하면
+`--capture-process-resource-snapshot`이 output report 옆에 작은 process resource
+snapshot을 만들고 Safety workload에
+`producer_source=process_resource_snapshot`으로 연결합니다.
+
 ## Compatibility Rules
 
 - `schema_version`은 `inferedge-orchestration-summary-v1`입니다.
