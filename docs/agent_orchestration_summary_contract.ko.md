@@ -143,7 +143,7 @@ policy decision이 들어갑니다. Runtime은 task execution/result layer로
 유지하고, scheduling/drop/fallback과 policy evidence는 Orchestrator가
 소유합니다.
 이 starter는 full external YOLO/Whisper/FastAPI integration이 아니라
-profiled local workload evidence입니다. device-specific sustained validation은
+profiled local workload evidence입니다. live device-local sustained validation은
 별도 다음 단계입니다.
 
 ## Multi-Workload Sustained Starter
@@ -177,7 +177,12 @@ input digest, sampled byte statistics를 기록합니다. 첫 Voice ingress prod
 request digest, burst evidence를 기록합니다. 첫 Safety monitor producer 단계는
 [`configs/agent_multi_workload_sustained_safety_resource.json`](../configs/agent_multi_workload_sustained_safety_resource.json)이며,
 작은 resource snapshot fixture를 Safety workload로 전달하고 CPU, memory,
-temperature, fallback, deadline, degradation evidence를 기록합니다. 외부 YOLO,
+temperature, fallback, deadline, degradation evidence를 기록합니다. 명시적
+device-local starter는
+[`configs/agent_multi_workload_sustained_device_local.json`](../configs/agent_multi_workload_sustained_device_local.json)이며,
+committed Vision image, Voice request, Safety resource producer를
+`scenario_mode=device_local`로 실행하고 `multi_workload_sustained_summary`에
+`producer_sources`와 `device_local_producer_count`를 기록합니다. 외부 YOLO,
 Whisper, FastAPI, live monitor, Jetson producer는 선택적 후속 integration입니다.
 
 ## Compatibility Rules

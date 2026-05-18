@@ -128,7 +128,8 @@ flowchart LR
 | Phase 4: Jetson Smoke | Jetson CLI smoke, telemetry 생성, resource snapshot, optional `tegrastats` parsing | `scripts/smoke_jetson_dummy.sh`, `scripts/smoke_jetson_onnx.sh` |
 | Phase 5: InferEdge Handoff | `result.json` latency signal을 Orchestrator task config로 변환 | `python3 -m inferedge_orchestrator from-inferedge ...` |
 | Agent Runtime Contract | Forge agent manifest와 Runtime `result.agent` 참조를 사용하는 Vision / Voice-Command / Safety-Monitor dummy workload | `configs/agent_3_workload_demo.json`, [`docs/agent_orchestration_summary_contract.ko.md`](docs/agent_orchestration_summary_contract.ko.md) |
-| Lightweight Sustained Workload Starter | YOLO-like vision, Whisper-like command burst, FastAPI-style ingress, optional tegrastats timeline, Vision local-file producer starter를 포함한 profiled local sustained scenario | `python3 -m inferedge_orchestrator run-multi-workload-sustained ...` |
+| Lightweight Sustained Workload Starter | YOLO-like vision, Whisper-like command burst, FastAPI-style ingress, optional tegrastats timeline, producer-backed starter를 포함한 profiled local sustained scenario | `python3 -m inferedge_orchestrator run-multi-workload-sustained ...` |
+| Device-Local Sustained Starter | committed image/request/resource snapshot producer를 하나의 `device_local` mode로 실행하는 starter | `configs/agent_multi_workload_sustained_device_local.json` |
 
 ## Validation Evidence
 
@@ -296,6 +297,19 @@ python3 -m inferedge_orchestrator run-multi-workload-sustained \
 이 경로는 `producer_source=resource_snapshot_fixture`, CPU/memory/temperature
 signal, fallback/deadline signal, deterministic degradation score를 기록하며 live
 device monitor integration은 후속 단계로 둔다.
+
+세 producer fixture를 하나의 명시적 `device_local` mode로 실행하려면 다음을 사용한다.
+
+```bash
+python3 -m inferedge_orchestrator run-multi-workload-sustained \
+  --config configs/agent_multi_workload_sustained_device_local.json \
+  --output reports/agent_multi_workload_sustained_device_local.json \
+  --frames 16
+```
+
+이 경로는 `producer_sources`, `device_local_producer_count`, Vision image, Voice
+request, Safety resource evidence를 기록하며 live YOLO/ONNX, FastAPI,
+tegrastats, Jetson/RPi producer는 후속 integration으로 둔다.
 
 자세한 문서:
 

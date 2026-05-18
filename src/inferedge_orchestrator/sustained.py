@@ -95,10 +95,7 @@ def _multi_workload_summary(
     return {
         "schema_version": MULTI_WORKLOAD_SCHEMA,
         "scenario_mode": config.scenario_mode,
-        "evidence_scope": (
-            "local sustained workload profiles with lightweight CPU profile "
-            "adapters; external YOLO/Whisper/FastAPI integrations remain optional"
-        ),
+        "evidence_scope": _evidence_scope(config),
         "workload_profiles": [_workload_profile(task, report) for task in config.tasks],
         "observed_runtime_signals": {
             "max_total_queue_depth": sustained.get("max_total_queue_depth", 0),
@@ -110,11 +107,9 @@ def _multi_workload_summary(
             "policy_decision_reasons": reasons,
             "tegrastats_sample_count": tegrastats.get("sample_count", 0),
             **_local_profile_signals(report),
+            **_producer_source_signals(report),
         },
-        "next_validation_step": (
-            "replace local CPU profile adapters with device-local lightweight YOLO, "
-            "Whisper, FastAPI ingress, or tegrastats producers one at a time"
-        ),
+        "next_validation_step": _next_validation_step(config),
     }
 
 
@@ -129,6 +124,8 @@ def _workload_profile(task: TaskConfig, report: dict[str, Any]) -> dict[str, Any
         "runtime_loop": str(options.get("runtime_loop", _default_runtime_loop(task))),
         "ingress_profile": str(options.get("ingress_profile", _default_ingress(task))),
         "implementation": str(options.get("implementation", "synthetic_adapter")),
+        "producer_stage": options.get("producer_stage"),
+        "device_local_validation": bool(options.get("device_local_validation", False)),
         "profile_work_units": options.get("profile_work_units"),
         "expected_runtime_mode": str(
             options.get("expected_runtime_mode", "sustained")
@@ -174,6 +171,31 @@ def _default_ingress(task: TaskConfig) -> str:
     return "scheduled_task"
 
 
+def _evidence_scope(config: OrchestratorConfig) -> str:
+    if config.scenario_mode == "device_local":
+        return (
+            "device-local sustained validation starter using committed local "
+            "image, FastAPI-style request, and resource snapshot producers; "
+            "live device producers remain optional follow-up integrations"
+        )
+    return (
+        "local sustained workload profiles with lightweight CPU profile "
+        "adapters; external YOLO/Whisper/FastAPI integrations remain optional"
+    )
+
+
+def _next_validation_step(config: OrchestratorConfig) -> str:
+    if config.scenario_mode == "device_local":
+        return (
+            "replace committed producer fixtures with live device-local YOLO/ONNX, "
+            "FastAPI ingress, or tegrastats producers one at a time"
+        )
+    return (
+        "replace local CPU profile adapters with device-local lightweight YOLO, "
+        "Whisper, FastAPI ingress, or tegrastats producers one at a time"
+    )
+
+
 def _local_profile_signals(report: dict[str, Any]) -> dict[str, Any]:
     profiled_events = []
     profile_kinds: list[str] = []
@@ -198,6 +220,39 @@ def _local_profile_signals(report: dict[str, Any]) -> dict[str, Any]:
         "local_profile_adapter_count": len(profiled_events),
         "local_profile_elapsed_ms": round(elapsed_total, 3),
         "local_profile_kinds": profile_kinds,
+    }
+
+
+def _producer_source_signals(report: dict[str, Any]) -> dict[str, Any]:
+    producer_events = []
+    producer_sources: list[str] = []
+    device_local_sources = {
+        "image_file",
+        "video_file",
+        "fastapi_request_fixture",
+        "resource_snapshot_fixture",
+    }
+    for event in report.get("result_events", []):
+        if not isinstance(event, dict):
+            continue
+        output = event.get("output")
+        if not isinstance(output, dict):
+            continue
+        source = output.get("producer_source")
+        if not isinstance(source, str) or not source:
+            continue
+        producer_events.append(output)
+        if source not in producer_sources:
+            producer_sources.append(source)
+
+    return {
+        "producer_source_count": len(producer_events),
+        "producer_sources": producer_sources,
+        "device_local_producer_count": sum(
+            1
+            for output in producer_events
+            if output.get("producer_source") in device_local_sources
+        ),
     }
 
 

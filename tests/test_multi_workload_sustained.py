@@ -219,6 +219,41 @@ def test_run_multi_workload_sustained_profiles_safety_resource_fixture(tmp_path)
     assert "fallback_signal" in first_output["sampled_metrics"]
 
 
+def test_run_multi_workload_sustained_device_local_starter(tmp_path) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_device_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    output = tmp_path / "multi_workload_sustained_device_local.json"
+
+    report = write_multi_workload_sustained(config, output=output, frames=8)
+
+    assert output.exists()
+    assert config.name == "agent_multi_workload_sustained_device_local"
+    assert config.scenario_mode == "device_local"
+    summary = report["multi_workload_sustained_summary"]
+    assert summary["scenario_mode"] == "device_local"
+    assert "device-local sustained validation starter" in summary["evidence_scope"]
+    assert "live device-local" in summary["next_validation_step"]
+
+    signals = summary["observed_runtime_signals"]
+    assert set(signals["producer_sources"]) == {
+        "image_file",
+        "fastapi_request_fixture",
+        "resource_snapshot_fixture",
+    }
+    assert signals["producer_source_count"] > 0
+    assert signals["device_local_producer_count"] == signals["producer_source_count"]
+
+    profiles = {profile["agent_id"]: profile for profile in summary["workload_profiles"]}
+    assert profiles["vision_agent"]["device_local_validation"] is True
+    assert profiles["voice_command_agent"]["producer_stage"] == "device_local_starter"
+    assert profiles["safety_monitor_agent"]["producer_stage"] == "device_local_starter"
+
+
 def test_missing_tegrastats_log_is_explicit() -> None:
     timeline = load_tegrastats_timeline(None)
 
