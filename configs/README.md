@@ -72,7 +72,9 @@ Tracked evidence samples live under
   committed Vision image, Voice request, and Safety resource producers in one
   sustained validation path. The CLI can override those inputs at run time with
   `--vision-input`, `--voice-ingress-payload`, `--resource-snapshot`, or
-  `--capture-process-resource-snapshot`. If optional ONNX Runtime dependencies
-  are installed, `--vision-onnx-model` adds a lightweight Vision inference probe
-  that records provider, input/output shapes, and probe latency without claiming
-  a full live YOLO service.
+  `--capture-process-resource-snapshot`. `--vision-input` accepts either a
+  single image/video file or an image-frame directory, which is recorded as
+  `image_sequence_file` evidence and cycled during the sustained run. If
+  optional ONNX Runtime dependencies are installed, `--vision-onnx-model` adds
+  a lightweight Vision inference probe that records provider, input/output
+  shapes, and probe latency without claiming a full live YOLO service.

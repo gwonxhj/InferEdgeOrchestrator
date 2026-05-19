@@ -7,7 +7,7 @@ from typing import Any, Iterable
 
 
 DROP_POLICIES = {"drop_oldest", "drop_newest", "drop_low_priority"}
-INPUT_SOURCES = {"dummy", "image", "video"}
+INPUT_SOURCES = {"dummy", "image", "image_sequence", "video"}
 SCENARIO_MODES = {"normal", "overload", "sustained_high_load", "device_local"}
 WORKERS = {"dummy", "onnxruntime", "tensorrt"}
 
@@ -182,7 +182,10 @@ class OrchestratorConfig:
             raise ValueError("frame_interval_ms must be > 0")
         if self.input_source not in INPUT_SOURCES:
             raise ValueError(f"unsupported input_source {self.input_source!r}")
-        if self.input_source in {"image", "video"} and not self.input_path:
+        if (
+            self.input_source in {"image", "image_sequence", "video"}
+            and not self.input_path
+        ):
             raise ValueError(f"{self.input_source} input_source requires input_path")
 
     def task_map(self) -> dict[str, TaskConfig]:

@@ -48,11 +48,14 @@ class DummyFrameSource:
 
 
 class FileFrameSource:
-    """Routes image or video file metadata to workers without binding scheduler logic."""
+    """Routes file-backed metadata to workers without binding scheduler logic."""
 
     def __init__(self, *, source: str, path: str) -> None:
         self._source = source
         self._path = str(Path(path))
+        self._sequence_paths = (
+            _image_sequence_paths(Path(path)) if source == "image_sequence" else ()
+        )
         self._sequence = 0
 
     def frames_for_cycle(
@@ -67,6 +70,18 @@ class FileFrameSource:
             if cycle % task.emit_every_cycles != 0:
                 continue
             self._sequence += 1
+            selected_path = self._path
+            if self._sequence_paths:
+                selected_path = str(
+                    self._sequence_paths[cycle % len(self._sequence_paths)]
+                )
+            payload = {
+                "source": self._source,
+                "path": selected_path,
+                "frame_index": cycle,
+            }
+            if self._sequence_paths:
+                payload["sequence_root"] = self._path
             frames.append(
                 FrameEnvelope(
                     frame_id=f"{task.name}-{cycle}-{self._sequence}",
@@ -74,11 +89,7 @@ class FileFrameSource:
                     sequence=self._sequence,
                     created_at_ms=now_ms,
                     deadline_at_ms=now_ms + task.latency_budget_ms,
-                    payload={
-                        "source": self._source,
-                        "path": self._path,
-                        "frame_index": cycle,
-                    },
+                    payload=payload,
                 )
             )
         return frames
@@ -90,3 +101,21 @@ def build_frame_source(config: OrchestratorConfig) -> DummyFrameSource | FileFra
     if config.input_path is None:
         raise ValueError(f"{config.input_source} input_source requires input_path")
     return FileFrameSource(source=config.input_source, path=config.input_path)
+
+
+def _image_sequence_paths(path: Path) -> tuple[Path, ...]:
+    if not path.exists():
+        raise FileNotFoundError(f"image_sequence input path does not exist: {path}")
+    if not path.is_dir():
+        raise ValueError(f"image_sequence input path must be a directory: {path}")
+    extensions = {".jpg", ".jpeg", ".png", ".ppm", ".bmp"}
+    images = tuple(
+        sorted(
+            child
+            for child in path.iterdir()
+            if child.is_file() and child.suffix.lower() in extensions
+        )
+    )
+    if not images:
+        raise ValueError(f"image_sequence input path has no supported image files: {path}")
+    return images

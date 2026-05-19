@@ -214,6 +214,9 @@ integrations, not required dependencies.
 
 The CLI can override the committed device-local producer fixtures at run time
 with `--vision-input`, `--voice-ingress-payload`, and `--resource-snapshot`.
+`--vision-input` accepts a single image/video file or a directory of image
+frames. Directories are recorded as `image_sequence_file` producer evidence and
+cycled deterministically during sustained validation.
 For a minimal local process signal, `--capture-process-resource-snapshot` writes
 a small process resource snapshot next to the output report and routes it into
 the Safety workload with `producer_source=process_resource_snapshot`.

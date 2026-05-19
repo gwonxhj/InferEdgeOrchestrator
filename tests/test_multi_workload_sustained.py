@@ -385,6 +385,53 @@ def test_device_local_input_overrides_use_local_paths(tmp_path) -> None:
     )
 
 
+def test_device_local_vision_input_can_use_image_sequence_directory(tmp_path) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_device_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    sequence_dir = tmp_path / "frames"
+    sequence_dir.mkdir()
+    first = sequence_dir / "frame_001.ppm"
+    second = sequence_dir / "frame_002.ppm"
+    first.write_bytes(b"P6\n1 1\n255\n\xff\x00\x00")
+    second.write_bytes(b"P6\n1 1\n255\n\x00\xff\x00")
+
+    overridden = apply_device_local_input_overrides(
+        config,
+        vision_input=sequence_dir,
+    )
+    report = write_multi_workload_sustained(
+        overridden,
+        output=tmp_path / "device_local_image_sequence.json",
+        frames=4,
+    )
+
+    assert overridden.input_source == "image_sequence"
+    assert overridden.input_path == str(sequence_dir)
+    vision_outputs = [
+        event["output"]
+        for event in report["result_events"]
+        if event["task"] == "vision_agent"
+    ]
+    assert vision_outputs
+    assert {output["producer_source"] for output in vision_outputs} == {
+        "image_sequence_file"
+    }
+    observed_paths = {output["input_path"] for output in vision_outputs}
+    assert str(first) in observed_paths
+    assert str(second) in observed_paths
+    assert {output["sequence_root"] for output in vision_outputs} == {
+        str(sequence_dir)
+    }
+    signals = report["multi_workload_sustained_summary"]["observed_runtime_signals"]
+    assert "image_sequence_file" in signals["producer_sources"]
+    assert signals["device_local_producer_count"] == signals["producer_source_count"]
+
+
 def test_device_local_vision_can_run_optional_onnx_probe(
     tmp_path,
     monkeypatch,
