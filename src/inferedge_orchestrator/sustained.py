@@ -297,6 +297,8 @@ def _next_validation_step(config: OrchestratorConfig) -> str:
 
 
 def _vision_input_source(path: Path) -> str:
+    if path.is_dir():
+        return "image_sequence"
     if path.suffix.lower() in {".mp4", ".mov", ".mkv", ".avi", ".webm"}:
         return "video"
     return "image"
@@ -353,6 +355,7 @@ def _producer_source_signals(report: dict[str, Any]) -> dict[str, Any]:
     producer_sources: list[str] = []
     device_local_sources = {
         "image_file",
+        "image_sequence_file",
         "video_file",
         "fastapi_request_fixture",
         "resource_snapshot_fixture",

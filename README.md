@@ -270,14 +270,16 @@ YOLO/ONNX, FastAPI, tegrastats, and Jetson/RPi producers as follow-up
 integrations.
 
 You can replace those committed producer fixtures at run time without editing
-the config:
+the config. `--vision-input` accepts a single image/video file or a directory of
+image frames; directories are treated as a deterministic image sequence and
+cycled during the sustained run:
 
 ```bash
 python3 -m inferedge_orchestrator run-multi-workload-sustained \
   --config configs/agent_multi_workload_sustained_device_local.json \
   --output reports/agent_multi_workload_sustained_device_local.json \
   --frames 16 \
-  --vision-input /path/to/frame.ppm \
+  --vision-input /path/to/frame-or-image-sequence \
   --voice-ingress-payload /path/to/requests.json \
   --resource-snapshot /path/to/resources.json
 ```

@@ -312,14 +312,16 @@ request, Safety resource evidence를 기록하며 live YOLO/ONNX, FastAPI,
 tegrastats, Jetson/RPi producer는 후속 integration으로 둔다.
 
 config를 수정하지 않고 실행 시점에 committed producer fixture를 로컬 입력으로
-교체할 수도 있다.
+교체할 수도 있다. `--vision-input`은 단일 image/video file 또는 image frame
+directory를 받을 수 있으며, directory는 sustained run 동안 deterministic image
+sequence로 순환 처리된다.
 
 ```bash
 python3 -m inferedge_orchestrator run-multi-workload-sustained \
   --config configs/agent_multi_workload_sustained_device_local.json \
   --output reports/agent_multi_workload_sustained_device_local.json \
   --frames 16 \
-  --vision-input /path/to/frame.ppm \
+  --vision-input /path/to/frame-or-image-sequence \
   --voice-ingress-payload /path/to/requests.json \
   --resource-snapshot /path/to/resources.json
 ```

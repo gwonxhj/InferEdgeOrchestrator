@@ -192,7 +192,7 @@ def _vision_file_sample(
 ) -> tuple[dict[str, object], bytes]:
     source = _payload_value(frame, "source", "dummy")
     path_value = _payload_value(frame, "path", None)
-    if source not in {"image", "video"} or path_value is None:
+    if source not in {"image", "image_sequence", "video"} or path_value is None:
         return {}, b""
 
     path = Path(str(path_value))
@@ -207,9 +207,13 @@ def _vision_file_sample(
 
     size = path.stat().st_size
     digest = hashlib.sha1(sample).hexdigest()[:12] if sample else "empty"
+    producer_source = (
+        "image_sequence_file" if source == "image_sequence" else f"{source}_file"
+    )
     return {
-        "producer_source": f"{source}_file",
+        "producer_source": producer_source,
         "input_path": str(path),
+        "sequence_root": _payload_value(frame, "sequence_root", None),
         "input_bytes": size,
         "sampled_bytes": len(sample),
         "input_digest": digest,

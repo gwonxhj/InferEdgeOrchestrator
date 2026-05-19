@@ -43,7 +43,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sustained_parser.add_argument(
         "--vision-input",
-        help="optional local image/video path to use for the Vision producer",
+        help=(
+            "optional local image, video, or image-sequence directory to use "
+            "for the Vision producer"
+        ),
     )
     sustained_parser.add_argument(
         "--vision-onnx-model",
