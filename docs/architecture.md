@@ -21,6 +21,8 @@ The current implementation is intentionally small and explicit:
   interface.
 - `telemetry.py` records the operational evidence needed to explain scheduler
   decisions.
+- `remote_dispatch.py` records a file-based remote worker selection contract for
+  the first remote edge operation starter.
 
 This makes the project a runtime operation-control layer for edge inference, not
 a general inference server.
@@ -64,7 +66,8 @@ In code, `OrchestratorRuntime.run()` performs this flow:
 | `runtime.py` | Coordinates the end-to-end runtime loop and writes telemetry reports. |
 | `scenarios.py` | Runs the synthetic overload comparison between FIFO baseline and scheduler/load-shedding behavior. |
 | `inferedge_adapter.py` | Converts InferEdge `result.json` latency signals into an initial Orchestrator task config without importing InferEdge internals. |
-| `cli.py` | Exposes `run`, `report`, `compare-overload`, and `from-inferedge` commands. |
+| `remote_dispatch.py` | Selects a remote edge worker from a file-based registry and task request, preserving worker health and decision reason evidence. |
+| `cli.py` | Exposes `run`, `run-multi-workload-sustained`, `report`, `compare-overload`, `from-inferedge`, and `remote-dispatch` commands. |
 
 ## Scheduler Policy
 
@@ -111,6 +114,18 @@ Current behavior:
 
 This makes overload behavior explicit: low-priority work may be sacrificed to
 protect latency for high-priority work.
+
+## Remote Dispatch Starter
+
+The remote dispatch starter is intentionally file-based. It reads a worker
+registry and a task request, selects an online worker with compatible backend,
+device, and health state, then writes an
+`inferedge-remote-dispatch-result-v1` artifact.
+
+This is the first contract for remote edge operation. It does not claim
+production remote execution, distributed scheduling, or cloud orchestration.
+Those remain future hardening steps after the worker selection contract is
+stable.
 
 ## Worker Interface
 

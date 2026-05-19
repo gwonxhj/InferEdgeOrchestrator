@@ -6,6 +6,7 @@ from pathlib import Path
 
 from inferedge_orchestrator.config import load_config
 from inferedge_orchestrator.inferedge_adapter import write_config_from_inferedge_result
+from inferedge_orchestrator.remote_dispatch import dispatch_remote_task
 from inferedge_orchestrator.runtime import OrchestratorRuntime
 from inferedge_orchestrator.scenarios import write_overload_comparison
 from inferedge_orchestrator.sustained import (
@@ -113,6 +114,27 @@ def build_parser() -> argparse.ArgumentParser:
     inferedge_parser.add_argument("--engine-path")
     inferedge_parser.add_argument("--budget-multiplier", type=float, default=1.5)
     inferedge_parser.set_defaults(func=_from_inferedge)
+
+    remote_parser = subparsers.add_parser(
+        "remote-dispatch",
+        help="select a remote edge worker through a file-based starter contract",
+    )
+    remote_parser.add_argument(
+        "--registry",
+        required=True,
+        help="remote worker registry JSON path",
+    )
+    remote_parser.add_argument(
+        "--request",
+        required=True,
+        help="remote task request JSON path",
+    )
+    remote_parser.add_argument(
+        "--output",
+        required=True,
+        help="remote dispatch result JSON output path",
+    )
+    remote_parser.set_defaults(func=_remote_dispatch)
 
     return parser
 
@@ -226,4 +248,19 @@ def _from_inferedge(args: argparse.Namespace) -> int:
     latency_budget = config["tasks"][0]["latency_budget_ms"]
     print(f"wrote config: {args.output}")
     print(f"{args.task_name}: recommended latency_budget_ms={latency_budget}")
+    return 0
+
+
+def _remote_dispatch(args: argparse.Namespace) -> int:
+    result = dispatch_remote_task(
+        registry_path=args.registry,
+        request_path=args.request,
+        output_path=args.output,
+    )
+    print(f"wrote remote dispatch: {args.output}")
+    print(
+        f"dispatch_status={result['dispatch_status']} "
+        f"selected_worker_id={result['selected_worker_id']} "
+        f"reason={result['decision_reason']}"
+    )
     return 0
