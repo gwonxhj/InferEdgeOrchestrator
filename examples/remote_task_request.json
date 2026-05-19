@@ -1,0 +1,14 @@
+{
+  "schema_version": "inferedge-remote-task-request-v1",
+  "task_id": "task_vision_001",
+  "agent_id": "vision_agent",
+  "agent_type": "vision",
+  "required_backend": "tensorrt",
+  "device_target": "jetson",
+  "priority": 90,
+  "latency_budget_ms": 33.0,
+  "input_ref": {
+    "type": "image",
+    "path": "examples/inputs/vision_frame.ppm"
+  }
+}

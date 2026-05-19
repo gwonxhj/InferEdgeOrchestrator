@@ -48,6 +48,7 @@ Portfolio brief: [PORTFOLIO.ko.md](PORTFOLIO.ko.md) ([English](PORTFOLIO.md))
 | Worker abstraction | `dummy`, `onnxruntime`, TensorRT-backed worker를 같은 interface로 실행 |
 | Runtime evidence | executed/dropped count, latency, backlog, result event, resource snapshot, policy decision을 telemetry JSON으로 기록 |
 | Agent contract bridge | Forge agent manifest와 Runtime agent result를 task에서 optional 참조하고 orchestration summary evidence로 export |
+| Remote dispatch starter | file-based worker registry와 task request contract로 edge worker를 선택하고 decision reason을 기록 |
 | Jetson smoke coverage | Jetson Orin Nano smoke script로 CLI, telemetry, `tegrastats` parsing, ONNX Runtime execution, TensorRT-backed contention 경로를 실행 |
 
 ## Runtime Model
@@ -130,6 +131,7 @@ flowchart LR
 | Agent Runtime Contract | Forge agent manifest와 Runtime `result.agent` 참조를 사용하는 Vision / Voice-Command / Safety-Monitor dummy workload | `configs/agent_3_workload_demo.json`, [`docs/agent_orchestration_summary_contract.ko.md`](docs/agent_orchestration_summary_contract.ko.md) |
 | Lightweight Sustained Workload Starter | YOLO-like vision, Whisper-like command burst, FastAPI-style ingress, optional tegrastats timeline, producer-backed starter를 포함한 profiled local sustained scenario | `python3 -m inferedge_orchestrator run-multi-workload-sustained ...` |
 | Device-Local Sustained Starter | committed image/request/resource snapshot producer를 하나의 `device_local` mode로 실행하는 starter | `configs/agent_multi_workload_sustained_device_local.json` |
+| Remote Dispatch Starter | production remote execution을 주장하지 않고 file-based worker registry와 task request contract로 remote edge worker selection을 재현 | [`docs/remote_dispatch_starter.ko.md`](docs/remote_dispatch_starter.ko.md) |
 
 ## Validation Evidence
 

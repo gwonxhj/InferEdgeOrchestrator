@@ -21,6 +21,8 @@ scheduling, bounded queue, load shedding, worker abstraction, telemetry로
   분리한다.
 - `telemetry.py`는 scheduler decision을 설명하기 위한 operational evidence를
   기록한다.
+- `remote_dispatch.py`는 첫 remote edge operation starter를 위한 file-based
+  remote worker selection contract를 기록한다.
 
 즉, 이 프로젝트는 범용 inference server가 아니라 edge inference를 위한 runtime
 operation-control layer다.
@@ -64,7 +66,8 @@ Input Source
 | `runtime.py` | end-to-end runtime loop를 조율하고 telemetry report를 쓴다. |
 | `scenarios.py` | FIFO baseline과 scheduler/load-shedding 동작을 비교하는 synthetic overload scenario를 실행한다. |
 | `inferedge_adapter.py` | InferEdge 내부를 import하지 않고 `result.json` latency signal을 Orchestrator task config 초기값으로 변환한다. |
-| `cli.py` | `run`, `report`, `compare-overload`, `from-inferedge` command를 제공한다. |
+| `remote_dispatch.py` | file-based registry와 task request에서 remote edge worker를 선택하고 worker health 및 decision reason evidence를 보존한다. |
+| `cli.py` | `run`, `run-multi-workload-sustained`, `report`, `compare-overload`, `from-inferedge`, `remote-dispatch` command를 제공한다. |
 
 ## Scheduler Policy
 
@@ -110,6 +113,17 @@ overload behavior를 설명할 수 있게 한다.
 
 이 방식은 overload 상황에서 어떤 work를 포기했고 어떤 task를 보호했는지
 telemetry로 설명할 수 있게 만든다.
+
+## Remote Dispatch Starter
+
+remote dispatch starter는 의도적으로 file-based다. worker registry와 task
+request를 읽고, backend, device, health state가 맞는 online worker를 선택한 뒤
+`inferedge-remote-dispatch-result-v1` artifact를 쓴다.
+
+이 기능은 remote edge operation을 위한 첫 contract다. production remote
+execution, distributed scheduling, cloud orchestration을 완료했다고 주장하지
+않는다. 해당 항목은 worker selection contract가 안정화된 뒤의 future hardening
+단계다.
 
 ## Worker Interface
 

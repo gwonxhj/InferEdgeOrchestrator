@@ -1,0 +1,43 @@
+{
+  "schema_version": "inferedge-remote-worker-registry-v1",
+  "workers": [
+    {
+      "worker_id": "jetson-nano-01",
+      "status": "online",
+      "endpoint_type": "file_contract",
+      "capabilities": {
+        "workers": ["onnxruntime", "tensorrt"],
+        "backends": ["onnxruntime", "tensorrt"],
+        "devices": ["jetson"],
+        "priority_capacity": 10
+      },
+      "health": {
+        "state": "healthy",
+        "last_seen_at": "2026-05-19T00:00:00Z"
+      },
+      "metadata": {
+        "host": "nano01.local",
+        "note": "file-based remote dispatch starter; not production remote execution"
+      }
+    },
+    {
+      "worker_id": "mac-local-cpu",
+      "status": "online",
+      "endpoint_type": "file_contract",
+      "capabilities": {
+        "workers": ["onnxruntime"],
+        "backends": ["onnxruntime"],
+        "devices": ["cpu"],
+        "priority_capacity": 5
+      },
+      "health": {
+        "state": "constrained",
+        "last_seen_at": "2026-05-19T00:00:00Z"
+      },
+      "metadata": {
+        "host": "127.0.0.1",
+        "note": "local CPU fallback candidate"
+      }
+    }
+  ]
+}
