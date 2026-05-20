@@ -33,6 +33,8 @@ Task request:
 
 - schema: `inferedge-remote-task-request-v1`
 - example: [`examples/remote_task_request.json`](../examples/remote_task_request.json)
+- local HTTP example:
+  [`examples/remote_task_request_http_local.json`](../examples/remote_task_request_http_local.json)
 
 The starter matches:
 
@@ -61,6 +63,28 @@ python3 -m inferedge_orchestrator remote-dispatch \
   --execute-plan \
   --timeout-sec 5
 ```
+
+Local HTTP worker starter:
+
+```bash
+python3 scripts/remote_http_worker.py --host 127.0.0.1 --port 8765
+```
+
+In another terminal:
+
+```bash
+python3 -m inferedge_orchestrator remote-dispatch \
+  --registry examples/remote_worker_registry_http_local.json \
+  --request examples/remote_task_request_http_local.json \
+  --output reports/remote_dispatch_http_local.json \
+  --execute-plan \
+  --timeout-sec 2
+```
+
+This path is intentionally small: it proves that an HTTP worker endpoint can
+receive a structured task request and return a structured starter response. It
+does not provide heartbeat, auth, retry execution against fallback workers, or a
+long-lived production worker process.
 
 Expected output:
 
@@ -105,6 +129,8 @@ When execution is requested:
 
 - `http_request` posts the task request to `metadata.endpoint_url`.
 - `ssh_command` runs `metadata.ssh_command` on `metadata.ssh_host`.
+- `scripts/remote_http_worker.py` provides a local HTTP starter endpoint for
+  repeatable success-path smoke validation.
 - timeout, connection failure, HTTP error, and command failure are recorded in
   `remote_execution_result` instead of raising an unstructured crash.
 - fallback execution is not automatic yet; fallback candidates remain recorded
