@@ -32,6 +32,8 @@ Task request:
 
 - schema: `inferedge-remote-task-request-v1`
 - 예시: [`examples/remote_task_request.json`](../examples/remote_task_request.json)
+- local HTTP 예시:
+  [`examples/remote_task_request_http_local.json`](../examples/remote_task_request_http_local.json)
 
 starter는 다음 항목을 기준으로 worker를 선택한다.
 
@@ -60,6 +62,28 @@ python3 -m inferedge_orchestrator remote-dispatch \
   --execute-plan \
   --timeout-sec 5
 ```
+
+Local HTTP worker starter:
+
+```bash
+python3 scripts/remote_http_worker.py --host 127.0.0.1 --port 8765
+```
+
+다른 터미널에서:
+
+```bash
+python3 -m inferedge_orchestrator remote-dispatch \
+  --registry examples/remote_worker_registry_http_local.json \
+  --request examples/remote_task_request_http_local.json \
+  --output reports/remote_dispatch_http_local.json \
+  --execute-plan \
+  --timeout-sec 2
+```
+
+이 경로는 의도적으로 작게 유지한다. HTTP worker endpoint가 structured task
+request를 받고 structured starter response를 반환할 수 있음을 검증하지만,
+heartbeat, auth, fallback worker에 대한 retry execution, long-lived production
+worker process를 제공하지 않는다.
 
 예상 출력:
 
@@ -104,6 +128,8 @@ starter는 기본적으로 execution planning만 기록하고 network connection
 
 - `http_request`는 task request를 `metadata.endpoint_url`로 POST한다.
 - `ssh_command`는 `metadata.ssh_host`에서 `metadata.ssh_command`를 실행한다.
+- `scripts/remote_http_worker.py`는 repeatable success-path smoke validation을
+  위한 local HTTP starter endpoint를 제공한다.
 - timeout, connection failure, HTTP error, command failure는 unstructured crash가
   아니라 `remote_execution_result`에 기록된다.
 - fallback execution은 아직 자동 수행하지 않는다. fallback candidate는 이후

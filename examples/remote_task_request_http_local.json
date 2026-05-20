@@ -1,0 +1,18 @@
+{
+  "schema_version": "inferedge-remote-task-request-v1",
+  "task_id": "task_http_local_001",
+  "agent_id": "vision_agent",
+  "agent_type": "vision",
+  "required_backend": "onnxruntime",
+  "device_target": "cpu",
+  "priority": 80,
+  "latency_budget_ms": 50.0,
+  "input_ref": {
+    "type": "image",
+    "path": "examples/inputs/vision_frame.ppm"
+  },
+  "retry_policy": {
+    "max_attempts": 1,
+    "fallback_on": ["timeout", "connection_error"]
+  }
+}

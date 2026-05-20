@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 import json
+import socket
+import subprocess
+import sys
+import time
+import urllib.request
 from pathlib import Path
 
 import pytest
@@ -261,6 +266,85 @@ def test_remote_dispatch_execute_plan_posts_to_http_starter(
     assert result["runtime_events"][-1]["event"] == "remote_execution_completed"
 
 
+def test_remote_dispatch_execute_plan_against_local_http_worker(
+    tmp_path: Path,
+) -> None:
+    port = _free_tcp_port()
+    endpoint_url = f"http://127.0.0.1:{port}/execute"
+    worker = subprocess.Popen(
+        [
+            sys.executable,
+            "scripts/remote_http_worker.py",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(port),
+        ],
+        cwd=Path.cwd(),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        _wait_for_http_worker(port)
+        registry = {
+            "schema_version": "inferedge-remote-worker-registry-v1",
+            "workers": [
+                {
+                    "worker_id": "local-http-worker",
+                    "status": "online",
+                    "endpoint_type": "http_request",
+                    "capabilities": {
+                        "workers": ["onnxruntime"],
+                        "backends": ["onnxruntime"],
+                        "devices": ["cpu"],
+                    },
+                    "health": {"state": "healthy"},
+                    "metadata": {"endpoint_url": endpoint_url},
+                }
+            ],
+        }
+        request = {
+            "schema_version": "inferedge-remote-task-request-v1",
+            "task_id": "task_http_local_001",
+            "agent_id": "vision_agent",
+            "required_backend": "onnxruntime",
+            "device_target": "cpu",
+        }
+        registry_path = tmp_path / "registry.json"
+        request_path = tmp_path / "request.json"
+        output = tmp_path / "remote_dispatch.json"
+        registry_path.write_text(json.dumps(registry), encoding="utf-8")
+        request_path.write_text(json.dumps(request), encoding="utf-8")
+
+        result = dispatch_remote_task(
+            registry_path=registry_path,
+            request_path=request_path,
+            output_path=output,
+            execute_plan=True,
+            timeout_sec=2.0,
+        )
+
+        execution = result["remote_execution_result"]
+        assert execution["status"] == "succeeded"
+        assert execution["execution_performed"] is True
+        assert execution["transport"] == "http"
+        assert execution["http_status"] == 200
+        assert execution["response_json"]["schema_version"] == (
+            "inferedge-remote-http-worker-response-v1"
+        )
+        assert execution["response_json"]["execution_status"] == "simulated_completed"
+        assert execution["response_json"]["production_remote_execution"] is False
+        assert result["runtime_events"][-1]["event"] == "remote_execution_completed"
+    finally:
+        worker.terminate()
+        try:
+            worker.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            worker.kill()
+            worker.wait(timeout=2)
+
+
 def test_remote_dispatch_execute_plan_classifies_missing_ssh_contract(
     tmp_path: Path,
 ) -> None:
@@ -329,3 +413,29 @@ def test_remote_dispatch_cli_writes_result(tmp_path: Path, capsys: pytest.Captur
     assert json.loads(output.read_text(encoding="utf-8"))["selected_worker_id"] == (
         "jetson-nano-01"
     )
+
+
+def _free_tcp_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            sock.bind(("127.0.0.1", 0))
+        except PermissionError as exc:
+            pytest.skip(f"local socket bind is not available in this environment: {exc}")
+        return int(sock.getsockname()[1])
+
+
+def _wait_for_http_worker(port: int) -> None:
+    deadline = time.monotonic() + 4.0
+    last_error: Exception | None = None
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(
+                f"http://127.0.0.1:{port}/health",
+                timeout=0.2,
+            ) as response:
+                if response.status == 200:
+                    return
+        except Exception as exc:  # pragma: no cover - diagnostic path
+            last_error = exc
+            time.sleep(0.05)
+    raise AssertionError(f"local HTTP worker did not become ready: {last_error}")
