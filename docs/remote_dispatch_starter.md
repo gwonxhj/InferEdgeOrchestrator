@@ -18,9 +18,12 @@ This starter answers one narrow question:
 
 Without `--execute-plan`, it does not open network sockets or run SSH commands.
 With `--execute-plan`, it may perform a single starter HTTP POST or SSH command
-declared by the selected worker. It still does not manage Cloudflare tunnels,
-auth, heartbeat, retries against fallback workers, or long-lived production
-workers. Those remain future hardening steps.
+declared by the selected worker. If that starter execution fails with an error
+listed in the task request `retry_policy.fallback_on`, it can make one bounded
+starter attempt against an eligible fallback worker when `max_attempts` allows
+it. It still does not manage Cloudflare tunnels, auth, heartbeat, long-lived
+production workers, or production retry orchestration. Those remain future
+hardening steps.
 
 ## Inputs
 
@@ -43,6 +46,14 @@ The starter matches:
 - required backend or worker type
 - target device
 - optional retry policy fields in the task request
+
+Fallback starter execution is intentionally narrow:
+
+- the primary worker is selected first from eligible workers
+- `max_attempts` controls whether a fallback starter attempt is allowed
+- `fallback_on` controls which primary error categories trigger fallback
+- fallback attempts are recorded in `fallback_execution_result`
+- fallback execution is evidence collection, not production-grade retry control
 
 ## Run
 
@@ -133,8 +144,12 @@ When execution is requested:
   repeatable success-path smoke validation.
 - timeout, connection failure, HTTP error, and command failure are recorded in
   `remote_execution_result` instead of raising an unstructured crash.
-- fallback execution is not automatic yet; fallback candidates remain recorded
-  as future retry/fallback evidence.
+- if the primary starter fails and the retry policy allows fallback,
+  `fallback_execution_result` records the attempted fallback worker, status,
+  transport, and final starter outcome.
+- fallback execution remains bounded to starter evidence. Production-grade
+  retry, heartbeat, failover state, and worker lifecycle management remain
+  future hardening.
 
 ## Boundary
 

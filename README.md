@@ -133,7 +133,7 @@ The boundary is intentional:
 | Sustained Agent Scenario Starter | Normal / overload / sustained-high-load 3-agent modes with queue-depth timeline, latency timeline, and policy decision reasons | `configs/agent_3_workload_sustained_high_load.json` |
 | Lightweight Sustained Workload Starter | Profiled local sustained scenario for YOLO-like vision, Whisper-like command burst, FastAPI-style ingress, optional tegrastats timeline, and producer-backed starters | `python3 -m inferedge_orchestrator run-multi-workload-sustained ...` |
 | Device-Local Sustained Starter | Device-local mode using committed image, request, and resource snapshot producers before live device integrations | `configs/agent_multi_workload_sustained_device_local.json` |
-| Remote Dispatch Starter | File-based worker registry and task request contract for selecting a remote edge worker; optional `--execute-plan` records explicit HTTP/SSH starter evidence with a local HTTP worker starter without claiming production remote execution | [`docs/remote_dispatch_starter.md`](docs/remote_dispatch_starter.md) |
+| Remote Dispatch Starter | File-based worker registry and task request contract for selecting a remote edge worker; optional `--execute-plan` records explicit HTTP/SSH starter and bounded fallback evidence without claiming production remote execution | [`docs/remote_dispatch_starter.md`](docs/remote_dispatch_starter.md) |
 
 ## Validation Evidence
 
