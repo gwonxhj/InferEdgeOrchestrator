@@ -134,6 +134,20 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="remote dispatch result JSON output path",
     )
+    remote_parser.add_argument(
+        "--execute-plan",
+        action="store_true",
+        help=(
+            "explicitly execute the selected HTTP/SSH starter endpoint; default "
+            "is plan-only"
+        ),
+    )
+    remote_parser.add_argument(
+        "--timeout-sec",
+        type=float,
+        default=5.0,
+        help="timeout for explicit HTTP/SSH starter execution",
+    )
     remote_parser.set_defaults(func=_remote_dispatch)
 
     return parser
@@ -256,6 +270,8 @@ def _remote_dispatch(args: argparse.Namespace) -> int:
         registry_path=args.registry,
         request_path=args.request,
         output_path=args.output,
+        execute_plan=args.execute_plan,
+        timeout_sec=args.timeout_sec,
     )
     print(f"wrote remote dispatch: {args.output}")
     print(

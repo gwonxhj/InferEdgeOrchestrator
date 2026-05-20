@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import time
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -9,6 +13,7 @@ from typing import Any
 REGISTRY_SCHEMA_VERSION = "inferedge-remote-worker-registry-v1"
 REQUEST_SCHEMA_VERSION = "inferedge-remote-task-request-v1"
 RESULT_SCHEMA_VERSION = "inferedge-remote-dispatch-result-v1"
+EXECUTION_RESULT_SCHEMA_VERSION = "inferedge-remote-execution-result-v1"
 
 
 @dataclass(frozen=True)
@@ -69,6 +74,8 @@ def dispatch_remote_task(
     registry_path: str | Path,
     request_path: str | Path,
     output_path: str | Path,
+    execute_plan: bool = False,
+    timeout_sec: float = 5.0,
 ) -> dict[str, Any]:
     registry = _load_json(Path(registry_path))
     request = _load_json(Path(request_path))
@@ -84,6 +91,8 @@ def dispatch_remote_task(
         worker_selection=worker_selection,
         registry_path=str(registry_path),
         request_path=str(request_path),
+        execute_plan=execute_plan,
+        timeout_sec=timeout_sec,
     )
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -131,6 +140,8 @@ def _build_result(
     worker_selection: dict[str, Any],
     registry_path: str,
     request_path: str,
+    execute_plan: bool,
+    timeout_sec: float,
 ) -> dict[str, Any]:
     status = "accepted" if selected is not None else "rejected"
     worker_snapshot = {
@@ -143,13 +154,43 @@ def _build_result(
         }
         for worker in workers
     }
-    runtime_event = {
+    remote_execution_result = _execute_remote_plan(
+        selected=selected,
+        request=request,
+        execute_plan=execute_plan,
+        timeout_sec=timeout_sec,
+    )
+    remote_execution_plan = _build_remote_execution_plan(
+        selected,
+        request,
+        execution_result=remote_execution_result,
+    )
+    retry_fallback_plan = _build_retry_fallback_plan(
+        request,
+        worker_selection,
+        execution_result=remote_execution_result,
+    )
+    runtime_events = [{
         "event": "remote_dispatch_selected" if selected else "remote_dispatch_rejected",
         "task_id": request.get("task_id"),
         "agent_id": request.get("agent_id"),
         "selected_worker_id": selected.worker_id if selected else None,
         "reason": reason,
-    }
+    }]
+    if remote_execution_result["execution_requested"]:
+        runtime_events.append(
+            {
+                "event": "remote_execution_completed"
+                if remote_execution_result["status"] == "succeeded"
+                else "remote_execution_failed",
+                "task_id": request.get("task_id"),
+                "agent_id": request.get("agent_id"),
+                "selected_worker_id": selected.worker_id if selected else None,
+                "transport": remote_execution_result["transport"],
+                "status": remote_execution_result["status"],
+                "error_category": remote_execution_result.get("error_category"),
+            }
+        )
     return {
         "schema_version": RESULT_SCHEMA_VERSION,
         "dispatch_status": status,
@@ -158,18 +199,20 @@ def _build_result(
         "remote_execution": {
             "mode": "file_contract_starter",
             "production_remote_execution": False,
+            "execution_requested": execute_plan,
             "registry_path": registry_path,
             "request_path": request_path,
         },
-        "remote_execution_plan": _build_remote_execution_plan(selected, request),
+        "remote_execution_plan": remote_execution_plan,
+        "remote_execution_result": remote_execution_result,
         "worker_selection": worker_selection,
-        "retry_fallback_plan": _build_retry_fallback_plan(request, worker_selection),
+        "retry_fallback_plan": retry_fallback_plan,
         "task_request": request,
         "worker_health_snapshot": {
             "schema_version": "inferedge-remote-worker-health-v1",
             "workers": worker_snapshot,
         },
-        "runtime_events": [runtime_event],
+        "runtime_events": runtime_events,
     }
 
 
@@ -225,6 +268,7 @@ def _build_worker_selection(
 def _build_retry_fallback_plan(
     request: dict[str, Any],
     worker_selection: dict[str, Any],
+    execution_result: dict[str, Any],
 ) -> dict[str, Any]:
     retry_policy = request.get("retry_policy", {})
     if not isinstance(retry_policy, dict):
@@ -242,13 +286,17 @@ def _build_retry_fallback_plan(
         "fallback_on": [str(item) for item in fallback_on],
         "primary_worker_id": worker_selection.get("selected_worker_id"),
         "fallback_worker_ids": worker_selection.get("fallback_worker_ids", []),
-        "execution_performed": False,
+        "execution_performed": execution_result["execution_performed"],
+        "fallback_execution_performed": False,
+        "last_execution_status": execution_result["status"],
     }
 
 
 def _build_remote_execution_plan(
     selected: RemoteWorker | None,
     request: dict[str, Any],
+    *,
+    execution_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if selected is None:
         return {
@@ -257,10 +305,17 @@ def _build_remote_execution_plan(
             "network_execution_performed": False,
         }
     transport = _transport_from_endpoint_type(selected.endpoint_type)
+    execution_requested = bool(
+        execution_result and execution_result["execution_requested"]
+    )
     return {
         "schema_version": "inferedge-remote-execution-plan-v1",
-        "mode": "plan_only",
-        "network_execution_performed": False,
+        "mode": "starter_execute" if execution_requested else "plan_only",
+        "network_execution_performed": bool(
+            execution_result
+            and execution_result["execution_performed"]
+            and transport in {"http", "ssh"}
+        ),
         "transport": transport,
         "endpoint_type": selected.endpoint_type,
         "selected_worker_id": selected.worker_id,
@@ -268,9 +323,247 @@ def _build_remote_execution_plan(
         "agent_id": request.get("agent_id"),
         "note": (
             "This is a remote execution starter plan. It does not open SSH/HTTP "
-            "connections or run production remote workers."
+            "connections unless execute_plan is explicitly enabled, and it does "
+            "not run production remote workers."
         ),
     }
+
+
+def _execute_remote_plan(
+    *,
+    selected: RemoteWorker | None,
+    request: dict[str, Any],
+    execute_plan: bool,
+    timeout_sec: float,
+) -> dict[str, Any]:
+    if selected is None:
+        return _execution_result(
+            request=request,
+            selected=None,
+            execute_plan=execute_plan,
+            status="skipped",
+            execution_performed=False,
+            error_category="no_worker_selected",
+        )
+    transport = _transport_from_endpoint_type(selected.endpoint_type)
+    if not execute_plan:
+        return _execution_result(
+            request=request,
+            selected=selected,
+            execute_plan=False,
+            status="skipped",
+            execution_performed=False,
+            transport=transport,
+            error_category="execution_not_requested",
+        )
+    started = time.monotonic()
+    if transport == "http":
+        result = _execute_http_request(selected, request, timeout_sec)
+    elif transport == "ssh":
+        result = _execute_ssh_command(selected, request, timeout_sec)
+    else:
+        result = _execution_result(
+            request=request,
+            selected=selected,
+            execute_plan=True,
+            status="skipped",
+            execution_performed=False,
+            transport=transport,
+            error_category="unsupported_starter_transport",
+            error_message="file_contract workers are selection-only in this starter",
+        )
+    result["duration_ms"] = round((time.monotonic() - started) * 1000, 3)
+    return result
+
+
+def _execute_http_request(
+    selected: RemoteWorker,
+    request: dict[str, Any],
+    timeout_sec: float,
+) -> dict[str, Any]:
+    endpoint_url = _optional_string(
+        selected.metadata.get("endpoint_url", request.get("endpoint_url"))
+    )
+    if not endpoint_url:
+        return _execution_result(
+            request=request,
+            selected=selected,
+            execute_plan=True,
+            status="failed",
+            execution_performed=False,
+            transport="http",
+            error_category="missing_endpoint_url",
+            error_message="http_request worker requires metadata.endpoint_url",
+        )
+    payload = {
+        "schema_version": "inferedge-remote-http-task-v1",
+        "worker_id": selected.worker_id,
+        "task_request": request,
+    }
+    body = json.dumps(payload).encode("utf-8")
+    http_request = urllib.request.Request(
+        endpoint_url,
+        data=body,
+        method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(http_request, timeout=timeout_sec) as response:
+            response_body = response.read().decode("utf-8")
+            response_json = _maybe_json(response_body)
+            return _execution_result(
+                request=request,
+                selected=selected,
+                execute_plan=True,
+                status="succeeded",
+                execution_performed=True,
+                transport="http",
+                http_status=int(response.status),
+                response_json=response_json,
+                response_body=response_body if response_json is None else None,
+            )
+    except TimeoutError as exc:
+        return _execution_result(
+            request=request,
+            selected=selected,
+            execute_plan=True,
+            status="failed",
+            execution_performed=True,
+            transport="http",
+            error_category="timeout",
+            error_message=str(exc),
+        )
+    except urllib.error.HTTPError as exc:
+        return _execution_result(
+            request=request,
+            selected=selected,
+            execute_plan=True,
+            status="failed",
+            execution_performed=True,
+            transport="http",
+            http_status=int(exc.code),
+            error_category="http_error",
+            error_message=str(exc),
+        )
+    except urllib.error.URLError as exc:
+        return _execution_result(
+            request=request,
+            selected=selected,
+            execute_plan=True,
+            status="failed",
+            execution_performed=True,
+            transport="http",
+            error_category="connection_error",
+            error_message=str(exc.reason),
+        )
+
+
+def _execute_ssh_command(
+    selected: RemoteWorker,
+    request: dict[str, Any],
+    timeout_sec: float,
+) -> dict[str, Any]:
+    ssh_host = _optional_string(selected.metadata.get("ssh_host", request.get("ssh_host")))
+    command = _optional_string(
+        selected.metadata.get("ssh_command", request.get("remote_command"))
+    )
+    if not ssh_host or not command:
+        return _execution_result(
+            request=request,
+            selected=selected,
+            execute_plan=True,
+            status="failed",
+            execution_performed=False,
+            transport="ssh",
+            error_category="missing_ssh_contract",
+            error_message="ssh_command worker requires metadata.ssh_host and metadata.ssh_command",
+        )
+    try:
+        completed = subprocess.run(
+            ["ssh", ssh_host, command],
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=timeout_sec,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return _execution_result(
+            request=request,
+            selected=selected,
+            execute_plan=True,
+            status="failed",
+            execution_performed=True,
+            transport="ssh",
+            error_category="timeout",
+            error_message=str(exc),
+        )
+    status = "succeeded" if completed.returncode == 0 else "failed"
+    return _execution_result(
+        request=request,
+        selected=selected,
+        execute_plan=True,
+        status=status,
+        execution_performed=True,
+        transport="ssh",
+        exit_code=completed.returncode,
+        stdout=completed.stdout[-2000:] if completed.stdout else "",
+        stderr=completed.stderr[-2000:] if completed.stderr else "",
+        error_category=None if status == "succeeded" else "remote_command_failed",
+    )
+
+
+def _execution_result(
+    *,
+    request: dict[str, Any],
+    selected: RemoteWorker | None,
+    execute_plan: bool,
+    status: str,
+    execution_performed: bool,
+    transport: str | None = None,
+    error_category: str | None = None,
+    error_message: str | None = None,
+    http_status: int | None = None,
+    response_json: dict[str, Any] | list[Any] | None = None,
+    response_body: str | None = None,
+    exit_code: int | None = None,
+    stdout: str | None = None,
+    stderr: str | None = None,
+) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "schema_version": EXECUTION_RESULT_SCHEMA_VERSION,
+        "execution_requested": execute_plan,
+        "execution_performed": execution_performed,
+        "production_remote_execution": False,
+        "status": status,
+        "transport": transport,
+        "selected_worker_id": selected.worker_id if selected else None,
+        "task_id": request.get("task_id"),
+        "agent_id": request.get("agent_id"),
+    }
+    optional_values = {
+        "error_category": error_category,
+        "error_message": error_message,
+        "http_status": http_status,
+        "response_json": response_json,
+        "response_body": response_body,
+        "exit_code": exit_code,
+        "stdout": stdout,
+        "stderr": stderr,
+    }
+    result.update(
+        {key: value for key, value in optional_values.items() if value is not None}
+    )
+    return result
+
+
+def _maybe_json(value: str) -> dict[str, Any] | list[Any] | None:
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return None
+    if isinstance(parsed, (dict, list)):
+        return parsed
+    return None
 
 
 def _validate_registry(registry: dict[str, Any]) -> None:

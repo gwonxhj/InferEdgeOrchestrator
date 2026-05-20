@@ -124,8 +124,10 @@ device, and health state, then writes an
 
 The result also records worker selection evidence, fallback candidates,
 retry/fallback planning, and a `plan_only` remote execution plan. SSH/HTTP
-endpoint types may be represented as planned transports, but the starter does
-not open network connections.
+endpoint types may be represented as planned transports. By default the starter
+does not open network connections; when `--execute-plan` is explicitly enabled,
+it may perform a single HTTP POST or SSH command and record the structured
+execution result.
 
 This is the first contract for remote edge operation. It does not claim
 production remote execution, distributed scheduling, or cloud orchestration.
