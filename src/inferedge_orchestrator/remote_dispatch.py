@@ -160,6 +160,14 @@ def _build_result(
         execute_plan=execute_plan,
         timeout_sec=timeout_sec,
     )
+    fallback_execution_result = _execute_fallback_plan(
+        workers=workers,
+        request=request,
+        worker_selection=worker_selection,
+        primary_execution_result=remote_execution_result,
+        execute_plan=execute_plan,
+        timeout_sec=timeout_sec,
+    )
     remote_execution_plan = _build_remote_execution_plan(
         selected,
         request,
@@ -169,6 +177,7 @@ def _build_result(
         request,
         worker_selection,
         execution_result=remote_execution_result,
+        fallback_execution_result=fallback_execution_result,
     )
     runtime_events = [{
         "event": "remote_dispatch_selected" if selected else "remote_dispatch_rejected",
@@ -191,7 +200,24 @@ def _build_result(
                 "error_category": remote_execution_result.get("error_category"),
             }
         )
-    return {
+    if fallback_execution_result:
+        for attempt in fallback_execution_result["attempts"]:
+            runtime_events.append(
+                {
+                    "event": "remote_fallback_execution_completed"
+                    if attempt["status"] == "succeeded"
+                    else "remote_fallback_execution_failed",
+                    "task_id": request.get("task_id"),
+                    "agent_id": request.get("agent_id"),
+                    "selected_worker_id": attempt.get("selected_worker_id"),
+                    "primary_worker_id": fallback_execution_result["primary_worker_id"],
+                    "transport": attempt.get("transport"),
+                    "status": attempt["status"],
+                    "error_category": attempt.get("error_category"),
+                    "fallback_attempt": attempt["fallback_attempt"],
+                }
+            )
+    result = {
         "schema_version": RESULT_SCHEMA_VERSION,
         "dispatch_status": status,
         "selected_worker_id": selected.worker_id if selected else None,
@@ -214,6 +240,9 @@ def _build_result(
         },
         "runtime_events": runtime_events,
     }
+    if fallback_execution_result:
+        result["fallback_execution_result"] = fallback_execution_result
+    return result
 
 
 def _evaluate_worker(worker: RemoteWorker, request: dict[str, Any]) -> dict[str, Any]:
@@ -269,27 +298,35 @@ def _build_retry_fallback_plan(
     request: dict[str, Any],
     worker_selection: dict[str, Any],
     execution_result: dict[str, Any],
+    fallback_execution_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    retry_policy = request.get("retry_policy", {})
-    if not isinstance(retry_policy, dict):
-        retry_policy = {}
-    max_attempts = _positive_int(retry_policy.get("max_attempts"), default=1)
-    fallback_on = retry_policy.get(
-        "fallback_on",
-        ["timeout", "worker_unhealthy", "runtime_error"],
-    )
-    if not isinstance(fallback_on, list):
-        fallback_on = ["timeout", "worker_unhealthy", "runtime_error"]
-    return {
+    max_attempts, fallback_on = _normalized_retry_policy(request)
+    plan = {
         "schema_version": "inferedge-remote-retry-fallback-plan-v1",
         "max_attempts": max_attempts,
-        "fallback_on": [str(item) for item in fallback_on],
+        "fallback_on": fallback_on,
         "primary_worker_id": worker_selection.get("selected_worker_id"),
         "fallback_worker_ids": worker_selection.get("fallback_worker_ids", []),
         "execution_performed": execution_result["execution_performed"],
-        "fallback_execution_performed": False,
         "last_execution_status": execution_result["status"],
     }
+    if fallback_execution_result:
+        plan.update(
+            {
+                "fallback_execution_performed": any(
+                    attempt["execution_performed"]
+                    for attempt in fallback_execution_result["attempts"]
+                ),
+                "fallback_attempted_worker_ids": fallback_execution_result[
+                    "attempted_worker_ids"
+                ],
+                "fallback_final_status": fallback_execution_result["final_status"],
+                "last_execution_status": fallback_execution_result["final_status"],
+            }
+        )
+    else:
+        plan["fallback_execution_performed"] = False
+    return plan
 
 
 def _build_remote_execution_plan(
@@ -374,6 +411,87 @@ def _execute_remote_plan(
         )
     result["duration_ms"] = round((time.monotonic() - started) * 1000, 3)
     return result
+
+
+def _execute_fallback_plan(
+    *,
+    workers: list[RemoteWorker],
+    request: dict[str, Any],
+    worker_selection: dict[str, Any],
+    primary_execution_result: dict[str, Any],
+    execute_plan: bool,
+    timeout_sec: float,
+) -> dict[str, Any] | None:
+    if not _should_try_fallback(
+        request=request,
+        worker_selection=worker_selection,
+        primary_execution_result=primary_execution_result,
+        execute_plan=execute_plan,
+    ):
+        return None
+
+    max_attempts, _fallback_on = _normalized_retry_policy(request)
+    fallback_limit = max_attempts - 1
+    worker_by_id = {worker.worker_id: worker for worker in workers}
+    attempts: list[dict[str, Any]] = []
+    for fallback_worker_id in worker_selection.get("fallback_worker_ids", []):
+        if len(attempts) >= fallback_limit:
+            break
+        fallback_worker = worker_by_id.get(fallback_worker_id)
+        if fallback_worker is None:
+            continue
+        attempt = _execute_remote_plan(
+            selected=fallback_worker,
+            request=request,
+            execute_plan=True,
+            timeout_sec=timeout_sec,
+        )
+        attempt["fallback_attempt"] = len(attempts) + 1
+        attempt["fallback_for_worker_id"] = primary_execution_result.get(
+            "selected_worker_id"
+        )
+        attempts.append(attempt)
+        if attempt["status"] == "succeeded":
+            break
+
+    if not attempts:
+        return None
+
+    return {
+        "schema_version": "inferedge-remote-fallback-execution-v1",
+        "fallback_requested": True,
+        "fallback_reason": primary_execution_result.get("error_category")
+        or primary_execution_result["status"],
+        "primary_worker_id": primary_execution_result.get("selected_worker_id"),
+        "attempted_worker_ids": [
+            str(attempt.get("selected_worker_id")) for attempt in attempts
+        ],
+        "final_status": attempts[-1]["status"],
+        "attempts": attempts,
+        "production_remote_execution": False,
+    }
+
+
+def _should_try_fallback(
+    *,
+    request: dict[str, Any],
+    worker_selection: dict[str, Any],
+    primary_execution_result: dict[str, Any],
+    execute_plan: bool,
+) -> bool:
+    if not execute_plan:
+        return False
+    if primary_execution_result["status"] == "succeeded":
+        return False
+    if not worker_selection.get("fallback_worker_ids"):
+        return False
+    max_attempts, fallback_on = _normalized_retry_policy(request)
+    if max_attempts <= 1:
+        return False
+    error_category = primary_execution_result.get("error_category")
+    if error_category:
+        return str(error_category) in fallback_on
+    return primary_execution_result["status"] in fallback_on
 
 
 def _execute_http_request(
@@ -617,6 +735,20 @@ def _positive_int(value: Any, *, default: int) -> int:
     except (TypeError, ValueError):
         return default
     return parsed if parsed > 0 else default
+
+
+def _normalized_retry_policy(request: dict[str, Any]) -> tuple[int, list[str]]:
+    retry_policy = request.get("retry_policy", {})
+    if not isinstance(retry_policy, dict):
+        retry_policy = {}
+    max_attempts = _positive_int(retry_policy.get("max_attempts"), default=1)
+    fallback_on = retry_policy.get(
+        "fallback_on",
+        ["timeout", "worker_unhealthy", "runtime_error"],
+    )
+    if not isinstance(fallback_on, list):
+        fallback_on = ["timeout", "worker_unhealthy", "runtime_error"]
+    return max_attempts, [str(item) for item in fallback_on]
 
 
 def _transport_from_endpoint_type(endpoint_type: str) -> str:

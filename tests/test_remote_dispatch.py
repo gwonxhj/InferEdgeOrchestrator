@@ -5,6 +5,7 @@ import socket
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -264,6 +265,120 @@ def test_remote_dispatch_execute_plan_posts_to_http_starter(
         "worker_id": "http-worker",
     }
     assert result["runtime_events"][-1]["event"] == "remote_execution_completed"
+
+
+def test_remote_dispatch_execute_plan_falls_back_after_primary_connection_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[dict[str, object]] = []
+
+    class FakeResponse:
+        status = 200
+
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            payload = calls[-1]["payload"]
+            assert isinstance(payload, dict)
+            return json.dumps(
+                {
+                    "status": "ok",
+                    "task_id": payload["task_request"]["task_id"],
+                    "worker_id": payload["worker_id"],
+                }
+            ).encode("utf-8")
+
+    def fake_urlopen(request: object, timeout: float) -> FakeResponse:
+        payload = json.loads(request.data.decode("utf-8"))
+        calls.append({"url": request.full_url, "payload": payload, "timeout": timeout})
+        if payload["worker_id"] == "primary-http-worker":
+            raise urllib.error.URLError("primary refused")
+        return FakeResponse()
+
+    monkeypatch.setattr(
+        "inferedge_orchestrator.remote_dispatch.urllib.request.urlopen",
+        fake_urlopen,
+    )
+    registry = {
+        "schema_version": "inferedge-remote-worker-registry-v1",
+        "workers": [
+            {
+                "worker_id": "primary-http-worker",
+                "status": "online",
+                "endpoint_type": "http_request",
+                "capabilities": {
+                    "workers": ["onnxruntime"],
+                    "backends": ["onnxruntime"],
+                    "devices": ["cpu"],
+                    "priority_capacity": 10,
+                },
+                "health": {"state": "healthy"},
+                "metadata": {"endpoint_url": "http://primary.local/execute"},
+            },
+            {
+                "worker_id": "fallback-http-worker",
+                "status": "online",
+                "endpoint_type": "http_request",
+                "capabilities": {
+                    "workers": ["onnxruntime"],
+                    "backends": ["onnxruntime"],
+                    "devices": ["cpu"],
+                    "priority_capacity": 5,
+                },
+                "health": {"state": "healthy"},
+                "metadata": {"endpoint_url": "http://fallback.local/execute"},
+            },
+        ],
+    }
+    request = {
+        "schema_version": "inferedge-remote-task-request-v1",
+        "task_id": "task_http_fallback_001",
+        "agent_id": "vision_agent",
+        "required_backend": "onnxruntime",
+        "device_target": "cpu",
+        "retry_policy": {
+            "max_attempts": 2,
+            "fallback_on": ["connection_error", "timeout"],
+        },
+    }
+    registry_path = tmp_path / "registry.json"
+    request_path = tmp_path / "request.json"
+    output = tmp_path / "remote_dispatch.json"
+    registry_path.write_text(json.dumps(registry), encoding="utf-8")
+    request_path.write_text(json.dumps(request), encoding="utf-8")
+
+    result = dispatch_remote_task(
+        registry_path=registry_path,
+        request_path=request_path,
+        output_path=output,
+        execute_plan=True,
+        timeout_sec=2.0,
+    )
+
+    assert [call["payload"]["worker_id"] for call in calls] == [
+        "primary-http-worker",
+        "fallback-http-worker",
+    ]
+    assert result["remote_execution_result"]["status"] == "failed"
+    assert result["remote_execution_result"]["error_category"] == "connection_error"
+    fallback = result["fallback_execution_result"]
+    assert fallback["schema_version"] == "inferedge-remote-fallback-execution-v1"
+    assert fallback["primary_worker_id"] == "primary-http-worker"
+    assert fallback["attempted_worker_ids"] == ["fallback-http-worker"]
+    assert fallback["final_status"] == "succeeded"
+    assert fallback["attempts"][0]["status"] == "succeeded"
+    assert fallback["attempts"][0]["fallback_attempt"] == 1
+    assert result["retry_fallback_plan"]["fallback_execution_performed"] is True
+    assert result["retry_fallback_plan"]["fallback_attempted_worker_ids"] == [
+        "fallback-http-worker"
+    ]
+    assert result["retry_fallback_plan"]["last_execution_status"] == "succeeded"
+    assert result["runtime_events"][-1]["event"] == "remote_fallback_execution_completed"
 
 
 def test_remote_dispatch_execute_plan_against_local_http_worker(
