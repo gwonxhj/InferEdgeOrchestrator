@@ -49,7 +49,7 @@ Portfolio brief: [PORTFOLIO.md](PORTFOLIO.md) ([한국어](PORTFOLIO.ko.md))
 | Worker abstraction | Shared worker interface with `dummy`, `onnxruntime`, and TensorRT-backed workers |
 | Runtime evidence | Telemetry JSON records executed/dropped counts, latency, backlog, result events, resource snapshots, and policy decisions |
 | Agent contract bridge | Optional task references to Forge agent manifests and Runtime agent results, exported as orchestration summary evidence |
-| Remote dispatch starter | File-based worker registry + task request contract selects an edge worker and records decision, fallback, and plan-only execution evidence |
+| Remote dispatch starter | File-based worker registry + task request contract selects an edge worker and records decision, fallback, plan-only evidence, and optional explicit HTTP/SSH starter execution evidence |
 | Jetson smoke coverage | Jetson Orin Nano smoke scripts exercise CLI, telemetry, `tegrastats` parsing, ONNX Runtime execution, and TensorRT-backed contention |
 
 ## Runtime Model
@@ -133,7 +133,7 @@ The boundary is intentional:
 | Sustained Agent Scenario Starter | Normal / overload / sustained-high-load 3-agent modes with queue-depth timeline, latency timeline, and policy decision reasons | `configs/agent_3_workload_sustained_high_load.json` |
 | Lightweight Sustained Workload Starter | Profiled local sustained scenario for YOLO-like vision, Whisper-like command burst, FastAPI-style ingress, optional tegrastats timeline, and producer-backed starters | `python3 -m inferedge_orchestrator run-multi-workload-sustained ...` |
 | Device-Local Sustained Starter | Device-local mode using committed image, request, and resource snapshot producers before live device integrations | `configs/agent_multi_workload_sustained_device_local.json` |
-| Remote Dispatch Starter | File-based worker registry and task request contract for selecting a remote edge worker and recording plan-only fallback evidence without claiming production remote execution | [`docs/remote_dispatch_starter.md`](docs/remote_dispatch_starter.md) |
+| Remote Dispatch Starter | File-based worker registry and task request contract for selecting a remote edge worker; optional `--execute-plan` records explicit HTTP/SSH starter execution evidence without claiming production remote execution | [`docs/remote_dispatch_starter.md`](docs/remote_dispatch_starter.md) |
 
 ## Validation Evidence
 

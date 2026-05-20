@@ -5,6 +5,9 @@ Language: English | [한국어](remote_dispatch_starter.ko.md)
 InferEdgeOrchestrator includes a small file-based remote dispatch starter for
 the Runtime Operation Platform roadmap. It is designed to prove the handoff
 contract for remote edge workers without claiming production remote execution.
+By default it remains plan-only. When `--execute-plan` is explicitly enabled,
+it can attempt a small HTTP/SSH starter call and record the result as structured
+evidence.
 
 ## Scope
 
@@ -13,9 +16,11 @@ This starter answers one narrow question:
 > Given a remote worker registry and a task request, which edge worker should
 > receive the task, and why?
 
-It does not open network sockets, run SSH commands, manage Cloudflare tunnels,
-or keep long-lived production workers alive. Those remain future hardening
-steps.
+Without `--execute-plan`, it does not open network sockets or run SSH commands.
+With `--execute-plan`, it may perform a single starter HTTP POST or SSH command
+declared by the selected worker. It still does not manage Cloudflare tunnels,
+auth, heartbeat, retries against fallback workers, or long-lived production
+workers. Those remain future hardening steps.
 
 ## Inputs
 
@@ -46,6 +51,17 @@ python3 -m inferedge_orchestrator remote-dispatch \
   --output reports/remote_dispatch_result.json
 ```
 
+Explicit starter execution:
+
+```bash
+python3 -m inferedge_orchestrator remote-dispatch \
+  --registry examples/remote_worker_registry.json \
+  --request examples/remote_task_request.json \
+  --output reports/remote_dispatch_result.json \
+  --execute-plan \
+  --timeout-sec 5
+```
+
 Expected output:
 
 ```json
@@ -55,7 +71,8 @@ Expected output:
   "selected_worker_id": "jetson-nano-01",
   "remote_execution": {
     "mode": "file_contract_starter",
-    "production_remote_execution": false
+    "production_remote_execution": false,
+    "execution_requested": false
   }
 }
 ```
@@ -73,14 +90,25 @@ The result preserves:
 - worker selection evidence with eligible/rejected worker reasons
 - retry/fallback plan with primary and fallback worker ids
 - remote execution plan in `plan_only` mode
+- remote execution result showing skipped/succeeded/failed starter execution
 
 This output is intended to become an input to AIGuard and Lab reports once the
 remote execution path grows beyond the starter contract.
 
 The starter intentionally records execution planning without opening network
-connections. If a selected worker declares `endpoint_type` such as
+connections by default. If a selected worker declares `endpoint_type` such as
 `ssh_command` or `http_request`, the output records the planned transport as
-`ssh` or `http`, but `network_execution_performed` remains `false`.
+`ssh` or `http`, but `network_execution_performed` remains `false` until
+`--execute-plan` is explicitly enabled.
+
+When execution is requested:
+
+- `http_request` posts the task request to `metadata.endpoint_url`.
+- `ssh_command` runs `metadata.ssh_command` on `metadata.ssh_host`.
+- timeout, connection failure, HTTP error, and command failure are recorded in
+  `remote_execution_result` instead of raising an unstructured crash.
+- fallback execution is not automatic yet; fallback candidates remain recorded
+  as future retry/fallback evidence.
 
 ## Boundary
 
@@ -89,6 +117,7 @@ Use precise wording:
 - Allowed: "file-based remote dispatch starter"
 - Allowed: "remote worker selection contract"
 - Allowed: "remote execution plan-only starter"
+- Allowed: "explicit HTTP/SSH remote execution starter"
 - Avoid: "production remote execution"
 - Avoid: "distributed scheduler"
 - Avoid: "cloud orchestration"
