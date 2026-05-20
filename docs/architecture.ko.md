@@ -120,6 +120,10 @@ remote dispatch starter는 의도적으로 file-based다. worker registry와 tas
 request를 읽고, backend, device, health state가 맞는 online worker를 선택한 뒤
 `inferedge-remote-dispatch-result-v1` artifact를 쓴다.
 
+결과에는 worker selection evidence, fallback 후보, retry/fallback plan,
+`plan_only` remote execution plan도 기록된다. SSH/HTTP endpoint type은 planned
+transport로 표현할 수 있지만, starter는 network connection을 열지 않는다.
+
 이 기능은 remote edge operation을 위한 첫 contract다. production remote
 execution, distributed scheduling, cloud orchestration을 완료했다고 주장하지
 않는다. 해당 항목은 worker selection contract가 안정화된 뒤의 future hardening

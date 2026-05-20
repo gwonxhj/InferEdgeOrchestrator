@@ -35,6 +35,7 @@ The starter matches:
 - health state: `healthy` or `constrained`
 - required backend or worker type
 - target device
+- optional retry policy fields in the task request
 
 ## Run
 
@@ -69,9 +70,17 @@ The result preserves:
 - original task request
 - worker health snapshot
 - runtime event showing selected or rejected dispatch
+- worker selection evidence with eligible/rejected worker reasons
+- retry/fallback plan with primary and fallback worker ids
+- remote execution plan in `plan_only` mode
 
 This output is intended to become an input to AIGuard and Lab reports once the
 remote execution path grows beyond the starter contract.
+
+The starter intentionally records execution planning without opening network
+connections. If a selected worker declares `endpoint_type` such as
+`ssh_command` or `http_request`, the output records the planned transport as
+`ssh` or `http`, but `network_execution_performed` remains `false`.
 
 ## Boundary
 
@@ -79,6 +88,7 @@ Use precise wording:
 
 - Allowed: "file-based remote dispatch starter"
 - Allowed: "remote worker selection contract"
+- Allowed: "remote execution plan-only starter"
 - Avoid: "production remote execution"
 - Avoid: "distributed scheduler"
 - Avoid: "cloud orchestration"

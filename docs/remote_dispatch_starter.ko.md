@@ -35,6 +35,7 @@ starter는 다음 항목을 기준으로 worker를 선택한다.
 - health state: `healthy` 또는 `constrained`
 - required backend 또는 worker type
 - target device
+- task request의 optional retry policy
 
 ## 실행
 
@@ -69,9 +70,17 @@ python3 -m inferedge_orchestrator remote-dispatch \
 - 원본 task request
 - worker health snapshot
 - selected 또는 rejected dispatch를 나타내는 runtime event
+- eligible/rejected worker 이유를 포함한 worker selection evidence
+- primary/fallback worker id를 포함한 retry/fallback plan
+- `plan_only` mode의 remote execution plan
 
 이 출력은 remote execution path가 starter contract를 넘어 확장될 때 AIGuard와
 Lab report의 입력으로 연결될 수 있다.
+
+starter는 의도적으로 execution planning만 기록하고 network connection은 열지
+않는다. 선택된 worker가 `ssh_command` 또는 `http_request` 같은
+`endpoint_type`을 선언하면 출력에는 planned transport가 `ssh` 또는 `http`로
+기록되지만, `network_execution_performed`는 계속 `false`다.
 
 ## Boundary
 
@@ -79,6 +88,7 @@ Lab report의 입력으로 연결될 수 있다.
 
 - 허용: "file-based remote dispatch starter"
 - 허용: "remote worker selection contract"
+- 허용: "remote execution plan-only starter"
 - 피할 표현: "production remote execution"
 - 피할 표현: "distributed scheduler"
 - 피할 표현: "cloud orchestration"
