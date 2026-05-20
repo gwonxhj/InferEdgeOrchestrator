@@ -75,12 +75,13 @@ def dispatch_remote_task(
     _validate_registry(registry)
     _validate_request(request)
     workers = [RemoteWorker.from_dict(item) for item in registry.get("workers", [])]
-    selected, reason = _select_worker(workers, request)
+    selected, reason, worker_selection = _select_worker(workers, request)
     result = _build_result(
         request=request,
         workers=workers,
         selected=selected,
         reason=reason,
+        worker_selection=worker_selection,
         registry_path=str(registry_path),
         request_path=str(request_path),
     )
@@ -93,16 +94,19 @@ def dispatch_remote_task(
 def _select_worker(
     workers: list[RemoteWorker],
     request: dict[str, Any],
-) -> tuple[RemoteWorker | None, str]:
+) -> tuple[RemoteWorker | None, str, dict[str, Any]]:
+    evaluations = [_evaluate_worker(worker, request) for worker in workers]
     candidates = [
-        worker
-        for worker in workers
-        if worker.status == "online"
-        and worker.health_state in {"healthy", "constrained"}
-        and worker.supports(request)
+        item["worker"]
+        for item in evaluations
+        if item["eligible"]
     ]
     if not candidates:
-        return None, "no online worker matched backend/device health requirements"
+        return (
+            None,
+            "no online worker matched backend/device health requirements",
+            _build_worker_selection(None, [], evaluations),
+        )
     candidates.sort(
         key=lambda worker: (
             _health_rank(worker.health_state),
@@ -111,7 +115,11 @@ def _select_worker(
         )
     )
     selected = candidates[0]
-    return selected, "selected online worker matching backend/device requirements"
+    return (
+        selected,
+        "selected online worker matching backend/device requirements",
+        _build_worker_selection(selected, candidates, evaluations),
+    )
 
 
 def _build_result(
@@ -120,6 +128,7 @@ def _build_result(
     workers: list[RemoteWorker],
     selected: RemoteWorker | None,
     reason: str,
+    worker_selection: dict[str, Any],
     registry_path: str,
     request_path: str,
 ) -> dict[str, Any]:
@@ -152,12 +161,115 @@ def _build_result(
             "registry_path": registry_path,
             "request_path": request_path,
         },
+        "remote_execution_plan": _build_remote_execution_plan(selected, request),
+        "worker_selection": worker_selection,
+        "retry_fallback_plan": _build_retry_fallback_plan(request, worker_selection),
         "task_request": request,
         "worker_health_snapshot": {
             "schema_version": "inferedge-remote-worker-health-v1",
             "workers": worker_snapshot,
         },
         "runtime_events": [runtime_event],
+    }
+
+
+def _evaluate_worker(worker: RemoteWorker, request: dict[str, Any]) -> dict[str, Any]:
+    reasons: list[str] = []
+    if worker.status != "online":
+        reasons.append(f"worker status is {worker.status}")
+    if worker.health_state not in {"healthy", "constrained"}:
+        reasons.append(f"worker health is {worker.health_state}")
+    if not worker.supports(request):
+        reasons.append("worker capabilities do not match backend/device request")
+    return {
+        "worker": worker,
+        "worker_id": worker.worker_id,
+        "eligible": not reasons,
+        "status": worker.status,
+        "health_state": worker.health_state,
+        "endpoint_type": worker.endpoint_type,
+        "decision_reason": "eligible" if not reasons else "; ".join(reasons),
+    }
+
+
+def _build_worker_selection(
+    selected: RemoteWorker | None,
+    candidates: list[RemoteWorker],
+    evaluations: list[dict[str, Any]],
+) -> dict[str, Any]:
+    selected_worker_id = selected.worker_id if selected else None
+    fallback_candidates = [
+        worker.worker_id
+        for worker in candidates
+        if worker.worker_id != selected_worker_id
+    ]
+    return {
+        "schema_version": "inferedge-remote-worker-selection-v1",
+        "selected_worker_id": selected_worker_id,
+        "candidate_worker_ids": [worker.worker_id for worker in candidates],
+        "fallback_worker_ids": fallback_candidates,
+        "evaluations": [
+            {
+                "worker_id": item["worker_id"],
+                "eligible": item["eligible"],
+                "status": item["status"],
+                "health_state": item["health_state"],
+                "endpoint_type": item["endpoint_type"],
+                "decision_reason": item["decision_reason"],
+            }
+            for item in evaluations
+        ],
+    }
+
+
+def _build_retry_fallback_plan(
+    request: dict[str, Any],
+    worker_selection: dict[str, Any],
+) -> dict[str, Any]:
+    retry_policy = request.get("retry_policy", {})
+    if not isinstance(retry_policy, dict):
+        retry_policy = {}
+    max_attempts = _positive_int(retry_policy.get("max_attempts"), default=1)
+    fallback_on = retry_policy.get(
+        "fallback_on",
+        ["timeout", "worker_unhealthy", "runtime_error"],
+    )
+    if not isinstance(fallback_on, list):
+        fallback_on = ["timeout", "worker_unhealthy", "runtime_error"]
+    return {
+        "schema_version": "inferedge-remote-retry-fallback-plan-v1",
+        "max_attempts": max_attempts,
+        "fallback_on": [str(item) for item in fallback_on],
+        "primary_worker_id": worker_selection.get("selected_worker_id"),
+        "fallback_worker_ids": worker_selection.get("fallback_worker_ids", []),
+        "execution_performed": False,
+    }
+
+
+def _build_remote_execution_plan(
+    selected: RemoteWorker | None,
+    request: dict[str, Any],
+) -> dict[str, Any]:
+    if selected is None:
+        return {
+            "schema_version": "inferedge-remote-execution-plan-v1",
+            "mode": "no_worker_selected",
+            "network_execution_performed": False,
+        }
+    transport = _transport_from_endpoint_type(selected.endpoint_type)
+    return {
+        "schema_version": "inferedge-remote-execution-plan-v1",
+        "mode": "plan_only",
+        "network_execution_performed": False,
+        "transport": transport,
+        "endpoint_type": selected.endpoint_type,
+        "selected_worker_id": selected.worker_id,
+        "task_id": request.get("task_id"),
+        "agent_id": request.get("agent_id"),
+        "note": (
+            "This is a remote execution starter plan. It does not open SSH/HTTP "
+            "connections or run production remote workers."
+        ),
     }
 
 
@@ -204,3 +316,19 @@ def _string_set(value: Any) -> set[str]:
 
 def _health_rank(state: str) -> int:
     return {"healthy": 0, "constrained": 1}.get(state, 99)
+
+
+def _positive_int(value: Any, *, default: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed > 0 else default
+
+
+def _transport_from_endpoint_type(endpoint_type: str) -> str:
+    if endpoint_type.startswith("ssh"):
+        return "ssh"
+    if endpoint_type.startswith("http"):
+        return "http"
+    return "file_contract"

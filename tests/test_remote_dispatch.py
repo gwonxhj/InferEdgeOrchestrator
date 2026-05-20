@@ -33,6 +33,16 @@ def test_remote_dispatch_selects_matching_healthy_worker(tmp_path: Path) -> None
         result["worker_health_snapshot"]["workers"]["jetson-nano-01"]["health_state"]
         == "healthy"
     )
+    assert result["remote_execution_plan"]["mode"] == "plan_only"
+    assert result["remote_execution_plan"]["network_execution_performed"] is False
+    assert result["worker_selection"]["schema_version"] == (
+        "inferedge-remote-worker-selection-v1"
+    )
+    assert result["worker_selection"]["selected_worker_id"] == "jetson-nano-01"
+    assert result["retry_fallback_plan"]["schema_version"] == (
+        "inferedge-remote-retry-fallback-plan-v1"
+    )
+    assert result["retry_fallback_plan"]["execution_performed"] is False
 
 
 def test_remote_dispatch_rejects_when_no_worker_matches(tmp_path: Path) -> None:
@@ -70,6 +80,80 @@ def test_remote_dispatch_rejects_when_no_worker_matches(tmp_path: Path) -> None:
     assert result["dispatch_status"] == "rejected"
     assert result["selected_worker_id"] is None
     assert result["runtime_events"][0]["event"] == "remote_dispatch_rejected"
+    assert result["remote_execution_plan"]["mode"] == "no_worker_selected"
+    assert result["worker_selection"]["candidate_worker_ids"] == []
+
+
+def test_remote_dispatch_records_fallback_candidates_and_retry_policy(
+    tmp_path: Path,
+) -> None:
+    registry = {
+        "schema_version": "inferedge-remote-worker-registry-v1",
+        "workers": [
+            {
+                "worker_id": "jetson-primary",
+                "status": "online",
+                "endpoint_type": "ssh_command",
+                "capabilities": {
+                    "workers": ["onnxruntime"],
+                    "backends": ["onnxruntime"],
+                    "devices": ["jetson"],
+                    "priority_capacity": 10,
+                },
+                "health": {"state": "healthy"},
+            },
+            {
+                "worker_id": "jetson-fallback",
+                "status": "online",
+                "endpoint_type": "http_request",
+                "capabilities": {
+                    "workers": ["onnxruntime"],
+                    "backends": ["onnxruntime"],
+                    "devices": ["jetson"],
+                    "priority_capacity": 5,
+                },
+                "health": {"state": "constrained"},
+            },
+        ],
+    }
+    request = {
+        "schema_version": "inferedge-remote-task-request-v1",
+        "task_id": "task_vision_002",
+        "agent_id": "vision_agent",
+        "required_backend": "onnxruntime",
+        "device_target": "jetson",
+        "retry_policy": {
+            "max_attempts": 3,
+            "fallback_on": ["timeout", "worker_unhealthy"],
+        },
+    }
+    registry_path = tmp_path / "registry.json"
+    request_path = tmp_path / "request.json"
+    output = tmp_path / "remote_dispatch.json"
+    registry_path.write_text(json.dumps(registry), encoding="utf-8")
+    request_path.write_text(json.dumps(request), encoding="utf-8")
+
+    result = dispatch_remote_task(
+        registry_path=registry_path,
+        request_path=request_path,
+        output_path=output,
+    )
+
+    assert result["selected_worker_id"] == "jetson-primary"
+    assert result["worker_selection"]["candidate_worker_ids"] == [
+        "jetson-primary",
+        "jetson-fallback",
+    ]
+    assert result["worker_selection"]["fallback_worker_ids"] == ["jetson-fallback"]
+    assert result["remote_execution_plan"]["transport"] == "ssh"
+    assert result["retry_fallback_plan"] == {
+        "schema_version": "inferedge-remote-retry-fallback-plan-v1",
+        "max_attempts": 3,
+        "fallback_on": ["timeout", "worker_unhealthy"],
+        "primary_worker_id": "jetson-primary",
+        "fallback_worker_ids": ["jetson-fallback"],
+        "execution_performed": False,
+    }
 
 
 def test_remote_dispatch_cli_writes_result(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
