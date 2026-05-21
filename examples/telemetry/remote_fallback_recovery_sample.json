@@ -1,0 +1,105 @@
+{
+  "schema_version": "inferedge-remote-fallback-recovery-sample-v1",
+  "not_a_benchmark": true,
+  "source_test": "tests/test_remote_dispatch.py::test_remote_dispatch_execute_plan_falls_back_after_primary_connection_error",
+  "source_contract": "inferedge-remote-dispatch-result-v1",
+  "task_request": {
+    "schema_version": "inferedge-remote-task-request-v1",
+    "task_id": "task_http_fallback_001",
+    "agent_id": "vision_agent",
+    "required_backend": "onnxruntime",
+    "device_target": "cpu",
+    "retry_policy": {
+      "max_attempts": 2,
+      "fallback_on": [
+        "connection_error",
+        "timeout"
+      ]
+    }
+  },
+  "dispatch_summary": {
+    "dispatch_status": "accepted",
+    "selected_worker_id": "primary-http-worker",
+    "candidate_worker_ids": [
+      "primary-http-worker",
+      "fallback-http-worker"
+    ],
+    "fallback_worker_ids": [
+      "fallback-http-worker"
+    ],
+    "decision_reason": "selected online worker matching backend/device requirements"
+  },
+  "remote_execution_result": {
+    "schema_version": "inferedge-remote-execution-result-v1",
+    "execution_requested": true,
+    "execution_performed": false,
+    "production_remote_execution": false,
+    "transport": "http",
+    "selected_worker_id": "primary-http-worker",
+    "status": "failed",
+    "error_category": "connection_error"
+  },
+  "fallback_execution_result": {
+    "schema_version": "inferedge-remote-fallback-execution-v1",
+    "primary_worker_id": "primary-http-worker",
+    "attempted_worker_ids": [
+      "fallback-http-worker"
+    ],
+    "final_status": "succeeded",
+    "attempts": [
+      {
+        "fallback_attempt": 1,
+        "selected_worker_id": "fallback-http-worker",
+        "transport": "http",
+        "status": "succeeded",
+        "production_remote_execution": false
+      }
+    ]
+  },
+  "retry_fallback_plan": {
+    "schema_version": "inferedge-remote-retry-fallback-plan-v1",
+    "max_attempts": 2,
+    "fallback_on": [
+      "connection_error",
+      "timeout"
+    ],
+    "primary_worker_id": "primary-http-worker",
+    "fallback_worker_ids": [
+      "fallback-http-worker"
+    ],
+    "execution_performed": true,
+    "fallback_execution_performed": true,
+    "fallback_attempted_worker_ids": [
+      "fallback-http-worker"
+    ],
+    "last_execution_status": "succeeded"
+  },
+  "runtime_event_sample": [
+    {
+      "event": "remote_dispatch_selected",
+      "selected_worker_id": "primary-http-worker",
+      "reason": "selected online worker matching backend/device requirements"
+    },
+    {
+      "event": "remote_execution_failed",
+      "selected_worker_id": "primary-http-worker",
+      "transport": "http",
+      "status": "failed",
+      "error_category": "connection_error"
+    },
+    {
+      "event": "remote_fallback_execution_completed",
+      "selected_worker_id": "fallback-http-worker",
+      "primary_worker_id": "primary-http-worker",
+      "transport": "http",
+      "status": "succeeded",
+      "fallback_attempt": 1
+    }
+  ],
+  "downstream_expectation": {
+    "aiguard_evidence_type": "remote_execution_recovered_by_fallback",
+    "lab_report_context": "Remote fallback starter evidence",
+    "entrypoint_registry_operation_path": "remote_dispatch_with_fallback",
+    "boundary": "starter evidence only; not production remote retry control"
+  }
+}
