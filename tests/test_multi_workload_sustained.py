@@ -273,10 +273,25 @@ def test_run_multi_workload_sustained_device_local_starter(tmp_path) -> None:
         "vision_agent",
         "voice_command_agent",
     }
+    assert set(queue_summary["device_local_producer_sources"]) == {
+        "image_file",
+        "fastapi_request_fixture",
+        "resource_snapshot_fixture",
+    }
+    assert queue_summary["queue_pressure_reason"] != (
+        "overload_threshold_not_configured"
+    )
+    assert queue_summary["producer_sources_by_task"]["vision_agent"] == ["image_file"]
     workers = report["worker_health_snapshot"]["workers"]
     assert workers["vision_agent"]["device_local_validation"] is True
     assert workers["vision_agent"]["producer_stage"] == "device_local_starter"
     assert "image_file" in workers["vision_agent"]["producer_sources"]
+    assert workers["vision_agent"]["producer_context_summary"] == {
+        "device_local_validation": True,
+        "producer_stage": "device_local_starter",
+        "producer_sources": ["image_file"],
+        "producer_event_count": workers["vision_agent"]["producer_event_count"],
+    }
     assert workers["voice_command_agent"]["producer_sources"] == [
         "fastapi_request_fixture"
     ]
@@ -300,6 +315,14 @@ def test_run_multi_workload_sustained_device_local_starter(tmp_path) -> None:
         event["producer_context"].get("producer_source") == "resource_snapshot_fixture"
         for event in execution_events
     )
+    event_summary = report["runtime_event_summary"]
+    assert set(event_summary["producer_sources"]) == {
+        "image_file",
+        "fastapi_request_fixture",
+        "resource_snapshot_fixture",
+    }
+    assert event_summary["producer_event_count"] == len(execution_events)
+    assert event_summary["device_local_event_count"] > 0
 
 
 def test_device_local_input_overrides_use_local_paths(tmp_path) -> None:
@@ -380,12 +403,33 @@ def test_device_local_input_overrides_use_local_paths(tmp_path) -> None:
     workers = report["worker_health_snapshot"]["workers"]
     assert "image_file" in workers["vision_agent"]["producer_sources"]
     assert workers["vision_agent"]["producer_stage"] == "device_local_cli_override"
+    assert workers["vision_agent"]["primary_health_reason"]
+    assert workers["vision_agent"]["operation_risk_summary"]
+    assert workers["vision_agent"]["producer_context_summary"][
+        "producer_stage"
+    ] == "device_local_cli_override"
     assert workers["voice_command_agent"]["producer_sources"] == [
         "fastapi_request_fixture"
     ]
     assert workers["safety_monitor_agent"]["producer_sources"] == [
         "resource_snapshot_fixture"
     ]
+    queue_summary = report["queue_state_summary"]
+    assert set(queue_summary["device_local_producer_sources"]) == {
+        "image_file",
+        "fastapi_request_fixture",
+        "resource_snapshot_fixture",
+    }
+    assert queue_summary["producer_sources_by_task"]["voice_command_agent"] == [
+        "fastapi_request_fixture"
+    ]
+    event_summary = report["runtime_event_summary"]
+    assert set(event_summary["producer_sources"]) == {
+        "image_file",
+        "fastapi_request_fixture",
+        "resource_snapshot_fixture",
+    }
+    assert event_summary["device_local_event_count"] > 0
     assert any(
         event["producer_context"].get("input_path") == str(image)
         for event in report["runtime_event_timeline"]

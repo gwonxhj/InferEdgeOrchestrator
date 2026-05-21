@@ -112,18 +112,23 @@ Top-level summary:
 추가 operation-health field:
 
 - `queue_state_summary`: queue pressure, 최대 total backlog, 최종 queue depth,
-  task별 최대 queue depth, overload threshold를 요약합니다.
+  task별 최대 queue depth, overload threshold, pressure reason,
+  policy/drop reason rollup, device-local starter의 실제 local input producer
+  source를 요약합니다.
 - `worker_health_snapshot`: 실행/drop/deadline/fallback evidence를 바탕으로
   task별 worker 상태를 `healthy`, `constrained`, `degraded`, `idle`로
-  요약합니다. 각 worker는 additive `health_reasons`, `drop_rate`,
-  `deadline_miss_rate`, `fallback_rate`도 기록합니다.
+  요약합니다. 각 worker는 additive `health_reasons`,
+  `primary_health_reason`, `operation_risk_summary`, `drop_rate`,
+  `deadline_miss_rate`, `fallback_rate`, producer context field도 기록합니다.
 - `runtime_event_summary`: runtime event type별 개수와 함께 policy decision
   reason, drop reason, deadline miss, fallback decision, scheduler-delay event
-  count를 additive field로 기록합니다.
+  count를 additive field로 기록합니다. Device-local run에서는 producer source와
+  device-local event coverage도 요약합니다.
 - `runtime_event_timeline`: queue snapshot, drop, scheduler selection,
   execution, policy decision, resource snapshot을 순서대로 남기는 event log입니다.
   execution event는 backlog/delay 확인을 위한 additive
-  `scheduler_delay_cycles`, `queue_wait_ms`를 포함합니다.
+  `scheduler_delay_cycles`, `queue_wait_ms`를 포함합니다. Queue snapshot event는
+  additive queue pressure state와 overload threshold field를 포함합니다.
 
 ## 3-Agent Demo
 

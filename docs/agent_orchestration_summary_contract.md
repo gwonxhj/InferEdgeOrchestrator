@@ -112,18 +112,23 @@ Existing telemetry fields remain available:
 Additive operation-health fields:
 
 - `queue_state_summary`: summarizes queue pressure, maximum total backlog,
-  final queue depth, per-task maximum queue depth, and the overload threshold.
+  final queue depth, per-task maximum queue depth, overload threshold, pressure
+  reason, policy/drop reason rollups, and device-local producer sources when
+  the starter uses real local inputs.
 - `worker_health_snapshot`: summarizes per-task worker health as `healthy`,
   `constrained`, `degraded`, or `idle` using executed/drop/deadline/fallback
   evidence. Each worker also records additive `health_reasons`,
-  `drop_rate`, `deadline_miss_rate`, and `fallback_rate` fields.
+  `primary_health_reason`, `operation_risk_summary`, `drop_rate`,
+  `deadline_miss_rate`, `fallback_rate`, and producer context fields.
 - `runtime_event_summary`: counts runtime event types and additive reason
   counts for policy decisions, drops, deadline misses, fallback decisions, and
-  scheduler-delay events.
+  scheduler-delay events. Device-local runs also summarize producer sources and
+  device-local event coverage.
 - `runtime_event_timeline`: ordered event log for queue snapshots, drops,
   scheduler selections, executions, policy decisions, and resource snapshots.
   Execution events include additive `scheduler_delay_cycles` and
-  `queue_wait_ms` fields for backlog/delay inspection.
+  `queue_wait_ms` fields for backlog/delay inspection. Queue snapshot events
+  include additive queue pressure state and overload threshold fields.
 
 ## 3-Agent Demo
 
