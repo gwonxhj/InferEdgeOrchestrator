@@ -176,6 +176,11 @@ and per-worker drop/deadline/fallback rates, while runtime event summaries
 count policy/drop reasons and scheduler-delay events. This keeps Runtime as the
 task execution/result layer while Orchestrator owns scheduling, drop/fallback,
 and policy evidence.
+For a small curated scheduler-delay evidence excerpt from this path, see
+[`examples/telemetry/agent_scheduler_delay_sample.json`](../examples/telemetry/agent_scheduler_delay_sample.json).
+It is the deterministic smoke marker that downstream AIGuard can turn into
+`scheduler_delay_pattern` and Lab can display under `AIGuard Orchestrator
+Operation Evidence`.
 This starter remains profiled local workload evidence rather than full external
 YOLO/Whisper/FastAPI integration. Device-specific sustained validation remains a
 separate next step.

@@ -175,6 +175,11 @@ drop/deadline/fallback rate도 포함하고, runtime event summary는 policy/dro
 reason과 scheduler-delay event count를 함께 집계합니다. Runtime은 task
 execution/result layer로 유지하고, scheduling/drop/fallback과 policy evidence는
 Orchestrator가 소유합니다.
+이 경로에서 나온 작은 scheduler-delay evidence excerpt는
+[`examples/telemetry/agent_scheduler_delay_sample.json`](../examples/telemetry/agent_scheduler_delay_sample.json)에
+있습니다. 이는 downstream AIGuard가 `scheduler_delay_pattern`으로 해석하고
+Lab이 `AIGuard Orchestrator Operation Evidence` 아래에 표시할 수 있는
+deterministic smoke marker입니다.
 이 starter는 full external YOLO/Whisper/FastAPI integration이 아니라
 profiled local workload evidence입니다. live device-local sustained validation은
 별도 다음 단계입니다.
