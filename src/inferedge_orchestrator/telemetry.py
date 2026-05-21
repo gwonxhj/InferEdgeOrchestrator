@@ -95,6 +95,15 @@ class TelemetryCollector:
             reason=_queue_state_reason(total_queue_depth),
             queue_depth=backlog,
             total_queue_depth=total_queue_depth,
+            overload_backlog_threshold=self._overload_backlog_threshold(),
+            queue_pressure_state=_queue_pressure_state(
+                total_queue_depth,
+                self._overload_backlog_threshold(),
+            ),
+            queue_pressure_reason=_queue_pressure_event_reason(
+                total_queue_depth,
+                self._overload_backlog_threshold(),
+            ),
         )
 
     def record_drop(self, drop: DropRecord) -> None:
@@ -378,27 +387,50 @@ class TelemetryCollector:
         average_total_queue_depth = (
             round(sum(total_depths) / len(total_depths), 3) if total_depths else 0.0
         )
+        overload_backlog_threshold = self._overload_backlog_threshold()
+        queue_pressure_state = _queue_pressure_state(
+            max_total_queue_depth,
+            overload_backlog_threshold,
+        )
+        max_pressure_task = _max_pressure_task(max_queue_depth_by_task)
+        device_local_tasks = [
+            name
+            for name, task in self._task_config.items()
+            if bool((task.worker_options or {}).get("device_local_validation"))
+        ]
         return {
             "schema_version": "inferedge-orchestrator-queue-state-v1",
             "sample_count": len(self.queue_depth_timeline),
-            "overload_backlog_threshold": self._overload_backlog_threshold(),
+            "overload_backlog_threshold": overload_backlog_threshold,
             "max_total_queue_depth": max_total_queue_depth,
             "average_total_queue_depth": average_total_queue_depth,
             "final_queue_depth": final_queue_depth,
             "max_queue_depth_by_task": max_queue_depth_by_task,
-            "device_local_task_count": sum(
-                1
-                for task in self._task_config.values()
-                if bool((task.worker_options or {}).get("device_local_validation"))
-            ),
-            "device_local_tasks": [
-                name
-                for name, task in self._task_config.items()
-                if bool((task.worker_options or {}).get("device_local_validation"))
-            ],
-            "queue_pressure_state": _queue_pressure_state(
+            "max_pressure_task": max_pressure_task,
+            "device_local_task_count": len(device_local_tasks),
+            "device_local_tasks": device_local_tasks,
+            "queue_pressure_state": queue_pressure_state,
+            "queue_pressure_reason": _queue_pressure_reason(
                 max_total_queue_depth,
-                self._overload_backlog_threshold(),
+                overload_backlog_threshold,
+                queue_pressure_state,
+            ),
+            "overload_event_count": len(self.overload_events),
+            "policy_decision_reasons": _ordered_unique(
+                event["reason"]
+                for event in self.policy_decisions
+                if isinstance(event.get("reason"), str)
+            ),
+            "drop_reason_counts": _count_by_key(self.drop_events, "reason"),
+            "producer_sources_by_task": {
+                name: list(telemetry.producer_sources)
+                for name, telemetry in self.tasks.items()
+                if telemetry.producer_sources
+            },
+            "device_local_producer_sources": _ordered_unique(
+                source
+                for name in device_local_tasks
+                for source in self.tasks[name].producer_sources
             ),
         }
 
@@ -431,15 +463,30 @@ class TelemetryCollector:
         task_config = self._task_config[task_name]
         total_seen = telemetry.executed + telemetry.dropped
         health_state = _worker_health_state(telemetry)
+        health_reasons = _worker_health_reasons(
+            telemetry,
+            task_config.queue_size,
+            health_state,
+        )
+        queue_pressure_state = _task_queue_pressure_state(
+            telemetry.max_queue_backlog,
+            task_config.queue_size,
+        )
+        device_local_validation = bool(
+            (task_config.worker_options or {}).get("device_local_validation")
+        )
+        producer_stage = (task_config.worker_options or {}).get("producer_stage")
         return {
             "task": task_name,
             **self._agent_event_fields(task_name),
             "worker": task_config.worker,
             "health_state": health_state,
-            "health_reasons": _worker_health_reasons(
+            "health_reasons": health_reasons,
+            "primary_health_reason": health_reasons[0] if health_reasons else None,
+            "operation_risk_summary": _operation_risk_summary(
                 telemetry,
-                task_config.queue_size,
                 health_state,
+                queue_pressure_state,
             ),
             "executed_count": telemetry.executed,
             "dropped_count": telemetry.dropped,
@@ -456,12 +503,17 @@ class TelemetryCollector:
             "queue_pressure_ratio": _rounded(
                 telemetry.max_queue_backlog / task_config.queue_size
             ),
-            "device_local_validation": bool(
-                (task_config.worker_options or {}).get("device_local_validation")
-            ),
-            "producer_stage": (task_config.worker_options or {}).get("producer_stage"),
+            "queue_pressure_state": queue_pressure_state,
+            "device_local_validation": device_local_validation,
+            "producer_stage": producer_stage,
             "producer_sources": list(telemetry.producer_sources),
             "producer_event_count": telemetry.producer_event_count,
+            "producer_context_summary": {
+                "device_local_validation": device_local_validation,
+                "producer_stage": producer_stage,
+                "producer_sources": list(telemetry.producer_sources),
+                "producer_event_count": telemetry.producer_event_count,
+            },
             "workload_type": (task_config.worker_options or {}).get("workload_type"),
             "runtime_loop": (task_config.worker_options or {}).get("runtime_loop"),
             "ingress_profile": (task_config.worker_options or {}).get("ingress_profile"),
@@ -472,9 +524,13 @@ class TelemetryCollector:
         reason_counts: dict[str, int] = {}
         policy_reason_counts: dict[str, int] = {}
         drop_reason_counts: dict[str, int] = {}
+        queue_pressure_reason_counts: dict[str, int] = {}
+        producer_sources: list[str] = []
         deadline_missed_count = 0
         fallback_decision_count = 0
         scheduler_delay_event_count = 0
+        producer_event_count = 0
+        device_local_event_count = 0
         for event in self.runtime_event_timeline:
             event_type = event.get("event_type")
             if not isinstance(event_type, str):
@@ -487,6 +543,12 @@ class TelemetryCollector:
                     policy_reason_counts[reason] = policy_reason_counts.get(reason, 0) + 1
                 if event_type == "drop":
                     drop_reason_counts[reason] = drop_reason_counts.get(reason, 0) + 1
+                if event_type == "queue_snapshot":
+                    pressure_reason = event.get("queue_pressure_reason")
+                    if isinstance(pressure_reason, str):
+                        queue_pressure_reason_counts[pressure_reason] = (
+                            queue_pressure_reason_counts.get(pressure_reason, 0) + 1
+                        )
             if bool(event.get("deadline_missed")):
                 deadline_missed_count += 1
             if bool(event.get("fallback_used")):
@@ -494,6 +556,16 @@ class TelemetryCollector:
             scheduler_delay_cycles = event.get("scheduler_delay_cycles")
             if isinstance(scheduler_delay_cycles, int) and scheduler_delay_cycles > 0:
                 scheduler_delay_event_count += 1
+            task_name = event.get("task")
+            if isinstance(task_name, str) and self._is_device_local_task(task_name):
+                device_local_event_count += 1
+            producer_context = event.get("producer_context")
+            if isinstance(producer_context, dict):
+                producer_source = producer_context.get("producer_source")
+                if isinstance(producer_source, str) and producer_source:
+                    producer_event_count += 1
+                    if producer_source not in producer_sources:
+                        producer_sources.append(producer_source)
         return {
             "schema_version": "inferedge-orchestrator-runtime-event-summary-v1",
             "event_count": len(self.runtime_event_timeline),
@@ -501,11 +573,20 @@ class TelemetryCollector:
             "reason_counts": reason_counts,
             "policy_decision_reason_counts": policy_reason_counts,
             "drop_reason_counts": drop_reason_counts,
+            "queue_pressure_reason_counts": queue_pressure_reason_counts,
             "deadline_missed_count": deadline_missed_count,
             "fallback_decision_count": fallback_decision_count,
             "scheduler_delay_event_count": scheduler_delay_event_count,
+            "producer_sources": producer_sources,
+            "producer_event_count": producer_event_count,
+            "device_local_event_count": device_local_event_count,
             "latest_event_index": (
                 len(self.runtime_event_timeline) - 1
+                if self.runtime_event_timeline
+                else None
+            ),
+            "latest_event_type": (
+                self.runtime_event_timeline[-1].get("event_type")
                 if self.runtime_event_timeline
                 else None
             ),
@@ -528,6 +609,12 @@ class TelemetryCollector:
         if task_name is None:
             return None
         return self._task_config[task_name].agent_id
+
+    def _is_device_local_task(self, task_name: str) -> bool:
+        task = self._task_config.get(task_name)
+        if task is None:
+            return False
+        return bool((task.worker_options or {}).get("device_local_validation"))
 
     def _record_runtime_event(self, event_type: str, **fields: Any) -> None:
         self.runtime_event_timeline.append(
@@ -575,6 +662,18 @@ def _queue_state_reason(total_queue_depth: int) -> str:
     return "queue_depth_sampled"
 
 
+def _queue_pressure_event_reason(total_queue_depth: int, threshold: int) -> str:
+    if total_queue_depth <= 0:
+        return "queue_empty"
+    if threshold <= 0:
+        return "overload_threshold_not_configured"
+    if total_queue_depth > threshold:
+        return "queue_backlog_threshold_exceeded"
+    if total_queue_depth >= max(1, math.ceil(threshold * 0.75)):
+        return "queue_pressure_elevated"
+    return "queue_depth_below_pressure_threshold"
+
+
 def _queue_pressure_state(max_total_queue_depth: int, threshold: int) -> str:
     if threshold <= 0:
         return "unknown"
@@ -583,6 +682,50 @@ def _queue_pressure_state(max_total_queue_depth: int, threshold: int) -> str:
     if max_total_queue_depth >= max(1, math.ceil(threshold * 0.75)):
         return "elevated"
     return "nominal"
+
+
+def _queue_pressure_reason(
+    max_total_queue_depth: int,
+    threshold: int,
+    state: str,
+) -> str:
+    if state == "unknown":
+        return "overload_threshold_not_configured"
+    if state == "overloaded":
+        return (
+            "max_total_queue_depth_exceeded_overload_threshold"
+            if max_total_queue_depth > threshold
+            else "queue_pressure_overloaded"
+        )
+    if state == "elevated":
+        return "max_total_queue_depth_near_overload_threshold"
+    return "queue_depth_within_overload_threshold"
+
+
+def _task_queue_pressure_state(max_queue_backlog: int, queue_size: int) -> str:
+    if queue_size <= 0:
+        return "unknown"
+    if max_queue_backlog >= queue_size:
+        return "at_capacity"
+    if max_queue_backlog >= max(1, math.ceil(queue_size * 0.75)):
+        return "elevated"
+    return "nominal"
+
+
+def _operation_risk_summary(
+    telemetry: TaskTelemetry,
+    health_state: str,
+    queue_pressure_state: str,
+) -> str:
+    if telemetry.deadline_missed > 0 or telemetry.fallback_used > 0:
+        return "latency_or_fallback_risk"
+    if telemetry.dropped > 0:
+        return "drop_or_queue_pressure_risk"
+    if telemetry.executed == 0:
+        return "no_execution_evidence"
+    if queue_pressure_state in {"at_capacity", "elevated"}:
+        return "queue_pressure_watch"
+    return f"{health_state}_without_runtime_risk"
 
 
 def _worker_health_state(telemetry: TaskTelemetry) -> str:
@@ -629,6 +772,26 @@ def _count_by_key(
             continue
         counts[value] = counts.get(value, 0) + 1
     return counts
+
+
+def _ordered_unique(values: Any) -> list[str]:
+    unique: list[str] = []
+    for value in values:
+        if not isinstance(value, str) or not value:
+            continue
+        if value not in unique:
+            unique.append(value)
+    return unique
+
+
+def _max_pressure_task(max_queue_depth_by_task: dict[str, int]) -> str | None:
+    if not max_queue_depth_by_task:
+        return None
+    task_name, depth = max(
+        max_queue_depth_by_task.items(),
+        key=lambda item: item[1],
+    )
+    return task_name if depth > 0 else None
 
 
 def _producer_context(output: dict[str, object]) -> dict[str, object]:

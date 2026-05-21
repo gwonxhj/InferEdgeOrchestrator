@@ -148,9 +148,22 @@ def test_sustained_high_load_records_timeline_and_policy_reasons(tmp_path) -> No
 
     queue_summary = data["queue_state_summary"]
     assert queue_summary["queue_pressure_state"] == "overloaded"
+    assert queue_summary["queue_pressure_reason"] == (
+        "max_total_queue_depth_exceeded_overload_threshold"
+    )
     assert queue_summary["max_total_queue_depth"] == sustained["max_total_queue_depth"]
     assert queue_summary["final_queue_depth"]
     assert queue_summary["max_queue_depth_by_task"]
+    assert queue_summary["max_pressure_task"] in {
+        "safety_monitor_agent",
+        "vision_agent",
+        "voice_command_agent",
+    }
+    assert queue_summary["overload_event_count"] > 0
+    assert queue_summary["policy_decision_reasons"] == [
+        "queue_backlog_threshold_exceeded"
+    ]
+    assert queue_summary["drop_reason_counts"]
 
     worker_health = data["worker_health_snapshot"]["workers"]
     assert worker_health["voice_command_agent"]["health_state"] in {
@@ -160,6 +173,20 @@ def test_sustained_high_load_records_timeline_and_policy_reasons(tmp_path) -> No
     assert worker_health["voice_command_agent"]["worker"] == "dummy"
     assert worker_health["voice_command_agent"]["queue_pressure_ratio"] is not None
     assert worker_health["voice_command_agent"]["health_reasons"]
+    assert worker_health["voice_command_agent"]["primary_health_reason"] in {
+        "deadline_missed",
+        "fallback_policy_used",
+        "frames_dropped",
+    }
+    assert worker_health["voice_command_agent"]["operation_risk_summary"] in {
+        "latency_or_fallback_risk",
+        "drop_or_queue_pressure_risk",
+    }
+    assert worker_health["voice_command_agent"]["queue_pressure_state"] in {
+        "at_capacity",
+        "elevated",
+        "nominal",
+    }
     assert worker_health["voice_command_agent"]["drop_rate"] > 0
     assert worker_health["voice_command_agent"]["fallback_rate"] > 0
 
@@ -172,11 +199,27 @@ def test_sustained_high_load_records_timeline_and_policy_reasons(tmp_path) -> No
         "queue_backlog_threshold_exceeded"
     ] > 0
     assert event_summary["drop_reason_counts"]
+    assert event_summary["queue_pressure_reason_counts"][
+        "queue_backlog_threshold_exceeded"
+    ] > 0
     assert event_summary["fallback_decision_count"] > 0
     assert event_summary["scheduler_delay_event_count"] > 0
     assert event_summary["latest_event_index"] == len(data["runtime_event_timeline"]) - 1
+    assert event_summary["latest_event_type"] in {
+        "queue_snapshot",
+        "execution",
+        "policy_decision",
+        "drop",
+        "schedule",
+        "resource_snapshot",
+    }
 
     runtime_events = data["runtime_event_timeline"]
+    assert any(
+        event["event_type"] == "queue_snapshot"
+        and event["queue_pressure_state"] == "overloaded"
+        for event in runtime_events
+    )
     assert any(event["event_type"] == "policy_decision" for event in runtime_events)
     assert any(event["event_type"] == "drop" for event in runtime_events)
     assert any(
