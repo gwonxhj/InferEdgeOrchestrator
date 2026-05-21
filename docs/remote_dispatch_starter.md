@@ -151,6 +151,14 @@ When execution is requested:
   retry, heartbeat, failover state, and worker lifecycle management remain
   future hardening.
 
+A small curated sample of this recovery path is available at
+[`examples/telemetry/remote_fallback_recovery_sample.json`](../examples/telemetry/remote_fallback_recovery_sample.json).
+It records a primary HTTP starter `connection_error`, a successful fallback
+starter attempt, the retry/fallback plan fields, and the downstream
+`remote_execution_recovered_by_fallback` signal expected by AIGuard/Lab. The
+sample is documentation evidence only, not a benchmark or production retry
+claim.
+
 ## Boundary
 
 Use precise wording:

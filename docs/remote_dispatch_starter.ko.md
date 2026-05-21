@@ -147,6 +147,13 @@ starter는 기본적으로 execution planning만 기록하고 network connection
 - fallback execution은 starter evidence로만 제한한다. production-grade retry,
   heartbeat, failover state, worker lifecycle management는 future hardening이다.
 
+이 recovery path의 작은 curated sample은
+[`examples/telemetry/remote_fallback_recovery_sample.json`](../examples/telemetry/remote_fallback_recovery_sample.json)에
+있다. 이 sample은 primary HTTP starter `connection_error`, 성공한 fallback
+starter attempt, retry/fallback plan field, AIGuard/Lab이 기대하는 downstream
+`remote_execution_recovered_by_fallback` signal을 기록한다. 이 sample은 문서용
+evidence이며 benchmark나 production retry claim이 아니다.
+
 ## Boundary
 
 정확한 표현을 유지한다.

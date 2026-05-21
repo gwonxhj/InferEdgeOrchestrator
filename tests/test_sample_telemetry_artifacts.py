@@ -56,6 +56,54 @@ def test_agent_scheduler_delay_sample_records_downstream_signal() -> None:
     )
 
 
+def test_remote_fallback_recovery_sample_records_starter_boundary() -> None:
+    sample = _load_sample("remote_fallback_recovery_sample.json")
+
+    assert sample["schema_version"] == (  # type: ignore[index]
+        "inferedge-remote-fallback-recovery-sample-v1"
+    )
+    assert sample["source_contract"] == "inferedge-remote-dispatch-result-v1"
+    assert sample["not_a_benchmark"] is True
+
+    dispatch = sample["dispatch_summary"]  # type: ignore[index]
+    assert dispatch["dispatch_status"] == "accepted"
+    assert dispatch["selected_worker_id"] == "primary-http-worker"
+    assert dispatch["fallback_worker_ids"] == ["fallback-http-worker"]
+
+    remote_execution = sample["remote_execution_result"]  # type: ignore[index]
+    assert remote_execution["production_remote_execution"] is False
+    assert remote_execution["transport"] == "http"
+    assert remote_execution["status"] == "failed"
+    assert remote_execution["error_category"] == "connection_error"
+
+    fallback = sample["fallback_execution_result"]  # type: ignore[index]
+    assert fallback["schema_version"] == "inferedge-remote-fallback-execution-v1"
+    assert fallback["primary_worker_id"] == "primary-http-worker"
+    assert fallback["attempted_worker_ids"] == ["fallback-http-worker"]
+    assert fallback["final_status"] == "succeeded"
+    assert fallback["attempts"][0]["production_remote_execution"] is False
+
+    retry_plan = sample["retry_fallback_plan"]  # type: ignore[index]
+    assert retry_plan["fallback_execution_performed"] is True
+    assert retry_plan["last_execution_status"] == "succeeded"
+
+    events = sample["runtime_event_sample"]  # type: ignore[index]
+    assert [event["event"] for event in events] == [
+        "remote_dispatch_selected",
+        "remote_execution_failed",
+        "remote_fallback_execution_completed",
+    ]
+
+    downstream = sample["downstream_expectation"]  # type: ignore[index]
+    assert downstream["aiguard_evidence_type"] == (
+        "remote_execution_recovered_by_fallback"
+    )
+    assert downstream["entrypoint_registry_operation_path"] == (
+        "remote_dispatch_with_fallback"
+    )
+    assert "not production" in downstream["boundary"]
+
+
 def test_jetson_dummy_sample_matches_runtime_telemetry_schema() -> None:
     sample = _load_sample("jetson_smoke_dummy_sample.json")
 
