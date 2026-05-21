@@ -87,11 +87,19 @@ def test_remote_fallback_recovery_sample_records_starter_boundary() -> None:
     assert retry_plan["fallback_execution_performed"] is True
     assert retry_plan["last_execution_status"] == "succeeded"
 
+    summary = sample["remote_operation_summary"]  # type: ignore[index]
+    assert summary["schema_version"] == "inferedge-remote-operation-summary-v1"
+    assert summary["remote_error_category"] == "connection_error"
+    assert summary["fallback_recovered"] is True
+    assert summary["final_status"] == "succeeded"
+    assert summary["production_remote_execution"] is False
+
     events = sample["runtime_event_sample"]  # type: ignore[index]
     assert [event["event"] for event in events] == [
         "remote_dispatch_selected",
         "remote_execution_failed",
         "remote_fallback_execution_completed",
+        "remote_operation_summary_recorded",
     ]
 
     downstream = sample["downstream_expectation"]  # type: ignore[index]

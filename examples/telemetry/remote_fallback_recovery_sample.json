@@ -74,6 +74,31 @@
     ],
     "last_execution_status": "succeeded"
   },
+  "remote_operation_summary": {
+    "schema_version": "inferedge-remote-operation-summary-v1",
+    "dispatch_status": "accepted",
+    "selected_worker_id": "primary-http-worker",
+    "selected_worker_health_state": "healthy",
+    "decision_reason": "selected online worker matching backend/device requirements",
+    "worker_count": 2,
+    "eligible_worker_count": 2,
+    "rejected_worker_count": 0,
+    "health_state_counts": {
+      "healthy": 2
+    },
+    "execution_requested": true,
+    "execution_performed": true,
+    "remote_execution_status": "failed",
+    "remote_error_category": "connection_error",
+    "fallback_requested": true,
+    "fallback_execution_performed": true,
+    "fallback_attempt_count": 1,
+    "fallback_final_status": "succeeded",
+    "fallback_recovered": true,
+    "final_status": "succeeded",
+    "production_remote_execution": false,
+    "evidence_role": "remote_worker_selection_and_starter_execution_evidence"
+  },
   "runtime_event_sample": [
     {
       "event": "remote_dispatch_selected",
@@ -94,6 +119,12 @@
       "transport": "http",
       "status": "succeeded",
       "fallback_attempt": 1
+    },
+    {
+      "event": "remote_operation_summary_recorded",
+      "selected_worker_id": "primary-http-worker",
+      "final_status": "succeeded",
+      "fallback_final_status": "succeeded"
     }
   ],
   "downstream_expectation": {

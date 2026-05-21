@@ -108,6 +108,12 @@ Expected output:
     "mode": "file_contract_starter",
     "production_remote_execution": false,
     "execution_requested": false
+  },
+  "remote_operation_summary": {
+    "schema_version": "inferedge-remote-operation-summary-v1",
+    "dispatch_status": "accepted",
+    "final_status": "skipped",
+    "production_remote_execution": false
   }
 }
 ```
@@ -126,6 +132,8 @@ The result preserves:
 - retry/fallback plan with primary and fallback worker ids
 - remote execution plan in `plan_only` mode
 - remote execution result showing skipped/succeeded/failed starter execution
+- remote operation summary showing comparable dispatch, execution, fallback, and
+  final starter status evidence
 
 This output is intended to become an input to AIGuard and Lab reports once the
 remote execution path grows beyond the starter contract.
@@ -147,6 +155,10 @@ When execution is requested:
 - if the primary starter fails and the retry policy allows fallback,
   `fallback_execution_result` records the attempted fallback worker, status,
   transport, and final starter outcome.
+- `remote_operation_summary` records the dispatch status, selected worker
+  health state, eligible/rejected worker counts, primary execution status,
+  fallback recovery status, and `final_status` as compact operation evidence for
+  downstream registry/report ingestion.
 - fallback execution remains bounded to starter evidence. Production-grade
   retry, heartbeat, failover state, and worker lifecycle management remain
   future hardening.

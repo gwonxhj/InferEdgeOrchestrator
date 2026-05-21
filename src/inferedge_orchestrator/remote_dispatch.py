@@ -179,13 +179,17 @@ def _build_result(
         execution_result=remote_execution_result,
         fallback_execution_result=fallback_execution_result,
     )
-    runtime_events = [{
-        "event": "remote_dispatch_selected" if selected else "remote_dispatch_rejected",
-        "task_id": request.get("task_id"),
-        "agent_id": request.get("agent_id"),
-        "selected_worker_id": selected.worker_id if selected else None,
-        "reason": reason,
-    }]
+    runtime_events = [
+        {
+            "event": (
+                "remote_dispatch_selected" if selected else "remote_dispatch_rejected"
+            ),
+            "task_id": request.get("task_id"),
+            "agent_id": request.get("agent_id"),
+            "selected_worker_id": selected.worker_id if selected else None,
+            "reason": reason,
+        }
+    ]
     if remote_execution_result["execution_requested"]:
         runtime_events.append(
             {
@@ -217,6 +221,25 @@ def _build_result(
                     "fallback_attempt": attempt["fallback_attempt"],
                 }
             )
+    remote_operation_summary = _build_remote_operation_summary(
+        dispatch_status=status,
+        selected_worker=selected,
+        decision_reason=reason,
+        worker_selection=worker_selection,
+        workers=workers,
+        remote_execution_result=remote_execution_result,
+        fallback_execution_result=fallback_execution_result,
+    )
+    runtime_events.append(
+        {
+            "event": "remote_operation_summary_recorded",
+            "task_id": request.get("task_id"),
+            "agent_id": request.get("agent_id"),
+            "selected_worker_id": selected.worker_id if selected else None,
+            "final_status": remote_operation_summary["final_status"],
+            "fallback_final_status": remote_operation_summary["fallback_final_status"],
+        }
+    )
     result = {
         "schema_version": RESULT_SCHEMA_VERSION,
         "dispatch_status": status,
@@ -238,11 +261,86 @@ def _build_result(
             "schema_version": "inferedge-remote-worker-health-v1",
             "workers": worker_snapshot,
         },
+        "remote_operation_summary": remote_operation_summary,
         "runtime_events": runtime_events,
     }
     if fallback_execution_result:
         result["fallback_execution_result"] = fallback_execution_result
     return result
+
+
+def _build_remote_operation_summary(
+    *,
+    dispatch_status: str,
+    selected_worker: RemoteWorker | None,
+    decision_reason: str,
+    worker_selection: dict[str, Any],
+    workers: list[RemoteWorker],
+    remote_execution_result: dict[str, Any],
+    fallback_execution_result: dict[str, Any] | None,
+) -> dict[str, Any]:
+    evaluations = worker_selection.get("evaluations", [])
+    if not isinstance(evaluations, list):
+        evaluations = []
+    eligible_count = sum(
+        1 for item in evaluations if isinstance(item, dict) and item.get("eligible")
+    )
+    health_counts: dict[str, int] = {}
+    for worker in workers:
+        health_counts[worker.health_state] = (
+            health_counts.get(worker.health_state, 0) + 1
+        )
+
+    fallback_attempts = (
+        fallback_execution_result.get("attempts", [])
+        if isinstance(fallback_execution_result, dict)
+        else []
+    )
+    fallback_final_status = (
+        str(fallback_execution_result.get("final_status"))
+        if isinstance(fallback_execution_result, dict)
+        and fallback_execution_result.get("final_status") is not None
+        else "not_attempted"
+    )
+    remote_status = str(remote_execution_result.get("status", "unknown"))
+    final_status = (
+        fallback_final_status
+        if fallback_final_status != "not_attempted"
+        else remote_status
+    )
+    fallback_performed = any(
+        bool(attempt.get("execution_performed"))
+        for attempt in fallback_attempts
+        if isinstance(attempt, dict)
+    )
+    return {
+        "schema_version": "inferedge-remote-operation-summary-v1",
+        "dispatch_status": dispatch_status,
+        "selected_worker_id": selected_worker.worker_id if selected_worker else None,
+        "selected_worker_health_state": (
+            selected_worker.health_state if selected_worker else None
+        ),
+        "decision_reason": decision_reason,
+        "worker_count": len(workers),
+        "eligible_worker_count": eligible_count,
+        "rejected_worker_count": max(len(workers) - eligible_count, 0),
+        "health_state_counts": health_counts,
+        "execution_requested": bool(remote_execution_result.get("execution_requested")),
+        "execution_performed": bool(remote_execution_result.get("execution_performed")),
+        "remote_execution_status": remote_status,
+        "remote_error_category": remote_execution_result.get("error_category"),
+        "fallback_requested": bool(
+            isinstance(fallback_execution_result, dict)
+            and fallback_execution_result.get("fallback_requested")
+        ),
+        "fallback_execution_performed": fallback_performed,
+        "fallback_attempt_count": len(fallback_attempts),
+        "fallback_final_status": fallback_final_status,
+        "fallback_recovered": fallback_final_status == "succeeded",
+        "final_status": final_status,
+        "production_remote_execution": False,
+        "evidence_role": "remote_worker_selection_and_starter_execution_evidence",
+    }
 
 
 def _evaluate_worker(worker: RemoteWorker, request: dict[str, Any]) -> dict[str, Any]:
