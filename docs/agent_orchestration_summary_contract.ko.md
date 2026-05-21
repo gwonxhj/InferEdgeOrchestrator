@@ -191,6 +191,20 @@ python3 -m inferedge_orchestrator run-multi-workload-sustained \
 - FastAPI-style concurrent request ingress 기반 Whisper-like command burst
 - optional tegrastats timeline evidence를 포함할 수 있는 safety/monitor loop
 
+Sustained output은 기존 `scenario_mode`를 그대로 보존하면서 `run`,
+`sustained_runtime_summary`, `multi_workload_sustained_summary`에 사람이 읽기
+쉬운 scenario identity field도 함께 기록합니다.
+
+| scenario_mode | scenario_label | scenario_category |
+|---|---|---|
+| `normal` | `normal_scheduler_smoke` | `normal` |
+| `overload` | `overload_scheduler_pressure` | `overload` |
+| `sustained_high_load` | `producer_backed_sustained_high_load` | `sustained` |
+| `device_local` | `device_local_sustained_starter` | `device_local` |
+
+이 label들은 반복 실행 registry를 더 쉽게 훑기 위한 보조 field이며,
+machine-readable mode인 `scenario_mode`의 backward compatibility는 유지합니다.
+
 기본 실행은 lightweight local CPU profile adapter를 사용하므로 model
 download, FastAPI server, Jetson-only telemetry 없이도 workload pressure를
 테스트할 수 있습니다. 첫 Vision producer 단계는

@@ -75,6 +75,11 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     summary = report["multi_workload_sustained_summary"]
     assert summary["schema_version"] == MULTI_WORKLOAD_SCHEMA
     assert summary["scenario_mode"] == "sustained_high_load"
+    assert summary["scenario_label"] == "producer_backed_sustained_high_load"
+    assert summary["scenario_category"] == "sustained"
+    assert "Producer-backed sustained" in summary["scenario_description"]
+    assert report["run"]["scenario_label"] == "producer_backed_sustained_high_load"
+    assert report["sustained_runtime_summary"]["scenario_category"] == "sustained"
     signals = summary["observed_runtime_signals"]
     assert signals["max_total_queue_depth"] > 0
     assert signals["tegrastats_sample_count"] == 1
@@ -242,6 +247,9 @@ def test_run_multi_workload_sustained_device_local_starter(tmp_path) -> None:
     assert config.scenario_mode == "device_local"
     summary = report["multi_workload_sustained_summary"]
     assert summary["scenario_mode"] == "device_local"
+    assert summary["scenario_label"] == "device_local_sustained_starter"
+    assert summary["scenario_category"] == "device_local"
+    assert "Device-local sustained starter" in summary["scenario_description"]
     assert "device-local sustained validation starter" in summary["evidence_scope"]
     assert "live device-local" in summary["next_validation_step"]
 

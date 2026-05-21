@@ -126,6 +126,8 @@ def run_multi_workload_sustained(
 
     report = OrchestratorRuntime(config, sleep_worker=sleep_worker).run(frames=frames)
     tegrastats = load_tegrastats_timeline(tegrastats_log)
+    report.setdefault("run", {}).update(_scenario_identity(config))
+    report.setdefault("sustained_runtime_summary", {}).update(_scenario_identity(config))
     report["tegrastats_timeline"] = tegrastats
     report["multi_workload_sustained_summary"] = _multi_workload_summary(
         config,
@@ -193,6 +195,7 @@ def _multi_workload_summary(
     return {
         "schema_version": MULTI_WORKLOAD_SCHEMA,
         "scenario_mode": config.scenario_mode,
+        **_scenario_identity(config),
         "evidence_scope": _evidence_scope(config),
         "workload_profiles": [_workload_profile(task, report) for task in config.tasks],
         "observed_runtime_signals": {
@@ -209,6 +212,54 @@ def _multi_workload_summary(
         },
         "next_validation_step": _next_validation_step(config),
     }
+
+
+def _scenario_identity(config: OrchestratorConfig) -> dict[str, str]:
+    labels = {
+        "normal": {
+            "scenario_label": "normal_scheduler_smoke",
+            "scenario_category": "normal",
+            "scenario_description": (
+                "Nominal priority/deadline scheduler smoke without intentional "
+                "sustained overload pressure."
+            ),
+        },
+        "overload": {
+            "scenario_label": "overload_scheduler_pressure",
+            "scenario_category": "overload",
+            "scenario_description": (
+                "Intentional backlog pressure scenario for observing drop, "
+                "load-shedding, and fallback behavior."
+            ),
+        },
+        "sustained_high_load": {
+            "scenario_label": "producer_backed_sustained_high_load",
+            "scenario_category": "sustained",
+            "scenario_description": (
+                "Producer-backed sustained multi-workload smoke with "
+                "Vision, Voice, and Safety workload pressure."
+            ),
+        },
+        "device_local": {
+            "scenario_label": "device_local_sustained_starter",
+            "scenario_category": "device_local",
+            "scenario_description": (
+                "Device-local sustained starter using local Vision, Voice, "
+                "Safety, and optional tegrastats inputs."
+            ),
+        },
+    }
+    return labels.get(
+        config.scenario_mode,
+        {
+            "scenario_label": f"{config.scenario_mode}_scenario",
+            "scenario_category": "custom",
+            "scenario_description": (
+                "Custom Orchestrator scenario mode. Verify downstream wording "
+                "before portfolio use."
+            ),
+        },
+    )
 
 
 def _workload_profile(task: TaskConfig, report: dict[str, Any]) -> dict[str, Any]:
