@@ -65,6 +65,7 @@ def test_runtime_writes_telemetry_json(tmp_path) -> None:
         "inferedge-orchestrator-worker-health-v1"
     )
     assert set(data["worker_health_snapshot"]["workers"]) == {"detector", "classifier"}
+    assert data["worker_health_snapshot"]["health_state_counts"]
     assert data["runtime_event_summary"]["schema_version"] == (
         "inferedge-orchestrator-runtime-event-summary-v1"
     )
@@ -158,12 +159,22 @@ def test_sustained_high_load_records_timeline_and_policy_reasons(tmp_path) -> No
     }
     assert worker_health["voice_command_agent"]["worker"] == "dummy"
     assert worker_health["voice_command_agent"]["queue_pressure_ratio"] is not None
+    assert worker_health["voice_command_agent"]["health_reasons"]
+    assert worker_health["voice_command_agent"]["drop_rate"] > 0
+    assert worker_health["voice_command_agent"]["fallback_rate"] > 0
 
     event_summary = data["runtime_event_summary"]
     assert event_summary["event_type_counts"]["queue_snapshot"] > 0
     assert event_summary["event_type_counts"]["policy_decision"] > 0
     assert event_summary["event_type_counts"]["drop"] > 0
     assert event_summary["event_type_counts"]["execution"] > 0
+    assert event_summary["policy_decision_reason_counts"][
+        "queue_backlog_threshold_exceeded"
+    ] > 0
+    assert event_summary["drop_reason_counts"]
+    assert event_summary["fallback_decision_count"] > 0
+    assert event_summary["scheduler_delay_event_count"] > 0
+    assert event_summary["latest_event_index"] == len(data["runtime_event_timeline"]) - 1
 
     runtime_events = data["runtime_event_timeline"]
     assert any(event["event_type"] == "policy_decision" for event in runtime_events)
@@ -171,5 +182,10 @@ def test_sustained_high_load_records_timeline_and_policy_reasons(tmp_path) -> No
     assert any(
         event["event_type"] == "execution"
         and event["reason"] in {"completed_within_latency_budget", "deadline_missed"}
+        for event in runtime_events
+    )
+    assert any(
+        event["event_type"] == "execution"
+        and event.get("scheduler_delay_cycles", 0) > 0
         for event in runtime_events
     )

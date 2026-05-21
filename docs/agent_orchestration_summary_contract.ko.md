@@ -115,10 +115,15 @@ Top-level summary:
   task별 최대 queue depth, overload threshold를 요약합니다.
 - `worker_health_snapshot`: 실행/drop/deadline/fallback evidence를 바탕으로
   task별 worker 상태를 `healthy`, `constrained`, `degraded`, `idle`로
-  요약합니다.
-- `runtime_event_summary`: runtime event type별 개수를 기록합니다.
+  요약합니다. 각 worker는 additive `health_reasons`, `drop_rate`,
+  `deadline_miss_rate`, `fallback_rate`도 기록합니다.
+- `runtime_event_summary`: runtime event type별 개수와 함께 policy decision
+  reason, drop reason, deadline miss, fallback decision, scheduler-delay event
+  count를 additive field로 기록합니다.
 - `runtime_event_timeline`: queue snapshot, drop, scheduler selection,
   execution, policy decision, resource snapshot을 순서대로 남기는 event log입니다.
+  execution event는 backlog/delay 확인을 위한 additive
+  `scheduler_delay_cycles`, `queue_wait_ms`를 포함합니다.
 
 ## 3-Agent Demo
 
@@ -165,9 +170,11 @@ python3 -m inferedge_orchestrator run \
 생성된 summary에는 `queue_depth_timeline`, `latency_timeline`,
 `sustained_runtime_summary`, 그리고 `decision_reason`,
 `total_backlog_before`, `backlog_threshold`, `queue_depth_snapshot`을 포함한
-policy decision이 들어갑니다. Runtime은 task execution/result layer로
-유지하고, scheduling/drop/fallback과 policy evidence는 Orchestrator가
-소유합니다.
+policy decision이 들어갑니다. Worker health는 `health_reasons`와 worker별
+drop/deadline/fallback rate도 포함하고, runtime event summary는 policy/drop
+reason과 scheduler-delay event count를 함께 집계합니다. Runtime은 task
+execution/result layer로 유지하고, scheduling/drop/fallback과 policy evidence는
+Orchestrator가 소유합니다.
 이 starter는 full external YOLO/Whisper/FastAPI integration이 아니라
 profiled local workload evidence입니다. live device-local sustained validation은
 별도 다음 단계입니다.

@@ -46,13 +46,13 @@ class OrchestratorRuntime:
                 if result.dropped is not None:
                     self.telemetry.record_drop(result.dropped)
             self._record_backlog_and_shed(cycle=cycle, stage="cycle")
-            self._execute_one()
+            self._execute_one(cycle=cycle)
 
         drain_cycle = frames
         if drain:
             while self.queues.total_backlog() > 0:
                 self._record_backlog_and_shed(cycle=drain_cycle, stage="drain")
-                if not self._execute_one():
+                if not self._execute_one(cycle=drain_cycle):
                     break
                 drain_cycle += 1
 
@@ -80,7 +80,7 @@ class OrchestratorRuntime:
             stage=f"{stage}_after_policy",
         )
 
-    def _execute_one(self) -> bool:
+    def _execute_one(self, *, cycle: int) -> bool:
         decision = self.scheduler.choose_next(self.queues)
         if decision is None:
             return False
@@ -94,5 +94,6 @@ class OrchestratorRuntime:
             result,
             frame=frame,
             backlog_after=self.queues.backlog(decision.task_name),
+            execution_cycle=cycle,
         )
         return True

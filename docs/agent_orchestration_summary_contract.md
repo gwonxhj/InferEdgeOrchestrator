@@ -115,10 +115,15 @@ Additive operation-health fields:
   final queue depth, per-task maximum queue depth, and the overload threshold.
 - `worker_health_snapshot`: summarizes per-task worker health as `healthy`,
   `constrained`, `degraded`, or `idle` using executed/drop/deadline/fallback
-  evidence.
-- `runtime_event_summary`: counts runtime event types.
+  evidence. Each worker also records additive `health_reasons`,
+  `drop_rate`, `deadline_miss_rate`, and `fallback_rate` fields.
+- `runtime_event_summary`: counts runtime event types and additive reason
+  counts for policy decisions, drops, deadline misses, fallback decisions, and
+  scheduler-delay events.
 - `runtime_event_timeline`: ordered event log for queue snapshots, drops,
   scheduler selections, executions, policy decisions, and resource snapshots.
+  Execution events include additive `scheduler_delay_cycles` and
+  `queue_wait_ms` fields for backlog/delay inspection.
 
 ## 3-Agent Demo
 
@@ -166,8 +171,11 @@ python3 -m inferedge_orchestrator run \
 The generated summary includes `queue_depth_timeline`, `latency_timeline`,
 `sustained_runtime_summary`, and policy decisions with explicit
 `decision_reason`, `total_backlog_before`, `backlog_threshold`, and
-`queue_depth_snapshot` fields. This keeps Runtime as the task execution/result
-layer while Orchestrator owns scheduling, drop/fallback, and policy evidence.
+`queue_depth_snapshot` fields. Worker health also includes `health_reasons`
+and per-worker drop/deadline/fallback rates, while runtime event summaries
+count policy/drop reasons and scheduler-delay events. This keeps Runtime as the
+task execution/result layer while Orchestrator owns scheduling, drop/fallback,
+and policy evidence.
 This starter remains profiled local workload evidence rather than full external
 YOLO/Whisper/FastAPI integration. Device-specific sustained validation remains a
 separate next step.
