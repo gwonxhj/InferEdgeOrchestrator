@@ -1,0 +1,48 @@
+{
+  "schema_version": "inferedge-orchestrator-scheduler-delay-sample-v1",
+  "source_config": "configs/agent_3_workload_sustained_high_load.json",
+  "source_command": "python3 -m inferedge_orchestrator run --config configs/agent_3_workload_sustained_high_load.json --output /tmp/inferedge_orchestrator_scheduler_delay_sample.json --frames 16",
+  "scope": "curated scheduler-delay telemetry excerpt for downstream AIGuard/Lab review",
+  "not_a_benchmark": true,
+  "run": {
+    "scenario_mode": "sustained_high_load",
+    "frame_interval_ms": 5.0,
+    "frames": 16
+  },
+  "sustained_runtime_summary": {
+    "max_total_queue_depth": 6,
+    "deadline_missed_count": 3,
+    "dropped_count": 21,
+    "fallback_count": 9,
+    "policy_decision_count": 9
+  },
+  "runtime_event_summary": {
+    "event_count": 108,
+    "scheduler_delay_event_count": 3,
+    "fallback_decision_count": 9,
+    "deadline_missed_count": 3,
+    "policy_decision_reason_counts": {
+      "queue_backlog_threshold_exceeded": 9
+    },
+    "drop_reason_counts": {
+      "load_shedding_backlog_threshold_exceeded": 9,
+      "queue_overflow_drop_oldest": 12
+    }
+  },
+  "delayed_execution_sample": {
+    "event_type": "execution",
+    "agent_id": "vision_agent",
+    "task_id": "task_vision_agent",
+    "frame_id": "vision_agent-13-35",
+    "reason": "deadline_missed",
+    "scheduler_delay_cycles": 3,
+    "queue_wait_ms": 15.0,
+    "latency_ms": 65.0,
+    "latency_budget_ms": 33.0,
+    "deadline_missed": true
+  },
+  "downstream_expectation": {
+    "aiguard_evidence_type": "scheduler_delay_pattern",
+    "lab_report_section": "AIGuard Orchestrator Operation Evidence"
+  }
+}

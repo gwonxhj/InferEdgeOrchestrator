@@ -22,6 +22,40 @@ def test_phase3_overload_sample_captures_policy_effect() -> None:
     assert sample["scheduled"]["overload_events"]  # type: ignore[index]
 
 
+def test_agent_scheduler_delay_sample_records_downstream_signal() -> None:
+    sample = _load_sample("agent_scheduler_delay_sample.json")
+
+    assert sample["schema_version"] == (  # type: ignore[index]
+        "inferedge-orchestrator-scheduler-delay-sample-v1"
+    )
+    assert sample["source_config"] == (  # type: ignore[index]
+        "configs/agent_3_workload_sustained_high_load.json"
+    )
+    assert sample["not_a_benchmark"] is True
+
+    event_summary = sample["runtime_event_summary"]  # type: ignore[index]
+    assert event_summary["scheduler_delay_event_count"] == 3
+    assert event_summary["policy_decision_reason_counts"] == {
+        "queue_backlog_threshold_exceeded": 9
+    }
+    assert event_summary["drop_reason_counts"] == {
+        "load_shedding_backlog_threshold_exceeded": 9,
+        "queue_overflow_drop_oldest": 12,
+    }
+
+    delayed = sample["delayed_execution_sample"]  # type: ignore[index]
+    assert delayed["event_type"] == "execution"
+    assert delayed["scheduler_delay_cycles"] == 3
+    assert delayed["queue_wait_ms"] == 15.0
+    assert delayed["deadline_missed"] is True
+
+    downstream = sample["downstream_expectation"]  # type: ignore[index]
+    assert downstream["aiguard_evidence_type"] == "scheduler_delay_pattern"
+    assert downstream["lab_report_section"] == (
+        "AIGuard Orchestrator Operation Evidence"
+    )
+
+
 def test_jetson_dummy_sample_matches_runtime_telemetry_schema() -> None:
     sample = _load_sample("jetson_smoke_dummy_sample.json")
 
