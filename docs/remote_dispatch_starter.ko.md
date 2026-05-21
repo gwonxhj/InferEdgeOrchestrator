@@ -106,6 +106,12 @@ worker process를 제공하지 않는다.
     "mode": "file_contract_starter",
     "production_remote_execution": false,
     "execution_requested": false
+  },
+  "remote_operation_summary": {
+    "schema_version": "inferedge-remote-operation-summary-v1",
+    "dispatch_status": "accepted",
+    "final_status": "skipped",
+    "production_remote_execution": false
   }
 }
 ```
@@ -124,6 +130,8 @@ worker process를 제공하지 않는다.
 - primary/fallback worker id를 포함한 retry/fallback plan
 - `plan_only` mode의 remote execution plan
 - skipped/succeeded/failed starter execution을 나타내는 remote execution result
+- dispatch, execution, fallback, final starter status evidence를 압축한
+  remote operation summary
 
 이 출력은 remote execution path가 starter contract를 넘어 확장될 때 AIGuard와
 Lab report의 입력으로 연결될 수 있다.
@@ -144,6 +152,10 @@ starter는 기본적으로 execution planning만 기록하고 network connection
   아니라 `remote_execution_result`에 기록된다.
 - primary starter가 실패하고 retry policy가 허용하면 `fallback_execution_result`에
   attempted fallback worker, status, transport, final starter outcome을 기록한다.
+- `remote_operation_summary`는 dispatch status, selected worker health state,
+  eligible/rejected worker count, primary execution status, fallback recovery
+  status, `final_status`를 downstream registry/report ingestion에 필요한 compact
+  operation evidence로 기록한다.
 - fallback execution은 starter evidence로만 제한한다. production-grade retry,
   heartbeat, failover state, worker lifecycle management는 future hardening이다.
 

@@ -48,6 +48,22 @@ def test_remote_dispatch_selects_matching_healthy_worker(tmp_path: Path) -> None
         "error_category": "execution_not_requested",
     }
     assert result["runtime_events"][0]["event"] == "remote_dispatch_selected"
+    assert result["runtime_events"][-1]["event"] == "remote_operation_summary_recorded"
+    summary = result["remote_operation_summary"]
+    assert summary["schema_version"] == "inferedge-remote-operation-summary-v1"
+    assert summary["dispatch_status"] == "accepted"
+    assert summary["selected_worker_id"] == "jetson-nano-01"
+    assert summary["selected_worker_health_state"] == "healthy"
+    assert summary["worker_count"] == 2
+    assert summary["eligible_worker_count"] == 1
+    assert summary["rejected_worker_count"] == 1
+    assert summary["health_state_counts"] == {"healthy": 1, "constrained": 1}
+    assert summary["execution_requested"] is False
+    assert summary["execution_performed"] is False
+    assert summary["remote_execution_status"] == "skipped"
+    assert summary["fallback_final_status"] == "not_attempted"
+    assert summary["final_status"] == "skipped"
+    assert summary["production_remote_execution"] is False
     assert (
         result["worker_health_snapshot"]["workers"]["jetson-nano-01"]["health_state"]
         == "healthy"
@@ -99,6 +115,10 @@ def test_remote_dispatch_rejects_when_no_worker_matches(tmp_path: Path) -> None:
     assert result["dispatch_status"] == "rejected"
     assert result["selected_worker_id"] is None
     assert result["runtime_events"][0]["event"] == "remote_dispatch_rejected"
+    assert result["remote_operation_summary"]["dispatch_status"] == "rejected"
+    assert result["remote_operation_summary"]["eligible_worker_count"] == 0
+    assert result["remote_operation_summary"]["rejected_worker_count"] == 1
+    assert result["remote_operation_summary"]["final_status"] == "skipped"
     assert result["remote_execution_plan"]["mode"] == "no_worker_selected"
     assert result["worker_selection"]["candidate_worker_ids"] == []
 
@@ -264,7 +284,16 @@ def test_remote_dispatch_execute_plan_posts_to_http_starter(
         "task_id": "task_http_001",
         "worker_id": "http-worker",
     }
-    assert result["runtime_events"][-1]["event"] == "remote_execution_completed"
+    assert [event["event"] for event in result["runtime_events"]] == [
+        "remote_dispatch_selected",
+        "remote_execution_completed",
+        "remote_operation_summary_recorded",
+    ]
+    summary = result["remote_operation_summary"]
+    assert summary["execution_requested"] is True
+    assert summary["execution_performed"] is True
+    assert summary["remote_execution_status"] == "succeeded"
+    assert summary["final_status"] == "succeeded"
 
 
 def test_remote_dispatch_execute_plan_falls_back_after_primary_connection_error(
@@ -378,7 +407,22 @@ def test_remote_dispatch_execute_plan_falls_back_after_primary_connection_error(
         "fallback-http-worker"
     ]
     assert result["retry_fallback_plan"]["last_execution_status"] == "succeeded"
-    assert result["runtime_events"][-1]["event"] == "remote_fallback_execution_completed"
+    assert [event["event"] for event in result["runtime_events"]] == [
+        "remote_dispatch_selected",
+        "remote_execution_failed",
+        "remote_fallback_execution_completed",
+        "remote_operation_summary_recorded",
+    ]
+    summary = result["remote_operation_summary"]
+    assert summary["remote_execution_status"] == "failed"
+    assert summary["remote_error_category"] == "connection_error"
+    assert summary["fallback_requested"] is True
+    assert summary["fallback_execution_performed"] is True
+    assert summary["fallback_attempt_count"] == 1
+    assert summary["fallback_final_status"] == "succeeded"
+    assert summary["fallback_recovered"] is True
+    assert summary["final_status"] == "succeeded"
+    assert result["runtime_events"][-1]["event"] == "remote_operation_summary_recorded"
 
 
 def test_remote_dispatch_execute_plan_against_local_http_worker(
@@ -450,7 +494,12 @@ def test_remote_dispatch_execute_plan_against_local_http_worker(
         )
         assert execution["response_json"]["execution_status"] == "simulated_completed"
         assert execution["response_json"]["production_remote_execution"] is False
-        assert result["runtime_events"][-1]["event"] == "remote_execution_completed"
+        assert [event["event"] for event in result["runtime_events"]] == [
+            "remote_dispatch_selected",
+            "remote_execution_completed",
+            "remote_operation_summary_recorded",
+        ]
+        assert result["remote_operation_summary"]["final_status"] == "succeeded"
     finally:
         worker.terminate()
         try:
@@ -505,6 +554,10 @@ def test_remote_dispatch_execute_plan_classifies_missing_ssh_contract(
     assert result["remote_execution_result"]["transport"] == "ssh"
     assert result["remote_execution_result"]["execution_performed"] is False
     assert result["remote_execution_result"]["error_category"] == "missing_ssh_contract"
+    assert result["remote_operation_summary"]["remote_error_category"] == (
+        "missing_ssh_contract"
+    )
+    assert result["remote_operation_summary"]["final_status"] == "failed"
 
 
 def test_remote_dispatch_cli_writes_result(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
