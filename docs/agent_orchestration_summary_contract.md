@@ -190,6 +190,20 @@ The committed config names the intended lightweight workload profiles:
 - Whisper-like command burst through FastAPI-style concurrent request ingress
 - Safety/monitor loop with optional tegrastats timeline evidence
 
+The sustained output preserves the raw `scenario_mode` and also adds
+human-readable scenario identity fields in `run`, `sustained_runtime_summary`,
+and `multi_workload_sustained_summary`:
+
+| scenario_mode | scenario_label | scenario_category |
+|---|---|---|
+| `normal` | `normal_scheduler_smoke` | `normal` |
+| `overload` | `overload_scheduler_pressure` | `overload` |
+| `sustained_high_load` | `producer_backed_sustained_high_load` | `sustained` |
+| `device_local` | `device_local_sustained_starter` | `device_local` |
+
+These labels make repeated run registries easier to scan while keeping
+`scenario_mode` backward-compatible as the machine-readable mode.
+
 Default execution now uses lightweight local CPU profile adapters so the
 contract can exercise workload pressure without requiring model downloads,
 FastAPI servers, or Jetson-only telemetry. The first Vision producer step is
