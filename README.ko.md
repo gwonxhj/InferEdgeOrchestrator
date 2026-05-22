@@ -118,6 +118,10 @@ flowchart LR
 - InferEdgeEnv는 benchmark evidence가 신뢰 및 비교 가능한지 판단한다.
 - InferEdgeOrchestrator는 배포된 inference task들이 함께 실행될 때의 운영을 제어한다.
 - Orchestrator 연동은 직접 import가 아니라 `result.json` 파일 기반으로 유지된다.
+- sustained Orchestrator report에는 additive `edgeenv_runtime_telemetry_feed`
+  block이 포함되어 EdgeEnv/AIGuard/Lab이 queue, deadline, fallback, resource
+  context를 재사용할 수 있다. 단, Orchestrator가 regression 또는 deployment
+  decision owner가 되는 것은 아니다.
 
 ## Implementation Map
 
@@ -131,6 +135,7 @@ flowchart LR
 | Agent Runtime Contract | Forge agent manifest와 Runtime `result.agent` 참조를 사용하는 Vision / Voice-Command / Safety-Monitor dummy workload | `configs/agent_3_workload_demo.json`, [`docs/agent_orchestration_summary_contract.ko.md`](docs/agent_orchestration_summary_contract.ko.md) |
 | Lightweight Sustained Workload Starter | YOLO-like vision, Whisper-like command burst, FastAPI-style ingress, optional tegrastats timeline, producer-backed starter를 포함한 profiled local sustained scenario | `python3 -m inferedge_orchestrator run-multi-workload-sustained ...` |
 | Device-Local Sustained Starter | committed image/request/resource snapshot producer를 하나의 `device_local` mode로 실행하는 starter | `configs/agent_multi_workload_sustained_device_local.json` |
+| EdgeEnv Telemetry Feed Candidate | Orchestrator queue/deadline/fallback/resource context를 EdgeEnv runtime telemetry context candidate로 매핑하는 additive sustained report block | sustained report의 `edgeenv_runtime_telemetry_feed` |
 | Remote Dispatch Starter | production remote execution을 주장하지 않고 file-based worker registry와 task request contract로 remote edge worker selection, 명시적 HTTP/SSH starter 실행, bounded fallback evidence를 검증 | [`docs/remote_dispatch_starter.ko.md`](docs/remote_dispatch_starter.ko.md) |
 
 ## Validation Evidence
