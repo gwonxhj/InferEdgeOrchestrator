@@ -9,6 +9,7 @@ import pytest
 
 from inferedge_orchestrator.config import OrchestratorConfig
 from inferedge_orchestrator.sustained import (
+    EDGEENV_TELEMETRY_FEED_SCHEMA,
     MULTI_WORKLOAD_SCHEMA,
     apply_device_local_input_overrides,
     load_tegrastats_timeline,
@@ -105,6 +106,34 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     assert any(output.get("profile_kind") == "safety_monitor_loop" for output in outputs)
     assert report["tegrastats_timeline"]["summary"]["max_gpu_percent"] == 42
     assert report["tegrastats_timeline"]["summary"]["max_temperature_c"] == 45.5
+    feed = report["edgeenv_runtime_telemetry_feed"]
+    assert feed["schema_version"] == EDGEENV_TELEMETRY_FEED_SCHEMA
+    assert feed["role"] == "orchestrator_operation_context_for_edgeenv"
+    assert feed["not_a_regression_judgement"] is True
+    assert feed["not_a_comparability_gate"] is True
+    assert feed["decision_owner"] == "lab"
+    assert feed["regression_owner"] == "edgeenv"
+    candidate = feed["candidate_context"]
+    assert candidate["telemetry_source"] == (
+        "inferedge_orchestrator_operation_summary"
+    )
+    assert candidate["queue_depth"] == signals["max_total_queue_depth"]
+    assert candidate["operation"]["deadline_missed_count"] == (
+        report["agent_runtime_summary"]["totals"]["deadline_missed_count"]
+    )
+    assert candidate["operation"]["fallback_count"] == (
+        report["agent_runtime_summary"]["totals"]["fallback_count"]
+    )
+    assert candidate["operation"]["policy_decision_reasons"] == (
+        report["queue_state_summary"]["policy_decision_reasons"]
+    )
+    assert candidate["resource"]["source"] == "tegrastats_timeline"
+    assert candidate["resource"]["gpu_temperature"] == 44.0
+    assert candidate["resource"]["cpu_temperature"] == 45.5
+    assert candidate["resource"]["gpu_percent"] == 42
+    assert feed["edgeenv_mapping_hint"]["copy_candidate_context_to"] == (
+        "runtime_telemetry_context.candidate"
+    )
 
 
 def test_run_multi_workload_sustained_profiles_local_image_input(tmp_path) -> None:
@@ -323,6 +352,23 @@ def test_run_multi_workload_sustained_device_local_starter(tmp_path) -> None:
     }
     assert event_summary["producer_event_count"] == len(execution_events)
     assert event_summary["device_local_event_count"] > 0
+    feed = report["edgeenv_runtime_telemetry_feed"]
+    assert feed["schema_version"] == EDGEENV_TELEMETRY_FEED_SCHEMA
+    assert feed["scenario_mode"] == "device_local"
+    assert feed["candidate_context"]["operation"]["queue_pressure_state"] == (
+        queue_summary["queue_pressure_state"]
+    )
+    assert feed["candidate_context"]["operation"]["queue_depth"] == (
+        queue_summary["max_total_queue_depth"]
+    )
+    assert feed["candidate_context"]["resource"]["source"] == (
+        "result_events_resource_snapshot"
+    )
+    assert feed["candidate_context"]["resource"]["temperature_c"] == 69.2
+    assert feed["candidate_context"]["resource"]["ram_used_mb"] == 6144.0
+    assert "runtime_queue_overload" in feed["edgeenv_mapping_hint"][
+        "aiguard_evidence_candidates"
+    ]
 
 
 def test_device_local_input_overrides_use_local_paths(tmp_path) -> None:

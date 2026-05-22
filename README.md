@@ -119,6 +119,9 @@ The boundary is intentional:
 - InferEdgeEnv answers whether benchmark evidence can be trusted and compared.
 - InferEdgeOrchestrator controls how deployed inference tasks behave together.
 - Orchestrator integration is file-based through `result.json`, not direct imports.
+- Sustained Orchestrator reports include an additive `edgeenv_runtime_telemetry_feed`
+  block so EdgeEnv/AIGuard/Lab can reuse queue, deadline, fallback, and resource
+  context without treating Orchestrator as the regression or deployment-decision owner.
 
 ## Implementation Map
 
@@ -133,6 +136,7 @@ The boundary is intentional:
 | Sustained Agent Scenario Starter | Normal / overload / sustained-high-load 3-agent modes with queue-depth timeline, latency timeline, and policy decision reasons | `configs/agent_3_workload_sustained_high_load.json` |
 | Lightweight Sustained Workload Starter | Profiled local sustained scenario for YOLO-like vision, Whisper-like command burst, FastAPI-style ingress, optional tegrastats timeline, and producer-backed starters | `python3 -m inferedge_orchestrator run-multi-workload-sustained ...` |
 | Device-Local Sustained Starter | Device-local mode using committed image, request, and resource snapshot producers before live device integrations | `configs/agent_multi_workload_sustained_device_local.json` |
+| EdgeEnv Telemetry Feed Candidate | Additive sustained report block that maps Orchestrator queue/deadline/fallback/resource context into an EdgeEnv runtime telemetry context candidate | `edgeenv_runtime_telemetry_feed` in sustained reports |
 | Remote Dispatch Starter | File-based worker registry and task request contract for selecting a remote edge worker; optional `--execute-plan` records explicit HTTP/SSH starter and bounded fallback evidence without claiming production remote execution | [`docs/remote_dispatch_starter.md`](docs/remote_dispatch_starter.md) |
 
 ## Validation Evidence

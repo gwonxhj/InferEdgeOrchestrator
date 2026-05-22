@@ -11,6 +11,9 @@ from inferedge_orchestrator.runtime import OrchestratorRuntime
 
 
 MULTI_WORKLOAD_SCHEMA = "inferedge-orchestrator-multi-workload-sustained-v1"
+EDGEENV_TELEMETRY_FEED_SCHEMA = (
+    "inferedge-orchestrator-edgeenv-runtime-telemetry-feed-v1"
+)
 
 
 def apply_device_local_input_overrides(
@@ -134,6 +137,11 @@ def run_multi_workload_sustained(
         report,
         tegrastats,
     )
+    report["edgeenv_runtime_telemetry_feed"] = _edgeenv_runtime_telemetry_feed(
+        config,
+        report,
+        tegrastats,
+    )
     return report
 
 
@@ -211,6 +219,120 @@ def _multi_workload_summary(
             **_producer_source_signals(report),
         },
         "next_validation_step": _next_validation_step(config),
+    }
+
+
+def _edgeenv_runtime_telemetry_feed(
+    config: OrchestratorConfig,
+    report: dict[str, Any],
+    tegrastats: dict[str, Any],
+) -> dict[str, Any]:
+    run = report.get("run", {})
+    sustained = report.get("sustained_runtime_summary", {})
+    queue_summary = report.get("queue_state_summary", {})
+    runtime_event_summary = report.get("runtime_event_summary", {})
+    totals = report.get("agent_runtime_summary", {}).get("totals", {})
+    resource = _edgeenv_resource_context(report, tegrastats)
+    operation = {
+        "queue_depth": queue_summary.get(
+            "max_total_queue_depth",
+            sustained.get("max_total_queue_depth", 0),
+        ),
+        "deadline_missed_count": totals.get(
+            "deadline_missed_count",
+            sustained.get("deadline_missed_count", 0),
+        ),
+        "fallback_count": totals.get(
+            "fallback_count",
+            sustained.get("fallback_count", 0),
+        ),
+        "dropped_count": totals.get(
+            "dropped_count",
+            sustained.get("dropped_count", 0),
+        ),
+        "policy_decision_count": totals.get(
+            "policy_decision_count",
+            sustained.get("policy_decision_count", 0),
+        ),
+        "queue_pressure_state": queue_summary.get("queue_pressure_state"),
+        "queue_pressure_reason": queue_summary.get("queue_pressure_reason"),
+        "policy_decision_reasons": queue_summary.get("policy_decision_reasons", []),
+        "drop_reason_counts": queue_summary.get("drop_reason_counts", {}),
+        "runtime_event_counts": runtime_event_summary.get("event_type_counts", {}),
+        "runtime_event_reason_counts": runtime_event_summary.get("reason_counts", {}),
+    }
+    candidate_context = {
+        "run_id": run.get("name", config.name),
+        "result_telemetry_present": True,
+        "history_entry_present": True,
+        "telemetry_source": "inferedge_orchestrator_operation_summary",
+        "available_sections": [
+            "operation",
+            "resource",
+            "queue_state_summary",
+            "runtime_event_summary",
+        ],
+        "queue_depth": operation["queue_depth"],
+        "operation": operation,
+        "resource": resource,
+    }
+    if resource.get("gpu_temperature") is not None:
+        candidate_context["gpu_temperature"] = resource["gpu_temperature"]
+    if resource.get("cpu_temperature") is not None:
+        candidate_context["cpu_temperature"] = resource["cpu_temperature"]
+    if resource.get("ram_used_mb") is not None:
+        candidate_context["ram_used_mb"] = resource["ram_used_mb"]
+
+    return {
+        "schema_version": EDGEENV_TELEMETRY_FEED_SCHEMA,
+        "role": "orchestrator_operation_context_for_edgeenv",
+        "source": "orchestration_summary",
+        "run_id": run.get("name", config.name),
+        "scenario_mode": config.scenario_mode,
+        "scenario_label": run.get("scenario_label"),
+        "not_a_regression_judgement": True,
+        "not_a_comparability_gate": True,
+        "decision_owner": "lab",
+        "regression_owner": "edgeenv",
+        "candidate_context": candidate_context,
+        "edgeenv_mapping_hint": {
+            "runtime_telemetry_context_role": "candidate",
+            "copy_candidate_context_to": "runtime_telemetry_context.candidate",
+            "aiguard_evidence_candidates": [
+                "runtime_queue_overload",
+                "runtime_thermal_instability",
+            ],
+        },
+    }
+
+
+def _edgeenv_resource_context(
+    report: dict[str, Any],
+    tegrastats: dict[str, Any],
+) -> dict[str, Any]:
+    summary = tegrastats.get("summary", {})
+    samples = tegrastats.get("samples", [])
+    gpu_temperature = _max_named_temperature(samples, {"gpu", "gpu0"})
+    cpu_temperature = _max_named_temperature(samples, {"cpu", "cpu0"})
+    max_temperature = _first_number(
+        summary.get("max_temperature_c"),
+        _max_result_output_number(report, "temperature_c"),
+    )
+    return {
+        "source": _resource_context_source(report, tegrastats),
+        "resource_evidence_available": bool(
+            tegrastats.get("sample_count", 0)
+            or _result_output_values(report, "temperature_c")
+            or _result_output_values(report, "memory_used_mb")
+        ),
+        "gpu_temperature": gpu_temperature,
+        "cpu_temperature": cpu_temperature,
+        "temperature_c": max_temperature,
+        "ram_used_mb": _first_number(
+            summary.get("max_ram_used_mb"),
+            _max_result_output_number(report, "memory_used_mb"),
+        ),
+        "gpu_percent": summary.get("max_gpu_percent"),
     }
 
 
@@ -434,6 +556,75 @@ def _producer_source_signals(report: dict[str, Any]) -> dict[str, Any]:
             if output.get("producer_source") in device_local_sources
         ),
     }
+
+
+def _resource_context_source(
+    report: dict[str, Any],
+    tegrastats: dict[str, Any],
+) -> str:
+    if tegrastats.get("sample_count", 0):
+        return "tegrastats_timeline"
+    if _result_output_values(report, "temperature_c") or _result_output_values(
+        report,
+        "memory_used_mb",
+    ):
+        return "result_events_resource_snapshot"
+    return "not_available"
+
+
+def _max_named_temperature(
+    samples: Any,
+    names: set[str],
+) -> float | None:
+    values: list[float] = []
+    if not isinstance(samples, list):
+        return None
+    for sample in samples:
+        if not isinstance(sample, dict):
+            continue
+        temperatures = sample.get("temperatures_c")
+        if not isinstance(temperatures, dict):
+            continue
+        for name, value in temperatures.items():
+            if (
+                str(name).lower() in names
+                and isinstance(value, int | float)
+                and not isinstance(value, bool)
+            ):
+                values.append(float(value))
+    return round(max(values), 3) if values else None
+
+
+def _max_result_output_number(
+    report: dict[str, Any],
+    field: str,
+) -> float | None:
+    values = _result_output_values(report, field)
+    return round(max(values), 3) if values else None
+
+
+def _result_output_values(
+    report: dict[str, Any],
+    field: str,
+) -> list[float]:
+    values: list[float] = []
+    for event in report.get("result_events", []):
+        if not isinstance(event, dict):
+            continue
+        output = event.get("output")
+        if not isinstance(output, dict):
+            continue
+        value = output.get(field)
+        if isinstance(value, int | float) and not isinstance(value, bool):
+            values.append(float(value))
+    return values
+
+
+def _first_number(*values: Any) -> float | None:
+    for value in values:
+        if isinstance(value, int | float) and not isinstance(value, bool):
+            return round(float(value), 3)
+    return None
 
 
 def _policy_decision_reasons(report: dict[str, Any]) -> list[str]:
