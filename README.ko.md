@@ -122,6 +122,9 @@ flowchart LR
   block이 포함되어 EdgeEnv/AIGuard/Lab이 queue, deadline, fallback, resource
   context를 재사용할 수 있다. 단, Orchestrator가 regression 또는 deployment
   decision owner가 되는 것은 아니다.
+- 이 feed는 mapping contract를 명시한다. Orchestrator는 supplemental candidate
+  operation context를 제공하고, history-level telemetry coverage summary의 owner는
+  EdgeEnv로 유지한다.
 
 ## Implementation Map
 

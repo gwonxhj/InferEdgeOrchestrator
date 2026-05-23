@@ -122,6 +122,9 @@ The boundary is intentional:
 - Sustained Orchestrator reports include an additive `edgeenv_runtime_telemetry_feed`
   block so EdgeEnv/AIGuard/Lab can reuse queue, deadline, fallback, and resource
   context without treating Orchestrator as the regression or deployment-decision owner.
+- The feed declares its mapping contract explicitly: Orchestrator provides
+  supplemental candidate operation context, while EdgeEnv remains the owner of
+  history-level telemetry coverage summaries.
 
 ## Implementation Map
 

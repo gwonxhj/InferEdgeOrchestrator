@@ -14,6 +14,8 @@ MULTI_WORKLOAD_SCHEMA = "inferedge-orchestrator-multi-workload-sustained-v1"
 EDGEENV_TELEMETRY_FEED_SCHEMA = (
     "inferedge-orchestrator-edgeenv-runtime-telemetry-feed-v1"
 )
+EDGEENV_HISTORY_COVERAGE_PATH = "runtime_telemetry_context.history.telemetry_coverage"
+EDGEENV_CANDIDATE_CONTEXT_PATH = "runtime_telemetry_context.candidate"
 
 
 def apply_device_local_input_overrides(
@@ -317,7 +319,16 @@ def _edgeenv_runtime_telemetry_feed(
         "candidate_context": candidate_context,
         "edgeenv_mapping_hint": {
             "runtime_telemetry_context_role": "candidate",
-            "copy_candidate_context_to": "runtime_telemetry_context.candidate",
+            "copy_candidate_context_to": EDGEENV_CANDIDATE_CONTEXT_PATH,
+            "operation_context_role": "supplemental",
+            "coverage_summary_owner": "edgeenv",
+            "coverage_summary_path": EDGEENV_HISTORY_COVERAGE_PATH,
+            "candidate_context_required_fields": [
+                "run_id",
+                "telemetry_source",
+                "operation",
+                "resource",
+            ],
             "aiguard_evidence_candidates": [
                 "runtime_queue_overload",
                 "runtime_thermal_instability",
@@ -354,6 +365,48 @@ def _validate_edgeenv_runtime_telemetry_feed(feed: dict[str, Any]) -> None:
     if not isinstance(feed.get("candidate_context"), dict):
         raise ValueError(
             "edgeenv_runtime_telemetry_feed.candidate_context must be an object"
+        )
+    candidate_context = feed["candidate_context"]
+    for field in ("run_id", "telemetry_source", "operation", "resource"):
+        if field not in candidate_context:
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context must include "
+                f"{field}"
+            )
+    if not isinstance(candidate_context.get("operation"), dict):
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation must be "
+            "an object"
+        )
+    if not isinstance(candidate_context.get("resource"), dict):
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.resource must be "
+            "an object"
+        )
+    mapping_hint = feed.get("edgeenv_mapping_hint")
+    if not isinstance(mapping_hint, dict):
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.edgeenv_mapping_hint must be an object"
+        )
+    if mapping_hint.get("copy_candidate_context_to") != EDGEENV_CANDIDATE_CONTEXT_PATH:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.edgeenv_mapping_hint."
+            f"copy_candidate_context_to must be {EDGEENV_CANDIDATE_CONTEXT_PATH}"
+        )
+    if mapping_hint.get("operation_context_role") != "supplemental":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.edgeenv_mapping_hint."
+            "operation_context_role must be supplemental"
+        )
+    if mapping_hint.get("coverage_summary_owner") != "edgeenv":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.edgeenv_mapping_hint."
+            "coverage_summary_owner must be edgeenv"
+        )
+    if mapping_hint.get("coverage_summary_path") != EDGEENV_HISTORY_COVERAGE_PATH:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.edgeenv_mapping_hint."
+            f"coverage_summary_path must be {EDGEENV_HISTORY_COVERAGE_PATH}"
         )
 
 

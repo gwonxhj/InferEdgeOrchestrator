@@ -10,6 +10,8 @@ import pytest
 from inferedge_orchestrator.config import OrchestratorConfig
 from inferedge_orchestrator.cli import main
 from inferedge_orchestrator.sustained import (
+    EDGEENV_CANDIDATE_CONTEXT_PATH,
+    EDGEENV_HISTORY_COVERAGE_PATH,
     EDGEENV_TELEMETRY_FEED_SCHEMA,
     MULTI_WORKLOAD_SCHEMA,
     apply_device_local_input_overrides,
@@ -134,8 +136,19 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     assert candidate["resource"]["cpu_temperature"] == 45.5
     assert candidate["resource"]["gpu_percent"] == 42
     assert feed["edgeenv_mapping_hint"]["copy_candidate_context_to"] == (
-        "runtime_telemetry_context.candidate"
+        EDGEENV_CANDIDATE_CONTEXT_PATH
     )
+    assert feed["edgeenv_mapping_hint"]["operation_context_role"] == "supplemental"
+    assert feed["edgeenv_mapping_hint"]["coverage_summary_owner"] == "edgeenv"
+    assert feed["edgeenv_mapping_hint"]["coverage_summary_path"] == (
+        EDGEENV_HISTORY_COVERAGE_PATH
+    )
+    assert feed["edgeenv_mapping_hint"]["candidate_context_required_fields"] == [
+        "run_id",
+        "telemetry_source",
+        "operation",
+        "resource",
+    ]
 
 
 def test_write_edgeenv_runtime_telemetry_feed_exports_standalone_artifact(
@@ -172,7 +185,11 @@ def test_write_edgeenv_runtime_telemetry_feed_exports_standalone_artifact(
         report["queue_state_summary"]["max_total_queue_depth"]
     )
     assert feed["edgeenv_mapping_hint"]["copy_candidate_context_to"] == (
-        "runtime_telemetry_context.candidate"
+        EDGEENV_CANDIDATE_CONTEXT_PATH
+    )
+    assert feed["edgeenv_mapping_hint"]["coverage_summary_owner"] == "edgeenv"
+    assert feed["edgeenv_mapping_hint"]["coverage_summary_path"] == (
+        EDGEENV_HISTORY_COVERAGE_PATH
     )
 
 
@@ -182,6 +199,56 @@ def test_write_edgeenv_runtime_telemetry_feed_requires_feed_block(tmp_path) -> N
         match="missing edgeenv_runtime_telemetry_feed",
     ):
         write_edgeenv_runtime_telemetry_feed({}, tmp_path / "feed.json")
+
+
+def test_write_edgeenv_runtime_telemetry_feed_requires_mapping_contract(
+    tmp_path,
+) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    report = write_multi_workload_sustained(
+        config,
+        output=tmp_path / "report.json",
+        frames=4,
+    )
+    report["edgeenv_runtime_telemetry_feed"]["edgeenv_mapping_hint"][
+        "coverage_summary_owner"
+    ] = "orchestrator"
+
+    with pytest.raises(
+        ValueError,
+        match="coverage_summary_owner must be edgeenv",
+    ):
+        write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
+
+
+def test_write_edgeenv_runtime_telemetry_feed_requires_candidate_operation_context(
+    tmp_path,
+) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    report = write_multi_workload_sustained(
+        config,
+        output=tmp_path / "report.json",
+        frames=4,
+    )
+    report["edgeenv_runtime_telemetry_feed"]["candidate_context"].pop("operation")
+
+    with pytest.raises(
+        ValueError,
+        match="candidate_context must include operation",
+    ):
+        write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
 
 
 def test_cli_run_multi_workload_sustained_writes_edgeenv_feed_output(
@@ -447,6 +514,10 @@ def test_run_multi_workload_sustained_device_local_starter(tmp_path) -> None:
     assert "runtime_queue_overload" in feed["edgeenv_mapping_hint"][
         "aiguard_evidence_candidates"
     ]
+    assert feed["edgeenv_mapping_hint"]["coverage_summary_owner"] == "edgeenv"
+    assert feed["edgeenv_mapping_hint"]["coverage_summary_path"] == (
+        EDGEENV_HISTORY_COVERAGE_PATH
+    )
 
 
 def test_device_local_input_overrides_use_local_paths(tmp_path) -> None:
