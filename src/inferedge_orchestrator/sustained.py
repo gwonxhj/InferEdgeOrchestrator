@@ -152,6 +152,7 @@ def write_multi_workload_sustained(
     frames: int,
     tegrastats_log: str | Path | None = None,
     sleep_worker: bool = False,
+    edgeenv_feed_output: str | Path | None = None,
 ) -> dict[str, Any]:
     report = run_multi_workload_sustained(
         config,
@@ -165,7 +166,26 @@ def write_multi_workload_sustained(
         json.dumps(report, indent=2, sort_keys=True),
         encoding="utf-8",
     )
+    if edgeenv_feed_output is not None:
+        write_edgeenv_runtime_telemetry_feed(report, edgeenv_feed_output)
     return report
+
+
+def write_edgeenv_runtime_telemetry_feed(
+    report: dict[str, Any],
+    output: str | Path,
+) -> dict[str, Any]:
+    feed = report.get("edgeenv_runtime_telemetry_feed")
+    if not isinstance(feed, dict):
+        raise ValueError("sustained report is missing edgeenv_runtime_telemetry_feed")
+    _validate_edgeenv_runtime_telemetry_feed(feed)
+    output_path = Path(output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(feed, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    return feed
 
 
 def load_tegrastats_timeline(path: str | Path | None) -> dict[str, Any]:
@@ -304,6 +324,37 @@ def _edgeenv_runtime_telemetry_feed(
             ],
         },
     }
+
+
+def _validate_edgeenv_runtime_telemetry_feed(feed: dict[str, Any]) -> None:
+    if feed.get("schema_version") != EDGEENV_TELEMETRY_FEED_SCHEMA:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.schema_version must be "
+            f"{EDGEENV_TELEMETRY_FEED_SCHEMA}"
+        )
+    if feed.get("role") != "orchestrator_operation_context_for_edgeenv":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.role must be "
+            "orchestrator_operation_context_for_edgeenv"
+        )
+    if feed.get("not_a_regression_judgement") is not True:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.not_a_regression_judgement must be true"
+        )
+    if feed.get("not_a_comparability_gate") is not True:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.not_a_comparability_gate must be true"
+        )
+    if feed.get("decision_owner") != "lab":
+        raise ValueError("edgeenv_runtime_telemetry_feed.decision_owner must be lab")
+    if feed.get("regression_owner") != "edgeenv":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.regression_owner must be edgeenv"
+        )
+    if not isinstance(feed.get("candidate_context"), dict):
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context must be an object"
+        )
 
 
 def _edgeenv_resource_context(

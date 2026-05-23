@@ -267,6 +267,7 @@ producer fixtures in one explicit `device_local` mode:
 python3 -m inferedge_orchestrator run-multi-workload-sustained \
   --config configs/agent_multi_workload_sustained_device_local.json \
   --output reports/agent_multi_workload_sustained_device_local.json \
+  --edgeenv-feed-output reports/edgeenv_runtime_telemetry_feed.json \
   --frames 16
 ```
 
@@ -274,6 +275,11 @@ This records `producer_sources`, `device_local_producer_count`, and the same
 Vision image, Voice request, and Safety resource evidence while keeping live
 YOLO/ONNX, FastAPI, tegrastats, and Jetson/RPi producers as follow-up
 integrations.
+The optional `--edgeenv-feed-output` writes the same
+`edgeenv_runtime_telemetry_feed` block as a standalone JSON artifact that
+EdgeEnv can pass to `edgeenv runs telemetry export-history --orchestrator-feed`.
+That feed remains supplemental operation context; it is not a regression
+judgement or a deployment decision.
 
 You can replace those committed producer fixtures at run time without editing
 the config. `--vision-input` accepts a single image/video file or a directory of

@@ -311,12 +311,18 @@ device monitor integration은 후속 단계로 둔다.
 python3 -m inferedge_orchestrator run-multi-workload-sustained \
   --config configs/agent_multi_workload_sustained_device_local.json \
   --output reports/agent_multi_workload_sustained_device_local.json \
+  --edgeenv-feed-output reports/edgeenv_runtime_telemetry_feed.json \
   --frames 16
 ```
 
 이 경로는 `producer_sources`, `device_local_producer_count`, Vision image, Voice
 request, Safety resource evidence를 기록하며 live YOLO/ONNX, FastAPI,
 tegrastats, Jetson/RPi producer는 후속 integration으로 둔다.
+선택적 `--edgeenv-feed-output`은 같은 `edgeenv_runtime_telemetry_feed` block을
+standalone JSON artifact로 저장한다. 이 파일은 EdgeEnv의
+`edgeenv runs telemetry export-history --orchestrator-feed` 입력으로 사용할 수
+있다. 단, 이 feed는 supplemental operation context이며 regression judgement나
+deployment decision이 아니다.
 
 config를 수정하지 않고 실행 시점에 committed producer fixture를 로컬 입력으로
 교체할 수도 있다. `--vision-input`은 단일 image/video file 또는 image frame

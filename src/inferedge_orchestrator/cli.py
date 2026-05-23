@@ -11,6 +11,7 @@ from inferedge_orchestrator.runtime import OrchestratorRuntime
 from inferedge_orchestrator.scenarios import write_overload_comparison
 from inferedge_orchestrator.sustained import (
     apply_device_local_input_overrides,
+    write_edgeenv_runtime_telemetry_feed,
     write_multi_workload_sustained,
     write_process_resource_snapshot,
 )
@@ -37,6 +38,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sustained_parser.add_argument("--config", required=True, help="path to JSON config")
     sustained_parser.add_argument("--output", required=True, help="telemetry JSON output path")
+    sustained_parser.add_argument(
+        "--edgeenv-feed-output",
+        help=(
+            "optional standalone EdgeEnv telemetry feed JSON output path for "
+            "edgeenv runs telemetry export-history --orchestrator-feed"
+        ),
+    )
     sustained_parser.add_argument("--frames", type=int, default=16, help="frame cycles")
     sustained_parser.add_argument(
         "--tegrastats-log",
@@ -197,9 +205,13 @@ def _run_multi_workload_sustained(args: argparse.Namespace) -> int:
         tegrastats_log=args.tegrastats_log,
         sleep_worker=args.sleep_worker,
     )
+    if args.edgeenv_feed_output:
+        write_edgeenv_runtime_telemetry_feed(report, args.edgeenv_feed_output)
     summary = report["multi_workload_sustained_summary"]
     signals = summary["observed_runtime_signals"]
     print(f"wrote sustained telemetry: {args.output}")
+    if args.edgeenv_feed_output:
+        print(f"wrote EdgeEnv telemetry feed: {args.edgeenv_feed_output}")
     print(
         "multi-workload sustained: "
         f"max_queue={signals['max_total_queue_depth']} "
