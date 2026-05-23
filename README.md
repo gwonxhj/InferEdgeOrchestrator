@@ -125,6 +125,11 @@ The boundary is intentional:
 - The feed declares its mapping contract explicitly: Orchestrator provides
   supplemental candidate operation context, while EdgeEnv remains the owner of
   history-level telemetry coverage summaries.
+- The standalone feed writer validates that the mapping hint keeps
+  `coverage_summary_owner=edgeenv`,
+  `coverage_summary_path=runtime_telemetry_context.history.telemetry_coverage`,
+  `operation_context_role=supplemental`, and the required candidate context
+  fields used by EdgeEnv, AIGuard, and Lab.
 
 ## Implementation Map
 
@@ -283,6 +288,9 @@ The optional `--edgeenv-feed-output` writes the same
 EdgeEnv can pass to `edgeenv runs telemetry export-history --orchestrator-feed`.
 That feed remains supplemental operation context; it is not a regression
 judgement or a deployment decision.
+The feed export validates the EdgeEnv/AIGuard/Lab handoff markers before
+writing, so stale mapping hints fail locally instead of reaching downstream
+bundle gates.
 
 You can replace those committed producer fixtures at run time without editing
 the config. `--vision-input` accepts a single image/video file or a directory of

@@ -10,6 +10,7 @@ import pytest
 from inferedge_orchestrator.config import OrchestratorConfig
 from inferedge_orchestrator.cli import main
 from inferedge_orchestrator.sustained import (
+    EDGEENV_CANDIDATE_CONTEXT_REQUIRED_FIELDS,
     EDGEENV_CANDIDATE_CONTEXT_PATH,
     EDGEENV_HISTORY_COVERAGE_PATH,
     EDGEENV_TELEMETRY_FEED_SCHEMA,
@@ -143,12 +144,9 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     assert feed["edgeenv_mapping_hint"]["coverage_summary_path"] == (
         EDGEENV_HISTORY_COVERAGE_PATH
     )
-    assert feed["edgeenv_mapping_hint"]["candidate_context_required_fields"] == [
-        "run_id",
-        "telemetry_source",
-        "operation",
-        "resource",
-    ]
+    assert feed["edgeenv_mapping_hint"]["candidate_context_required_fields"] == (
+        EDGEENV_CANDIDATE_CONTEXT_REQUIRED_FIELDS
+    )
 
 
 def test_write_edgeenv_runtime_telemetry_feed_exports_standalone_artifact(
@@ -191,6 +189,9 @@ def test_write_edgeenv_runtime_telemetry_feed_exports_standalone_artifact(
     assert feed["edgeenv_mapping_hint"]["coverage_summary_path"] == (
         EDGEENV_HISTORY_COVERAGE_PATH
     )
+    assert feed["edgeenv_mapping_hint"]["candidate_context_required_fields"] == (
+        EDGEENV_CANDIDATE_CONTEXT_REQUIRED_FIELDS
+    )
 
 
 def test_write_edgeenv_runtime_telemetry_feed_requires_feed_block(tmp_path) -> None:
@@ -223,6 +224,32 @@ def test_write_edgeenv_runtime_telemetry_feed_requires_mapping_contract(
     with pytest.raises(
         ValueError,
         match="coverage_summary_owner must be edgeenv",
+    ):
+        write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
+
+
+def test_write_edgeenv_runtime_telemetry_feed_requires_mapping_required_fields(
+    tmp_path,
+) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    report = write_multi_workload_sustained(
+        config,
+        output=tmp_path / "report.json",
+        frames=4,
+    )
+    report["edgeenv_runtime_telemetry_feed"]["edgeenv_mapping_hint"][
+        "candidate_context_required_fields"
+    ] = ["run_id", "operation", "resource"]
+
+    with pytest.raises(
+        ValueError,
+        match="candidate_context_required_fields missing",
     ):
         write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
 
@@ -517,6 +544,9 @@ def test_run_multi_workload_sustained_device_local_starter(tmp_path) -> None:
     assert feed["edgeenv_mapping_hint"]["coverage_summary_owner"] == "edgeenv"
     assert feed["edgeenv_mapping_hint"]["coverage_summary_path"] == (
         EDGEENV_HISTORY_COVERAGE_PATH
+    )
+    assert feed["edgeenv_mapping_hint"]["candidate_context_required_fields"] == (
+        EDGEENV_CANDIDATE_CONTEXT_REQUIRED_FIELDS
     )
 
 
