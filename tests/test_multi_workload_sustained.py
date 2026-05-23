@@ -8,11 +8,13 @@ from types import SimpleNamespace
 import pytest
 
 from inferedge_orchestrator.config import OrchestratorConfig
+from inferedge_orchestrator.cli import main
 from inferedge_orchestrator.sustained import (
     EDGEENV_TELEMETRY_FEED_SCHEMA,
     MULTI_WORKLOAD_SCHEMA,
     apply_device_local_input_overrides,
     load_tegrastats_timeline,
+    write_edgeenv_runtime_telemetry_feed,
     write_multi_workload_sustained,
     write_process_resource_snapshot,
 )
@@ -134,6 +136,82 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     assert feed["edgeenv_mapping_hint"]["copy_candidate_context_to"] == (
         "runtime_telemetry_context.candidate"
     )
+
+
+def test_write_edgeenv_runtime_telemetry_feed_exports_standalone_artifact(
+    tmp_path,
+) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_device_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    output = tmp_path / "multi_workload_sustained_device_local.json"
+    feed_output = tmp_path / "edgeenv_runtime_telemetry_feed.json"
+
+    report = write_multi_workload_sustained(
+        config,
+        output=output,
+        frames=8,
+        edgeenv_feed_output=feed_output,
+    )
+
+    feed = json.loads(feed_output.read_text(encoding="utf-8"))
+    assert feed == report["edgeenv_runtime_telemetry_feed"]
+    assert feed["schema_version"] == EDGEENV_TELEMETRY_FEED_SCHEMA
+    assert feed["role"] == "orchestrator_operation_context_for_edgeenv"
+    assert feed["source"] == "orchestration_summary"
+    assert feed["not_a_regression_judgement"] is True
+    assert feed["not_a_comparability_gate"] is True
+    assert feed["decision_owner"] == "lab"
+    assert feed["regression_owner"] == "edgeenv"
+    assert feed["candidate_context"]["run_id"] == report["run"]["name"]
+    assert feed["candidate_context"]["operation"]["queue_depth"] == (
+        report["queue_state_summary"]["max_total_queue_depth"]
+    )
+    assert feed["edgeenv_mapping_hint"]["copy_candidate_context_to"] == (
+        "runtime_telemetry_context.candidate"
+    )
+
+
+def test_write_edgeenv_runtime_telemetry_feed_requires_feed_block(tmp_path) -> None:
+    with pytest.raises(
+        ValueError,
+        match="missing edgeenv_runtime_telemetry_feed",
+    ):
+        write_edgeenv_runtime_telemetry_feed({}, tmp_path / "feed.json")
+
+
+def test_cli_run_multi_workload_sustained_writes_edgeenv_feed_output(
+    tmp_path,
+    capsys,
+) -> None:
+    output = tmp_path / "multi_workload_sustained_device_local.json"
+    feed_output = tmp_path / "edgeenv_runtime_telemetry_feed.json"
+
+    exit_code = main(
+        [
+            "run-multi-workload-sustained",
+            "--config",
+            "configs/agent_multi_workload_sustained_device_local.json",
+            "--output",
+            str(output),
+            "--edgeenv-feed-output",
+            str(feed_output),
+            "--frames",
+            "8",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "wrote EdgeEnv telemetry feed" in captured.out
+    report = json.loads(output.read_text(encoding="utf-8"))
+    feed = json.loads(feed_output.read_text(encoding="utf-8"))
+    assert feed == report["edgeenv_runtime_telemetry_feed"]
+    assert feed["schema_version"] == EDGEENV_TELEMETRY_FEED_SCHEMA
 
 
 def test_run_multi_workload_sustained_profiles_local_image_input(tmp_path) -> None:
