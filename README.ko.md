@@ -125,6 +125,10 @@ flowchart LR
 - 이 feed는 mapping contract를 명시한다. Orchestrator는 supplemental candidate
   operation context를 제공하고, history-level telemetry coverage summary의 owner는
   EdgeEnv로 유지한다.
+- standalone feed writer는 `coverage_summary_owner=edgeenv`,
+  `coverage_summary_path=runtime_telemetry_context.history.telemetry_coverage`,
+  `operation_context_role=supplemental`, 그리고 EdgeEnv/AIGuard/Lab이 사용하는
+  candidate context 필수 필드를 검증한다.
 
 ## Implementation Map
 
@@ -326,6 +330,8 @@ standalone JSON artifact로 저장한다. 이 파일은 EdgeEnv의
 `edgeenv runs telemetry export-history --orchestrator-feed` 입력으로 사용할 수
 있다. 단, 이 feed는 supplemental operation context이며 regression judgement나
 deployment decision이 아니다.
+feed export는 EdgeEnv/AIGuard/Lab handoff marker를 쓰기 전에 검증하므로,
+오래된 mapping hint는 downstream bundle gate에 도달하기 전에 로컬에서 실패한다.
 
 config를 수정하지 않고 실행 시점에 committed producer fixture를 로컬 입력으로
 교체할 수도 있다. `--vision-input`은 단일 image/video file 또는 image frame

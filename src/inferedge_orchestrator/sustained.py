@@ -16,6 +16,12 @@ EDGEENV_TELEMETRY_FEED_SCHEMA = (
 )
 EDGEENV_HISTORY_COVERAGE_PATH = "runtime_telemetry_context.history.telemetry_coverage"
 EDGEENV_CANDIDATE_CONTEXT_PATH = "runtime_telemetry_context.candidate"
+EDGEENV_CANDIDATE_CONTEXT_REQUIRED_FIELDS = [
+    "run_id",
+    "telemetry_source",
+    "operation",
+    "resource",
+]
 
 
 def apply_device_local_input_overrides(
@@ -323,12 +329,9 @@ def _edgeenv_runtime_telemetry_feed(
             "operation_context_role": "supplemental",
             "coverage_summary_owner": "edgeenv",
             "coverage_summary_path": EDGEENV_HISTORY_COVERAGE_PATH,
-            "candidate_context_required_fields": [
-                "run_id",
-                "telemetry_source",
-                "operation",
-                "resource",
-            ],
+            "candidate_context_required_fields": list(
+                EDGEENV_CANDIDATE_CONTEXT_REQUIRED_FIELDS
+            ),
             "aiguard_evidence_candidates": [
                 "runtime_queue_overload",
                 "runtime_thermal_instability",
@@ -367,7 +370,7 @@ def _validate_edgeenv_runtime_telemetry_feed(feed: dict[str, Any]) -> None:
             "edgeenv_runtime_telemetry_feed.candidate_context must be an object"
         )
     candidate_context = feed["candidate_context"]
-    for field in ("run_id", "telemetry_source", "operation", "resource"):
+    for field in EDGEENV_CANDIDATE_CONTEXT_REQUIRED_FIELDS:
         if field not in candidate_context:
             raise ValueError(
                 "edgeenv_runtime_telemetry_feed.candidate_context must include "
@@ -407,6 +410,23 @@ def _validate_edgeenv_runtime_telemetry_feed(feed: dict[str, Any]) -> None:
         raise ValueError(
             "edgeenv_runtime_telemetry_feed.edgeenv_mapping_hint."
             f"coverage_summary_path must be {EDGEENV_HISTORY_COVERAGE_PATH}"
+        )
+    required_fields = mapping_hint.get("candidate_context_required_fields")
+    if not isinstance(required_fields, list):
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.edgeenv_mapping_hint."
+            "candidate_context_required_fields must be a list"
+        )
+    missing_required_fields = [
+        field
+        for field in EDGEENV_CANDIDATE_CONTEXT_REQUIRED_FIELDS
+        if field not in required_fields
+    ]
+    if missing_required_fields:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.edgeenv_mapping_hint."
+            "candidate_context_required_fields missing "
+            f"{missing_required_fields}"
         )
 
 
