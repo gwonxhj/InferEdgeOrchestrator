@@ -128,7 +128,9 @@ flowchart LR
 - standalone feed writer는 `coverage_summary_owner=edgeenv`,
   `coverage_summary_path=runtime_telemetry_context.history.telemetry_coverage`,
   `operation_context_role=supplemental`, 그리고 EdgeEnv/AIGuard/Lab이 사용하는
-  candidate context 필수 필드를 검증한다.
+  candidate context 필수 필드를 검증한다. 또한 `aiguard_evidence_candidates`가
+  `runtime_queue_overload`, `runtime_thermal_instability`를 유지하는지 확인해
+  downstream diagnosis/report fixture의 deterministic anomaly 경계를 보존한다.
 
 ## Implementation Map
 
