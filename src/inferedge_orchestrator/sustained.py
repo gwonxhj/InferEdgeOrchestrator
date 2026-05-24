@@ -22,6 +22,10 @@ EDGEENV_CANDIDATE_CONTEXT_REQUIRED_FIELDS = [
     "operation",
     "resource",
 ]
+EDGEENV_AIGUARD_EVIDENCE_CANDIDATES = [
+    "runtime_queue_overload",
+    "runtime_thermal_instability",
+]
 
 
 def apply_device_local_input_overrides(
@@ -332,10 +336,9 @@ def _edgeenv_runtime_telemetry_feed(
             "candidate_context_required_fields": list(
                 EDGEENV_CANDIDATE_CONTEXT_REQUIRED_FIELDS
             ),
-            "aiguard_evidence_candidates": [
-                "runtime_queue_overload",
-                "runtime_thermal_instability",
-            ],
+            "aiguard_evidence_candidates": list(
+                EDGEENV_AIGUARD_EVIDENCE_CANDIDATES
+            ),
         },
     }
 
@@ -427,6 +430,23 @@ def _validate_edgeenv_runtime_telemetry_feed(feed: dict[str, Any]) -> None:
             "edgeenv_runtime_telemetry_feed.edgeenv_mapping_hint."
             "candidate_context_required_fields missing "
             f"{missing_required_fields}"
+        )
+    evidence_candidates = mapping_hint.get("aiguard_evidence_candidates")
+    if not isinstance(evidence_candidates, list):
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.edgeenv_mapping_hint."
+            "aiguard_evidence_candidates must be a list"
+        )
+    missing_evidence_candidates = [
+        candidate
+        for candidate in EDGEENV_AIGUARD_EVIDENCE_CANDIDATES
+        if candidate not in evidence_candidates
+    ]
+    if missing_evidence_candidates:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.edgeenv_mapping_hint."
+            "aiguard_evidence_candidates missing "
+            f"{missing_evidence_candidates}"
         )
 
 

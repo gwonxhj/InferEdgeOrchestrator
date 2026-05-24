@@ -10,6 +10,7 @@ import pytest
 from inferedge_orchestrator.config import OrchestratorConfig
 from inferedge_orchestrator.cli import main
 from inferedge_orchestrator.sustained import (
+    EDGEENV_AIGUARD_EVIDENCE_CANDIDATES,
     EDGEENV_CANDIDATE_CONTEXT_REQUIRED_FIELDS,
     EDGEENV_CANDIDATE_CONTEXT_PATH,
     EDGEENV_HISTORY_COVERAGE_PATH,
@@ -147,6 +148,9 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     assert feed["edgeenv_mapping_hint"]["candidate_context_required_fields"] == (
         EDGEENV_CANDIDATE_CONTEXT_REQUIRED_FIELDS
     )
+    assert feed["edgeenv_mapping_hint"]["aiguard_evidence_candidates"] == (
+        EDGEENV_AIGUARD_EVIDENCE_CANDIDATES
+    )
 
 
 def test_write_edgeenv_runtime_telemetry_feed_exports_standalone_artifact(
@@ -191,6 +195,9 @@ def test_write_edgeenv_runtime_telemetry_feed_exports_standalone_artifact(
     )
     assert feed["edgeenv_mapping_hint"]["candidate_context_required_fields"] == (
         EDGEENV_CANDIDATE_CONTEXT_REQUIRED_FIELDS
+    )
+    assert feed["edgeenv_mapping_hint"]["aiguard_evidence_candidates"] == (
+        EDGEENV_AIGUARD_EVIDENCE_CANDIDATES
     )
 
 
@@ -250,6 +257,32 @@ def test_write_edgeenv_runtime_telemetry_feed_requires_mapping_required_fields(
     with pytest.raises(
         ValueError,
         match="candidate_context_required_fields missing",
+    ):
+        write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
+
+
+def test_write_edgeenv_runtime_telemetry_feed_requires_aiguard_evidence_candidates(
+    tmp_path,
+) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    report = write_multi_workload_sustained(
+        config,
+        output=tmp_path / "report.json",
+        frames=4,
+    )
+    report["edgeenv_runtime_telemetry_feed"]["edgeenv_mapping_hint"][
+        "aiguard_evidence_candidates"
+    ] = ["runtime_queue_overload"]
+
+    with pytest.raises(
+        ValueError,
+        match="aiguard_evidence_candidates missing",
     ):
         write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
 
@@ -539,6 +572,9 @@ def test_run_multi_workload_sustained_device_local_starter(tmp_path) -> None:
     assert feed["candidate_context"]["resource"]["temperature_c"] == 69.2
     assert feed["candidate_context"]["resource"]["ram_used_mb"] == 6144.0
     assert "runtime_queue_overload" in feed["edgeenv_mapping_hint"][
+        "aiguard_evidence_candidates"
+    ]
+    assert "runtime_thermal_instability" in feed["edgeenv_mapping_hint"][
         "aiguard_evidence_candidates"
     ]
     assert feed["edgeenv_mapping_hint"]["coverage_summary_owner"] == "edgeenv"
