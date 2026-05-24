@@ -14,6 +14,9 @@ MULTI_WORKLOAD_SCHEMA = "inferedge-orchestrator-multi-workload-sustained-v1"
 EDGEENV_TELEMETRY_FEED_SCHEMA = (
     "inferedge-orchestrator-edgeenv-runtime-telemetry-feed-v1"
 )
+EDGEENV_TELEMETRY_FEED_SOURCE_REPOSITORY = "InferEdgeOrchestrator"
+EDGEENV_TELEMETRY_FEED_ARTIFACT_ROLE = "orchestrator-supplemental-operation-context"
+EDGEENV_TELEMETRY_FEED_PRODUCER_CONTRACT = EDGEENV_TELEMETRY_FEED_SCHEMA
 EDGEENV_HISTORY_COVERAGE_PATH = "runtime_telemetry_context.history.telemetry_coverage"
 EDGEENV_CANDIDATE_CONTEXT_PATH = "runtime_telemetry_context.candidate"
 EDGEENV_CANDIDATE_CONTEXT_REQUIRED_FIELDS = [
@@ -318,6 +321,9 @@ def _edgeenv_runtime_telemetry_feed(
     return {
         "schema_version": EDGEENV_TELEMETRY_FEED_SCHEMA,
         "role": "orchestrator_operation_context_for_edgeenv",
+        "source_repository": EDGEENV_TELEMETRY_FEED_SOURCE_REPOSITORY,
+        "artifact_role": EDGEENV_TELEMETRY_FEED_ARTIFACT_ROLE,
+        "producer_contract": EDGEENV_TELEMETRY_FEED_PRODUCER_CONTRACT,
         "source": "orchestration_summary",
         "run_id": run.get("name", config.name),
         "scenario_mode": config.scenario_mode,
@@ -353,6 +359,21 @@ def _validate_edgeenv_runtime_telemetry_feed(feed: dict[str, Any]) -> None:
         raise ValueError(
             "edgeenv_runtime_telemetry_feed.role must be "
             "orchestrator_operation_context_for_edgeenv"
+        )
+    if feed.get("source_repository") != EDGEENV_TELEMETRY_FEED_SOURCE_REPOSITORY:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.source_repository must be "
+            f"{EDGEENV_TELEMETRY_FEED_SOURCE_REPOSITORY}"
+        )
+    if feed.get("artifact_role") != EDGEENV_TELEMETRY_FEED_ARTIFACT_ROLE:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.artifact_role must be "
+            f"{EDGEENV_TELEMETRY_FEED_ARTIFACT_ROLE}"
+        )
+    if feed.get("producer_contract") != EDGEENV_TELEMETRY_FEED_PRODUCER_CONTRACT:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.producer_contract must be "
+            f"{EDGEENV_TELEMETRY_FEED_PRODUCER_CONTRACT}"
         )
     if feed.get("not_a_regression_judgement") is not True:
         raise ValueError(
