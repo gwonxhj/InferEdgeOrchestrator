@@ -14,7 +14,10 @@ from inferedge_orchestrator.sustained import (
     EDGEENV_CANDIDATE_CONTEXT_REQUIRED_FIELDS,
     EDGEENV_CANDIDATE_CONTEXT_PATH,
     EDGEENV_HISTORY_COVERAGE_PATH,
+    EDGEENV_TELEMETRY_FEED_ARTIFACT_ROLE,
+    EDGEENV_TELEMETRY_FEED_PRODUCER_CONTRACT,
     EDGEENV_TELEMETRY_FEED_SCHEMA,
+    EDGEENV_TELEMETRY_FEED_SOURCE_REPOSITORY,
     MULTI_WORKLOAD_SCHEMA,
     apply_device_local_input_overrides,
     load_tegrastats_timeline,
@@ -115,6 +118,9 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     feed = report["edgeenv_runtime_telemetry_feed"]
     assert feed["schema_version"] == EDGEENV_TELEMETRY_FEED_SCHEMA
     assert feed["role"] == "orchestrator_operation_context_for_edgeenv"
+    assert feed["source_repository"] == EDGEENV_TELEMETRY_FEED_SOURCE_REPOSITORY
+    assert feed["artifact_role"] == EDGEENV_TELEMETRY_FEED_ARTIFACT_ROLE
+    assert feed["producer_contract"] == EDGEENV_TELEMETRY_FEED_PRODUCER_CONTRACT
     assert feed["not_a_regression_judgement"] is True
     assert feed["not_a_comparability_gate"] is True
     assert feed["decision_owner"] == "lab"
@@ -177,6 +183,9 @@ def test_write_edgeenv_runtime_telemetry_feed_exports_standalone_artifact(
     assert feed == report["edgeenv_runtime_telemetry_feed"]
     assert feed["schema_version"] == EDGEENV_TELEMETRY_FEED_SCHEMA
     assert feed["role"] == "orchestrator_operation_context_for_edgeenv"
+    assert feed["source_repository"] == EDGEENV_TELEMETRY_FEED_SOURCE_REPOSITORY
+    assert feed["artifact_role"] == EDGEENV_TELEMETRY_FEED_ARTIFACT_ROLE
+    assert feed["producer_contract"] == EDGEENV_TELEMETRY_FEED_PRODUCER_CONTRACT
     assert feed["source"] == "orchestration_summary"
     assert feed["not_a_regression_judgement"] is True
     assert feed["not_a_comparability_gate"] is True
@@ -231,6 +240,32 @@ def test_write_edgeenv_runtime_telemetry_feed_requires_mapping_contract(
     with pytest.raises(
         ValueError,
         match="coverage_summary_owner must be edgeenv",
+    ):
+        write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
+
+
+def test_write_edgeenv_runtime_telemetry_feed_requires_producer_markers(
+    tmp_path,
+) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    report = write_multi_workload_sustained(
+        config,
+        output=tmp_path / "report.json",
+        frames=4,
+    )
+    report["edgeenv_runtime_telemetry_feed"]["artifact_role"] = (
+        "lab-owned-deployment-risk-report"
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="artifact_role must be orchestrator-supplemental-operation-context",
     ):
         write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
 

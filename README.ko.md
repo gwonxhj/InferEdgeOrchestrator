@@ -122,6 +122,11 @@ flowchart LR
   block이 포함되어 EdgeEnv/AIGuard/Lab이 queue, deadline, fallback, resource
   context를 재사용할 수 있다. 단, Orchestrator가 regression 또는 deployment
   decision owner가 되는 것은 아니다.
+- standalone feed는 `source_repository=InferEdgeOrchestrator`,
+  `artifact_role=orchestrator-supplemental-operation-context`,
+  `producer_contract=inferedge-orchestrator-edgeenv-runtime-telemetry-feed-v1`를
+  선언해 Lab/EdgeEnv handoff check가 deployment ownership을 바꾸지 않고
+  producer를 식별할 수 있게 한다.
 - 이 feed는 mapping contract를 명시한다. Orchestrator는 supplemental candidate
   operation context를 제공하고, history-level telemetry coverage summary의 owner는
   EdgeEnv로 유지한다.
