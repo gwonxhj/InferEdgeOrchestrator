@@ -259,8 +259,9 @@ evidence이며, comparability와 runtime regression judgement의 owner는 계속
 EdgeEnv입니다.
 EdgeEnv로 넘기기 전에 저장된 feed를 검증하려면
 `scripts/check_edgeenv_runtime_feed_contract.py --require-device-local-producer`를
-사용합니다. 이 gate는 producer lineage와 ownership marker만 검증하며,
-regression analysis나 deployment judgement를 수행하지 않습니다.
+사용합니다. 이 gate는 producer lineage, task별 source/stage mapping,
+양수 event count, ownership marker만 검증하며, regression analysis나
+deployment judgement를 수행하지 않습니다.
 
 ## Compatibility Rules
 

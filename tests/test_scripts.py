@@ -68,6 +68,8 @@ def test_edgeenv_runtime_feed_contract_checker_passes_device_local_feed(
     out = capsys.readouterr().out
     assert "EdgeEnv runtime telemetry feed contract passed" in out
     assert "device_local_producer_sources" in out
+    assert "producer_stage_by_task" in out
+    assert "producer_event_count" in out
 
 
 def test_edgeenv_runtime_feed_contract_checker_fails_missing_producer(

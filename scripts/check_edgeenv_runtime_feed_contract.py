@@ -50,11 +50,26 @@ def main(argv: list[str] | None = None) -> int:
     candidate_context = feed.get("candidate_context") or {}
     producer = candidate_context.get("producer") or {}
     device_local_sources = producer.get("device_local_producer_sources") or []
+    producer_stage_by_task = producer.get("producer_stage_by_task") or {}
+    producer_event_count = producer.get("producer_event_count")
+    device_local_event_count = producer.get("device_local_event_count")
     print("EdgeEnv runtime telemetry feed contract passed.")
     if device_local_sources:
         print(
             "device_local_producer_sources: "
             + ", ".join(str(item) for item in device_local_sources)
+        )
+    if producer_stage_by_task:
+        stage_pairs = [
+            f"{task}:{stage}"
+            for task, stage in sorted(producer_stage_by_task.items())
+        ]
+        print("producer_stage_by_task: " + ", ".join(stage_pairs))
+    if producer_event_count is not None and device_local_event_count is not None:
+        print(
+            "producer_event_count: "
+            f"{producer_event_count}; device_local_event_count: "
+            f"{device_local_event_count}"
         )
     return 0
 

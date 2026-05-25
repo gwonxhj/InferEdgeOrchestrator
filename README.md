@@ -317,7 +317,9 @@ python3 scripts/check_edgeenv_runtime_feed_contract.py \
 ```
 
 This gate checks ownership markers and device-local producer lineage only; it
-does not calculate EdgeEnv comparability or make a Lab deployment decision.
+also verifies that device-local sources remain present in the global source
+list, per-task source mapping, stage mapping, and positive event counts. It does
+not calculate EdgeEnv comparability or make a Lab deployment decision.
 
 You can replace those committed producer fixtures at run time without editing
 the config. `--vision-input` accepts a single image/video file or a directory of
