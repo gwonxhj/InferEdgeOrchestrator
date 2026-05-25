@@ -258,6 +258,10 @@ EdgeEnv feed preserves the same producer lineage under
 device-local event counts, and producer source mappings. This field is
 supplemental operation evidence; EdgeEnv still owns comparability and runtime
 regression judgement.
+Use `scripts/check_edgeenv_runtime_feed_contract.py --require-device-local-producer`
+to gate a saved feed before handing it to EdgeEnv. The gate validates producer
+lineage and ownership markers only; it does not perform regression analysis or
+deployment judgement.
 
 ## Compatibility Rules
 

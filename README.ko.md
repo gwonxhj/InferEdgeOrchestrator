@@ -346,6 +346,16 @@ device-local run에서는 `candidate_context.producer` 아래에
 device-local event count도 함께 보존된다.
 feed export는 EdgeEnv/AIGuard/Lab handoff marker를 쓰기 전에 검증하므로,
 오래된 mapping hint는 downstream bundle gate에 도달하기 전에 로컬에서 실패한다.
+저장된 feed에 standalone contract gate를 직접 실행할 수도 있다.
+
+```bash
+python3 scripts/check_edgeenv_runtime_feed_contract.py \
+  --feed reports/edgeenv_runtime_telemetry_feed.json \
+  --require-device-local-producer
+```
+
+이 gate는 ownership marker와 device-local producer lineage만 확인한다.
+EdgeEnv comparability를 계산하거나 Lab deployment decision을 내리지 않는다.
 
 config를 수정하지 않고 실행 시점에 committed producer fixture를 로컬 입력으로
 교체할 수도 있다. `--vision-input`은 단일 image/video file 또는 image frame
