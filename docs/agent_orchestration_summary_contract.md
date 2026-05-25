@@ -252,6 +252,12 @@ cycled deterministically during sustained validation.
 For a minimal local process signal, `--capture-process-resource-snapshot` writes
 a small process resource snapshot next to the output report and routes it into
 the Safety workload with `producer_source=process_resource_snapshot`.
+When `--edgeenv-feed-output` is used with these overrides, the standalone
+EdgeEnv feed preserves the same producer lineage under
+`candidate_context.producer`: producer sources, per-task producer stages,
+device-local event counts, and producer source mappings. This field is
+supplemental operation evidence; EdgeEnv still owns comparability and runtime
+regression judgement.
 
 ## Compatibility Rules
 

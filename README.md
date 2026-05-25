@@ -130,6 +130,11 @@ The boundary is intentional:
 - The feed declares its mapping contract explicitly: Orchestrator provides
   supplemental candidate operation context, while EdgeEnv remains the owner of
   history-level telemetry coverage summaries.
+- Device-local producer traces are preserved inside the feed as additive
+  `candidate_context.producer` evidence, including producer sources, per-task
+  producer stages, and device-local event counts. This lets EdgeEnv preserve
+  override lineage without making Orchestrator a comparability or regression
+  owner.
 - The standalone feed writer validates that the mapping hint keeps
   `coverage_summary_owner=edgeenv`,
   `coverage_summary_path=runtime_telemetry_context.history.telemetry_coverage`,
@@ -296,6 +301,10 @@ The optional `--edgeenv-feed-output` writes the same
 EdgeEnv can pass to `edgeenv runs telemetry export-history --orchestrator-feed`.
 That feed remains supplemental operation context; it is not a regression
 judgement or a deployment decision.
+For device-local runs, the feed also preserves producer lineage under
+`candidate_context.producer`, including `producer_sources`,
+`producer_sources_by_task`, `producer_stage_by_task`, and device-local event
+counts.
 The feed export validates the EdgeEnv/AIGuard/Lab handoff markers before
 writing, so stale mapping hints fail locally instead of reaching downstream
 bundle gates.
