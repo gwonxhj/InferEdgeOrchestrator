@@ -193,7 +193,7 @@ def write_edgeenv_runtime_telemetry_feed(
     feed = report.get("edgeenv_runtime_telemetry_feed")
     if not isinstance(feed, dict):
         raise ValueError("sustained report is missing edgeenv_runtime_telemetry_feed")
-    _validate_edgeenv_runtime_telemetry_feed(feed)
+    validate_edgeenv_runtime_telemetry_feed(feed)
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
@@ -355,7 +355,11 @@ def _edgeenv_runtime_telemetry_feed(
     }
 
 
-def _validate_edgeenv_runtime_telemetry_feed(feed: dict[str, Any]) -> None:
+def validate_edgeenv_runtime_telemetry_feed(
+    feed: dict[str, Any],
+    *,
+    require_device_local_producer: bool = False,
+) -> None:
     if feed.get("schema_version") != EDGEENV_TELEMETRY_FEED_SCHEMA:
         raise ValueError(
             "edgeenv_runtime_telemetry_feed.schema_version must be "
@@ -475,6 +479,69 @@ def _validate_edgeenv_runtime_telemetry_feed(feed: dict[str, Any]) -> None:
             "aiguard_evidence_candidates missing "
             f"{missing_evidence_candidates}"
         )
+    producer = candidate_context.get("producer")
+    if producer is not None:
+        if not isinstance(producer, dict):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.producer must "
+                "be an object"
+            )
+        _validate_edgeenv_producer_context(producer)
+    if require_device_local_producer and producer is None:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.producer is "
+            "required for device-local feed validation"
+        )
+
+
+def _validate_edgeenv_producer_context(producer: dict[str, Any]) -> None:
+    if producer.get("operation_context_role") != "supplemental":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.producer."
+            "operation_context_role must be supplemental"
+        )
+    producer_sources = producer.get("producer_sources")
+    if (
+        not isinstance(producer_sources, list)
+        or not producer_sources
+        or not all(
+            isinstance(item, str) and item for item in producer_sources
+        )
+    ):
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.producer."
+            "producer_sources must be a non-empty string list"
+        )
+    device_local_sources = producer.get("device_local_producer_sources")
+    if (
+        not isinstance(device_local_sources, list)
+        or not device_local_sources
+        or not all(
+            isinstance(item, str) and item for item in device_local_sources
+        )
+    ):
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.producer."
+            "device_local_producer_sources must be a non-empty string list"
+        )
+    for field in ("producer_sources_by_task", "producer_stage_by_task"):
+        value = producer.get(field)
+        if not isinstance(value, dict) or not value:
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.producer."
+                f"{field} must be a non-empty object"
+            )
+    for field in (
+        "producer_event_count",
+        "device_local_event_count",
+        "device_local_task_count",
+    ):
+        value = producer.get(field)
+        if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.producer."
+                f"{field} must be a positive integer"
+            )
 
 
 def _edgeenv_resource_context(

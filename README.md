@@ -308,6 +308,16 @@ counts.
 The feed export validates the EdgeEnv/AIGuard/Lab handoff markers before
 writing, so stale mapping hints fail locally instead of reaching downstream
 bundle gates.
+You can also run the standalone contract gate against a saved feed:
+
+```bash
+python3 scripts/check_edgeenv_runtime_feed_contract.py \
+  --feed reports/edgeenv_runtime_telemetry_feed.json \
+  --require-device-local-producer
+```
+
+This gate checks ownership markers and device-local producer lineage only; it
+does not calculate EdgeEnv comparability or make a Lab deployment decision.
 
 You can replace those committed producer fixtures at run time without editing
 the config. `--vision-input` accepts a single image/video file or a directory of

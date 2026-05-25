@@ -21,6 +21,7 @@ from inferedge_orchestrator.sustained import (
     MULTI_WORKLOAD_SCHEMA,
     apply_device_local_input_overrides,
     load_tegrastats_timeline,
+    validate_edgeenv_runtime_telemetry_feed,
     write_edgeenv_runtime_telemetry_feed,
     write_multi_workload_sustained,
     write_process_resource_snapshot,
@@ -208,6 +209,22 @@ def test_write_edgeenv_runtime_telemetry_feed_exports_standalone_artifact(
     assert feed["edgeenv_mapping_hint"]["aiguard_evidence_candidates"] == (
         EDGEENV_AIGUARD_EVIDENCE_CANDIDATES
     )
+    producer = feed["candidate_context"]["producer"]
+    assert producer["operation_context_role"] == "supplemental"
+    assert producer["device_local_producer_sources"] == [
+        "resource_snapshot_fixture",
+        "image_file",
+        "fastapi_request_fixture",
+    ]
+    assert producer["producer_stage_by_task"] == {
+        "safety_monitor_agent": "device_local_starter",
+        "vision_agent": "device_local_starter",
+        "voice_command_agent": "device_local_starter",
+    }
+    validate_edgeenv_runtime_telemetry_feed(
+        feed,
+        require_device_local_producer=True,
+    )
 
 
 def test_write_edgeenv_runtime_telemetry_feed_requires_feed_block(tmp_path) -> None:
@@ -344,6 +361,64 @@ def test_write_edgeenv_runtime_telemetry_feed_requires_candidate_operation_conte
         match="candidate_context must include operation",
     ):
         write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
+
+
+def test_validate_edgeenv_runtime_telemetry_feed_requires_device_local_producer(
+    tmp_path,
+) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_device_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    report = write_multi_workload_sustained(
+        config,
+        output=tmp_path / "report.json",
+        frames=4,
+    )
+    feed = report["edgeenv_runtime_telemetry_feed"]
+    feed["candidate_context"].pop("producer")
+
+    with pytest.raises(
+        ValueError,
+        match="candidate_context.producer is required",
+    ):
+        validate_edgeenv_runtime_telemetry_feed(
+            feed,
+            require_device_local_producer=True,
+        )
+
+
+def test_validate_edgeenv_runtime_telemetry_feed_rejects_incomplete_producer(
+    tmp_path,
+) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_device_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    report = write_multi_workload_sustained(
+        config,
+        output=tmp_path / "report.json",
+        frames=4,
+    )
+    producer = report["edgeenv_runtime_telemetry_feed"]["candidate_context"][
+        "producer"
+    ]
+    producer["device_local_producer_sources"] = []
+
+    with pytest.raises(
+        ValueError,
+        match="device_local_producer_sources must be a non-empty string list",
+    ):
+        validate_edgeenv_runtime_telemetry_feed(
+            report["edgeenv_runtime_telemetry_feed"],
+            require_device_local_producer=True,
+        )
 
 
 def test_cli_run_multi_workload_sustained_writes_edgeenv_feed_output(

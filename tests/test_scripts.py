@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import json
 import stat
 from pathlib import Path
 
+from inferedge_orchestrator.config import load_config
+from inferedge_orchestrator.sustained import write_multi_workload_sustained
+from scripts.check_edgeenv_runtime_feed_contract import main as feed_contract_main
 from scripts.create_tensorrt_diverse_onnx import write_models
 
 
@@ -28,6 +32,74 @@ def test_jetson_tensorrt_smoke_script_contract() -> None:
     assert "host/device buffer allocation" in text
     assert "tensor address binding" in text
     assert "TensorRT inference execution" in text
+
+
+def test_edgeenv_runtime_feed_contract_checker_passes_device_local_feed(
+    tmp_path,
+    capsys,
+) -> None:
+    config = load_config(
+        "configs/agent_multi_workload_sustained_device_local.json"
+    )
+    report = write_multi_workload_sustained(
+        config,
+        output=tmp_path / "report.json",
+        frames=4,
+    )
+    feed_path = tmp_path / "edgeenv_runtime_telemetry_feed.json"
+    feed_path.write_text(
+        json.dumps(
+            report["edgeenv_runtime_telemetry_feed"],
+            indent=2,
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    result = feed_contract_main(
+        [
+            "--feed",
+            str(feed_path),
+            "--require-device-local-producer",
+        ]
+    )
+
+    assert result == 0
+    out = capsys.readouterr().out
+    assert "EdgeEnv runtime telemetry feed contract passed" in out
+    assert "device_local_producer_sources" in out
+
+
+def test_edgeenv_runtime_feed_contract_checker_fails_missing_producer(
+    tmp_path,
+    capsys,
+) -> None:
+    config = load_config(
+        "configs/agent_multi_workload_sustained_device_local.json"
+    )
+    report = write_multi_workload_sustained(
+        config,
+        output=tmp_path / "report.json",
+        frames=4,
+    )
+    feed = report["edgeenv_runtime_telemetry_feed"]
+    feed["candidate_context"].pop("producer")
+    feed_path = tmp_path / "edgeenv_runtime_telemetry_feed.json"
+    feed_path.write_text(
+        json.dumps(feed, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = feed_contract_main(
+        [
+            "--feed",
+            str(feed_path),
+            "--require-device-local-producer",
+        ]
+    )
+
+    assert result == 2
+    assert "candidate_context.producer is required" in capsys.readouterr().out
 
 
 def test_jetson_tensorrt_contention_script_contract() -> None:
