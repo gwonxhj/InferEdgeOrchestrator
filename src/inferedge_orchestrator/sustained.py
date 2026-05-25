@@ -524,12 +524,59 @@ def _validate_edgeenv_producer_context(producer: dict[str, Any]) -> None:
             "edgeenv_runtime_telemetry_feed.candidate_context.producer."
             "device_local_producer_sources must be a non-empty string list"
         )
-    for field in ("producer_sources_by_task", "producer_stage_by_task"):
-        value = producer.get(field)
-        if not isinstance(value, dict) or not value:
+    producer_sources_by_task = producer.get("producer_sources_by_task")
+    if not isinstance(producer_sources_by_task, dict) or not producer_sources_by_task:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.producer."
+            "producer_sources_by_task must be a non-empty object"
+        )
+    for task_name, sources in producer_sources_by_task.items():
+        if not isinstance(task_name, str) or not task_name:
             raise ValueError(
                 "edgeenv_runtime_telemetry_feed.candidate_context.producer."
-                f"{field} must be a non-empty object"
+                "producer_sources_by_task keys must be non-empty strings"
+            )
+        if (
+            not isinstance(sources, list)
+            or not sources
+            or not all(isinstance(item, str) and item for item in sources)
+        ):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.producer."
+                "producer_sources_by_task values must be non-empty string lists"
+            )
+    mapped_sources = {
+        source
+        for sources in producer_sources_by_task.values()
+        for source in sources
+    }
+    missing_device_local_sources = [
+        source
+        for source in device_local_sources
+        if source not in producer_sources or source not in mapped_sources
+    ]
+    if missing_device_local_sources:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.producer."
+            "device_local_producer_sources must also appear in producer_sources "
+            "and producer_sources_by_task"
+        )
+    producer_stage_by_task = producer.get("producer_stage_by_task")
+    if not isinstance(producer_stage_by_task, dict) or not producer_stage_by_task:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.producer."
+            "producer_stage_by_task must be a non-empty object"
+        )
+    for task_name, stage in producer_stage_by_task.items():
+        if not isinstance(task_name, str) or not task_name:
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.producer."
+                "producer_stage_by_task keys must be non-empty strings"
+            )
+        if not isinstance(stage, str) or not stage:
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.producer."
+                "producer_stage_by_task values must be non-empty strings"
             )
     for field in (
         "producer_event_count",

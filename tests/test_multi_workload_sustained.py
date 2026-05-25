@@ -216,11 +216,19 @@ def test_write_edgeenv_runtime_telemetry_feed_exports_standalone_artifact(
         "image_file",
         "fastapi_request_fixture",
     ]
+    assert producer["producer_sources_by_task"] == {
+        "safety_monitor_agent": ["resource_snapshot_fixture"],
+        "vision_agent": ["image_file"],
+        "voice_command_agent": ["fastapi_request_fixture"],
+    }
     assert producer["producer_stage_by_task"] == {
         "safety_monitor_agent": "device_local_starter",
         "vision_agent": "device_local_starter",
         "voice_command_agent": "device_local_starter",
     }
+    assert producer["producer_event_count"] > 0
+    assert producer["device_local_event_count"] > 0
+    assert producer["device_local_task_count"] == 3
     validate_edgeenv_runtime_telemetry_feed(
         feed,
         require_device_local_producer=True,
@@ -414,6 +422,68 @@ def test_validate_edgeenv_runtime_telemetry_feed_rejects_incomplete_producer(
     with pytest.raises(
         ValueError,
         match="device_local_producer_sources must be a non-empty string list",
+    ):
+        validate_edgeenv_runtime_telemetry_feed(
+            report["edgeenv_runtime_telemetry_feed"],
+            require_device_local_producer=True,
+        )
+
+
+def test_validate_edgeenv_runtime_telemetry_feed_rejects_unmapped_device_local_source(
+    tmp_path,
+) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_device_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    report = write_multi_workload_sustained(
+        config,
+        output=tmp_path / "report.json",
+        frames=4,
+    )
+    producer = report["edgeenv_runtime_telemetry_feed"]["candidate_context"][
+        "producer"
+    ]
+    producer["producer_sources_by_task"] = {
+        "vision_agent": ["image_file"],
+    }
+
+    with pytest.raises(
+        ValueError,
+        match="device_local_producer_sources must also appear",
+    ):
+        validate_edgeenv_runtime_telemetry_feed(
+            report["edgeenv_runtime_telemetry_feed"],
+            require_device_local_producer=True,
+        )
+
+
+def test_validate_edgeenv_runtime_telemetry_feed_rejects_bad_producer_stage_map(
+    tmp_path,
+) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_device_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    report = write_multi_workload_sustained(
+        config,
+        output=tmp_path / "report.json",
+        frames=4,
+    )
+    producer = report["edgeenv_runtime_telemetry_feed"]["candidate_context"][
+        "producer"
+    ]
+    producer["producer_stage_by_task"] = {"vision_agent": ""}
+
+    with pytest.raises(
+        ValueError,
+        match="producer_stage_by_task values must be non-empty strings",
     ):
         validate_edgeenv_runtime_telemetry_feed(
             report["edgeenv_runtime_telemetry_feed"],

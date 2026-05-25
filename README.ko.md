@@ -355,7 +355,9 @@ python3 scripts/check_edgeenv_runtime_feed_contract.py \
 ```
 
 이 gate는 ownership marker와 device-local producer lineage만 확인한다.
-EdgeEnv comparability를 계산하거나 Lab deployment decision을 내리지 않는다.
+또한 device-local source가 global source list, task별 source mapping,
+stage mapping, 양수 event count에 계속 남아 있는지 확인한다. EdgeEnv
+comparability를 계산하거나 Lab deployment decision을 내리지 않는다.
 
 config를 수정하지 않고 실행 시점에 committed producer fixture를 로컬 입력으로
 교체할 수도 있다. `--vision-input`은 단일 image/video file 또는 image frame
