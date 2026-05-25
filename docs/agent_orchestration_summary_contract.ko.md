@@ -251,6 +251,12 @@ signal이 필요하면
 `--capture-process-resource-snapshot`이 output report 옆에 작은 process resource
 snapshot을 만들고 Safety workload에
 `producer_source=process_resource_snapshot`으로 연결합니다.
+이 override들과 함께 `--edgeenv-feed-output`을 사용하면 standalone EdgeEnv
+feed는 같은 producer lineage를 `candidate_context.producer` 아래에 보존합니다.
+여기에는 producer sources, task별 producer stage, device-local event count,
+producer source mapping이 포함됩니다. 이 field는 supplemental operation
+evidence이며, comparability와 runtime regression judgement의 owner는 계속
+EdgeEnv입니다.
 
 ## Compatibility Rules
 

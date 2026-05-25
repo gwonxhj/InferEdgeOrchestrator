@@ -296,21 +296,27 @@ def _edgeenv_runtime_telemetry_feed(
         "runtime_event_counts": runtime_event_summary.get("event_type_counts", {}),
         "runtime_event_reason_counts": runtime_event_summary.get("reason_counts", {}),
     }
+    producer = _edgeenv_producer_context(report)
+    available_sections = [
+        "operation",
+        "resource",
+        "queue_state_summary",
+        "runtime_event_summary",
+    ]
+    if producer:
+        available_sections.append("producer")
     candidate_context = {
         "run_id": run.get("name", config.name),
         "result_telemetry_present": True,
         "history_entry_present": True,
         "telemetry_source": "inferedge_orchestrator_operation_summary",
-        "available_sections": [
-            "operation",
-            "resource",
-            "queue_state_summary",
-            "runtime_event_summary",
-        ],
+        "available_sections": available_sections,
         "queue_depth": operation["queue_depth"],
         "operation": operation,
         "resource": resource,
     }
+    if producer:
+        candidate_context["producer"] = producer
     if resource.get("gpu_temperature") is not None:
         candidate_context["gpu_temperature"] = resource["gpu_temperature"]
     if resource.get("cpu_temperature") is not None:
@@ -498,6 +504,44 @@ def _edgeenv_resource_context(
             _max_result_output_number(report, "memory_used_mb"),
         ),
         "gpu_percent": summary.get("max_gpu_percent"),
+    }
+
+
+def _edgeenv_producer_context(report: dict[str, Any]) -> dict[str, Any]:
+    queue_summary = report.get("queue_state_summary", {})
+    runtime_event_summary = report.get("runtime_event_summary", {})
+    worker_snapshot = report.get("worker_health_snapshot", {}).get("workers", {})
+    if not isinstance(queue_summary, dict) or not isinstance(
+        runtime_event_summary, dict
+    ):
+        return {}
+    producer_sources = runtime_event_summary.get("producer_sources")
+    device_local_sources = queue_summary.get("device_local_producer_sources")
+    producer_sources_by_task = queue_summary.get("producer_sources_by_task")
+    if not any([producer_sources, device_local_sources, producer_sources_by_task]):
+        return {}
+
+    producer_stage_by_task: dict[str, Any] = {}
+    if isinstance(worker_snapshot, dict):
+        for task_name, worker in worker_snapshot.items():
+            if not isinstance(worker, dict):
+                continue
+            stage = worker.get("producer_stage")
+            if stage:
+                producer_stage_by_task[str(task_name)] = stage
+
+    return {
+        "producer_sources": list(producer_sources or []),
+        "device_local_producer_sources": list(device_local_sources or []),
+        "producer_sources_by_task": dict(producer_sources_by_task or {}),
+        "producer_stage_by_task": producer_stage_by_task,
+        "producer_event_count": runtime_event_summary.get("producer_event_count", 0),
+        "device_local_event_count": runtime_event_summary.get(
+            "device_local_event_count",
+            0,
+        ),
+        "device_local_task_count": queue_summary.get("device_local_task_count", 0),
+        "operation_context_role": "supplemental",
     }
 
 

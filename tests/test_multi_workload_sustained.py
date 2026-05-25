@@ -595,6 +595,27 @@ def test_run_multi_workload_sustained_device_local_starter(tmp_path) -> None:
     feed = report["edgeenv_runtime_telemetry_feed"]
     assert feed["schema_version"] == EDGEENV_TELEMETRY_FEED_SCHEMA
     assert feed["scenario_mode"] == "device_local"
+    assert "producer" in feed["candidate_context"]["available_sections"]
+    assert set(feed["candidate_context"]["producer"]["producer_sources"]) == {
+        "image_file",
+        "fastapi_request_fixture",
+        "resource_snapshot_fixture",
+    }
+    assert set(
+        feed["candidate_context"]["producer"]["device_local_producer_sources"]
+    ) == {
+        "image_file",
+        "fastapi_request_fixture",
+        "resource_snapshot_fixture",
+    }
+    assert feed["candidate_context"]["producer"]["producer_stage_by_task"] == {
+        "safety_monitor_agent": "device_local_starter",
+        "vision_agent": "device_local_starter",
+        "voice_command_agent": "device_local_starter",
+    }
+    assert feed["candidate_context"]["producer"]["operation_context_role"] == (
+        "supplemental"
+    )
     assert feed["candidate_context"]["operation"]["queue_pressure_state"] == (
         queue_summary["queue_pressure_state"]
     )
@@ -730,6 +751,124 @@ def test_device_local_input_overrides_use_local_paths(tmp_path) -> None:
         event["producer_context"].get("input_path") == str(image)
         for event in report["runtime_event_timeline"]
         if event["event_type"] == "execution"
+    )
+    feed = report["edgeenv_runtime_telemetry_feed"]
+    producer_context = feed["candidate_context"]["producer"]
+    assert producer_context["producer_stage_by_task"] == {
+        "safety_monitor_agent": "device_local_cli_override",
+        "vision_agent": "device_local_cli_override",
+        "voice_command_agent": "device_local_cli_override",
+    }
+    assert producer_context["producer_sources_by_task"]["vision_agent"] == [
+        "image_file"
+    ]
+    assert producer_context["device_local_event_count"] > 0
+
+
+def test_cli_device_local_overrides_write_edgeenv_feed_output(
+    tmp_path,
+    capsys,
+) -> None:
+    output = tmp_path / "device_local_cli_override.json"
+    feed_output = tmp_path / "edgeenv_runtime_telemetry_feed.json"
+    image = tmp_path / "frame.ppm"
+    image.write_bytes(b"P6\n1 1\n255\n\xff\x00\x00")
+    requests = tmp_path / "requests.json"
+    requests.write_text(
+        json.dumps(
+            [
+                {
+                    "request_id": "local-command-1",
+                    "method": "POST",
+                    "path": "/agent/command",
+                    "command": "inspect local backlog",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    resources = tmp_path / "resources.json"
+    resources.write_text(
+        json.dumps(
+            {
+                "snapshots": [
+                    {
+                        "snapshot_id": "local-process-1",
+                        "cpu_percent": 37.5,
+                        "memory_used_mb": 256,
+                        "memory_total_mb": 1024,
+                        "temperature_c": 42.0,
+                        "queue_depth": 4,
+                        "fallback_count": 1,
+                        "deadline_missed_count": 1,
+                        "dropped_count": 2,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    exit_code = main(
+        [
+            "run-multi-workload-sustained",
+            "--config",
+            "configs/agent_multi_workload_sustained_device_local.json",
+            "--output",
+            str(output),
+            "--edgeenv-feed-output",
+            str(feed_output),
+            "--frames",
+            "4",
+            "--vision-input",
+            str(image),
+            "--voice-ingress-payload",
+            str(requests),
+            "--resource-snapshot",
+            str(resources),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "wrote EdgeEnv telemetry feed" in captured.out
+    report = json.loads(output.read_text(encoding="utf-8"))
+    feed = json.loads(feed_output.read_text(encoding="utf-8"))
+    assert feed == report["edgeenv_runtime_telemetry_feed"]
+    assert feed["schema_version"] == EDGEENV_TELEMETRY_FEED_SCHEMA
+    assert feed["source_repository"] == EDGEENV_TELEMETRY_FEED_SOURCE_REPOSITORY
+    assert feed["artifact_role"] == EDGEENV_TELEMETRY_FEED_ARTIFACT_ROLE
+    assert feed["producer_contract"] == EDGEENV_TELEMETRY_FEED_PRODUCER_CONTRACT
+    assert feed["not_a_regression_judgement"] is True
+    assert feed["not_a_comparability_gate"] is True
+    assert feed["decision_owner"] == "lab"
+    assert feed["regression_owner"] == "edgeenv"
+    candidate = feed["candidate_context"]
+    assert candidate["telemetry_source"] == (
+        "inferedge_orchestrator_operation_summary"
+    )
+    assert "producer" in candidate["available_sections"]
+    assert candidate["producer"]["producer_stage_by_task"] == {
+        "safety_monitor_agent": "device_local_cli_override",
+        "vision_agent": "device_local_cli_override",
+        "voice_command_agent": "device_local_cli_override",
+    }
+    assert set(candidate["producer"]["producer_sources"]) == {
+        "image_file",
+        "fastapi_request_fixture",
+        "resource_snapshot_fixture",
+    }
+    assert candidate["producer"]["operation_context_role"] == "supplemental"
+    assert candidate["operation"]["queue_depth"] == (
+        report["queue_state_summary"]["max_total_queue_depth"]
+    )
+    assert candidate["resource"]["temperature_c"] == 42.0
+    assert feed["edgeenv_mapping_hint"]["coverage_summary_owner"] == "edgeenv"
+    assert feed["edgeenv_mapping_hint"]["coverage_summary_path"] == (
+        EDGEENV_HISTORY_COVERAGE_PATH
+    )
+    assert feed["edgeenv_mapping_hint"]["aiguard_evidence_candidates"] == (
+        EDGEENV_AIGUARD_EVIDENCE_CANDIDATES
     )
 
 
