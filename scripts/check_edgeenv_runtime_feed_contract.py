@@ -53,7 +53,20 @@ def main(argv: list[str] | None = None) -> int:
     producer_stage_by_task = producer.get("producer_stage_by_task") or {}
     producer_event_count = producer.get("producer_event_count")
     device_local_event_count = producer.get("device_local_event_count")
+    guard_alignment = feed.get("downstream_guard_alignment") or {}
     print("EdgeEnv runtime telemetry feed contract passed.")
+    if guard_alignment:
+        print(
+            "producer_lineage_evidence_type: "
+            f"{guard_alignment.get('producer_lineage_evidence_type')}"
+        )
+        print(
+            "operation_evidence_candidates: "
+            + ", ".join(
+                str(item)
+                for item in guard_alignment.get("operation_evidence_candidates", [])
+            )
+        )
     if device_local_sources:
         print(
             "device_local_producer_sources: "

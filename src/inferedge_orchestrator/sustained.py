@@ -29,6 +29,9 @@ EDGEENV_AIGUARD_EVIDENCE_CANDIDATES = [
     "runtime_queue_overload",
     "runtime_thermal_instability",
 ]
+EDGEENV_PRODUCER_LINEAGE_AIGUARD_EVIDENCE_TYPE = (
+    "edgeenv_orchestrator_producer_lineage"
+)
 
 
 def apply_device_local_input_overrides(
@@ -352,6 +355,22 @@ def _edgeenv_runtime_telemetry_feed(
                 EDGEENV_AIGUARD_EVIDENCE_CANDIDATES
             ),
         },
+        "downstream_guard_alignment": {
+            "declared_by": "orchestrator",
+            "producer_lineage_evidence_type": (
+                EDGEENV_PRODUCER_LINEAGE_AIGUARD_EVIDENCE_TYPE
+            ),
+            "operation_evidence_candidates": list(
+                EDGEENV_AIGUARD_EVIDENCE_CANDIDATES
+            ),
+            "validated_by": [
+                "edgeenv runs telemetry inspect-history",
+                "inferedge-aiguard reason-edgeenv-regression",
+                "inferedgelab runtime-intelligence bundle manifest gate",
+            ],
+            "orchestrator_is_final_decision_owner": False,
+            "lab_is_final_decision_owner": True,
+        },
     }
 
 
@@ -478,6 +497,53 @@ def validate_edgeenv_runtime_telemetry_feed(
             "edgeenv_runtime_telemetry_feed.edgeenv_mapping_hint."
             "aiguard_evidence_candidates missing "
             f"{missing_evidence_candidates}"
+        )
+    guard_alignment = feed.get("downstream_guard_alignment")
+    if not isinstance(guard_alignment, dict):
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.downstream_guard_alignment must be "
+            "an object"
+        )
+    if guard_alignment.get("declared_by") != "orchestrator":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.downstream_guard_alignment."
+            "declared_by must be orchestrator"
+        )
+    if (
+        guard_alignment.get("producer_lineage_evidence_type")
+        != EDGEENV_PRODUCER_LINEAGE_AIGUARD_EVIDENCE_TYPE
+    ):
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.downstream_guard_alignment."
+            "producer_lineage_evidence_type must be "
+            f"{EDGEENV_PRODUCER_LINEAGE_AIGUARD_EVIDENCE_TYPE}"
+        )
+    operation_evidence_candidates = guard_alignment.get("operation_evidence_candidates")
+    if not isinstance(operation_evidence_candidates, list):
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.downstream_guard_alignment."
+            "operation_evidence_candidates must be a list"
+        )
+    missing_operation_candidates = [
+        candidate
+        for candidate in EDGEENV_AIGUARD_EVIDENCE_CANDIDATES
+        if candidate not in operation_evidence_candidates
+    ]
+    if missing_operation_candidates:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.downstream_guard_alignment."
+            "operation_evidence_candidates missing "
+            f"{missing_operation_candidates}"
+        )
+    if guard_alignment.get("orchestrator_is_final_decision_owner") is not False:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.downstream_guard_alignment."
+            "orchestrator_is_final_decision_owner must be false"
+        )
+    if guard_alignment.get("lab_is_final_decision_owner") is not True:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.downstream_guard_alignment."
+            "lab_is_final_decision_owner must be true"
         )
     producer = candidate_context.get("producer")
     if producer is not None:

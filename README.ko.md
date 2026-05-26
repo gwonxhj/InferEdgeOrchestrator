@@ -130,6 +130,9 @@ flowchart LR
 - 이 feed는 mapping contract를 명시한다. Orchestrator는 supplemental candidate
   operation context를 제공하고, history-level telemetry coverage summary의 owner는
   EdgeEnv로 유지한다.
+- 또한 feed는 `producer_lineage_evidence_type=edgeenv_orchestrator_producer_lineage`
+  downstream guard alignment를 선언해 AIGuard/Lab이 producer-lineage reasoning을
+  보존하더라도 Orchestrator가 final decision owner가 되지 않게 한다.
 - device-local producer trace는 additive `candidate_context.producer`
   evidence로 feed에 보존된다. 여기에는 producer sources, task별 producer stage,
   device-local event count가 포함되며, EdgeEnv가 override lineage를 보존하더라도
@@ -346,6 +349,9 @@ device-local run에서는 `candidate_context.producer` 아래에
 device-local event count도 함께 보존된다.
 feed export는 EdgeEnv/AIGuard/Lab handoff marker를 쓰기 전에 검증하므로,
 오래된 mapping hint는 downstream bundle gate에 도달하기 전에 로컬에서 실패한다.
+또한 `producer_lineage_evidence_type=edgeenv_orchestrator_producer_lineage`
+downstream guard alignment marker를 검증해 producer-lineage evidence가
+queue/thermal operation evidence와 섞이지 않게 한다.
 저장된 feed에 standalone contract gate를 직접 실행할 수도 있다.
 
 ```bash

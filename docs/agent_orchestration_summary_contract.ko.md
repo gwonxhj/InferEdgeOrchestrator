@@ -257,6 +257,10 @@ feed는 같은 producer lineage를 `candidate_context.producer` 아래에 보존
 producer source mapping이 포함됩니다. 이 field는 supplemental operation
 evidence이며, comparability와 runtime regression judgement의 owner는 계속
 EdgeEnv입니다.
+또한 feed는
+`downstream_guard_alignment.producer_lineage_evidence_type=edgeenv_orchestrator_producer_lineage`
+를 포함하므로 AIGuard/Lab이 producer-lineage reasoning을 queue/thermal operation
+evidence와 분리해 검증할 수 있고, final decision owner는 계속 Lab으로 유지됩니다.
 EdgeEnv로 넘기기 전에 저장된 feed를 검증하려면
 `scripts/check_edgeenv_runtime_feed_contract.py --require-device-local-producer`를
 사용합니다. 이 gate는 producer lineage, task별 source/stage mapping,

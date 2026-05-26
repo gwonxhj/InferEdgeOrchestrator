@@ -67,9 +67,54 @@ def test_edgeenv_runtime_feed_contract_checker_passes_device_local_feed(
     assert result == 0
     out = capsys.readouterr().out
     assert "EdgeEnv runtime telemetry feed contract passed" in out
+    assert (
+        "producer_lineage_evidence_type: "
+        "edgeenv_orchestrator_producer_lineage"
+    ) in out
+    assert (
+        "operation_evidence_candidates: runtime_queue_overload, "
+        "runtime_thermal_instability"
+    ) in out
     assert "device_local_producer_sources" in out
     assert "producer_stage_by_task" in out
     assert "producer_event_count" in out
+
+
+def test_edgeenv_runtime_feed_contract_checker_fails_bad_guard_alignment(
+    tmp_path,
+    capsys,
+) -> None:
+    config = load_config(
+        "configs/agent_multi_workload_sustained_device_local.json"
+    )
+    report = write_multi_workload_sustained(
+        config,
+        output=tmp_path / "report.json",
+        frames=4,
+    )
+    feed = report["edgeenv_runtime_telemetry_feed"]
+    feed["downstream_guard_alignment"][
+        "producer_lineage_evidence_type"
+    ] = "runtime_queue_overload"
+    feed_path = tmp_path / "edgeenv_runtime_telemetry_feed.json"
+    feed_path.write_text(
+        json.dumps(feed, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    result = feed_contract_main(
+        [
+            "--feed",
+            str(feed_path),
+            "--require-device-local-producer",
+        ]
+    )
+
+    assert result == 2
+    assert (
+        "producer_lineage_evidence_type must be "
+        "edgeenv_orchestrator_producer_lineage"
+    ) in capsys.readouterr().out
 
 
 def test_edgeenv_runtime_feed_contract_checker_fails_missing_producer(
