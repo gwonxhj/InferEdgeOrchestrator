@@ -132,6 +132,8 @@ worker process를 제공하지 않는다.
 - skipped/succeeded/failed starter execution을 나타내는 remote execution result
 - dispatch, execution, fallback, final starter status evidence를 압축한
   remote operation summary
+- downstream report ingestion을 위한 event, status, error, fallback, final
+  status count를 압축한 remote runtime event summary
 
 이 출력은 remote execution path가 starter contract를 넘어 확장될 때 AIGuard와
 Lab report의 입력으로 연결될 수 있다.
@@ -156,6 +158,10 @@ starter는 기본적으로 execution planning만 기록하고 network connection
   eligible/rejected worker count, primary execution status, fallback recovery
   status, `final_status`를 downstream registry/report ingestion에 필요한 compact
   operation evidence로 기록한다.
+- `remote_runtime_event_summary`는 같은 remote-dispatch event stream을 compact
+  additive summary로 기록한다. 여기에는 event count, status count, error
+  category, fallback event count, fallback recovery status, final starter status가
+  포함된다.
 - fallback execution은 starter evidence로만 제한한다. production-grade retry,
   heartbeat, failover state, worker lifecycle management는 future hardening이다.
 
@@ -164,7 +170,9 @@ starter는 기본적으로 execution planning만 기록하고 network connection
 있다. 이 sample은 primary HTTP starter `connection_error`, 성공한 fallback
 starter attempt, retry/fallback plan field, AIGuard/Lab이 기대하는 downstream
 `remote_execution_recovered_by_fallback` signal을 기록한다. 이 sample은 문서용
-evidence이며 benchmark나 production retry claim이 아니다.
+evidence이며, 전체 event list를 다시 해석하지 않아도 compact event/error/fallback
+count를 확인할 수 있도록 additive `remote_runtime_event_summary`도 포함한다.
+benchmark나 production retry claim이 아니다.
 
 ## Boundary
 

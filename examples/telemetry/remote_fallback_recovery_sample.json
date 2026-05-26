@@ -99,6 +99,33 @@
     "production_remote_execution": false,
     "evidence_role": "remote_worker_selection_and_starter_execution_evidence"
   },
+  "remote_runtime_event_summary": {
+    "schema_version": "inferedge-remote-runtime-event-summary-v1",
+    "event_count": 4,
+    "event_type_counts": {
+      "remote_dispatch_selected": 1,
+      "remote_execution_failed": 1,
+      "remote_fallback_execution_completed": 1,
+      "remote_operation_summary_recorded": 1
+    },
+    "status_counts": {
+      "failed": 1,
+      "succeeded": 1
+    },
+    "error_category_counts": {
+      "connection_error": 1
+    },
+    "selected_worker_id": "primary-http-worker",
+    "fallback_worker_ids": [
+      "fallback-http-worker"
+    ],
+    "fallback_event_count": 1,
+    "fallback_recovered": true,
+    "final_status": "succeeded",
+    "production_remote_execution": false,
+    "evidence_role": "remote_dispatch_runtime_event_compact_summary",
+    "latest_event": "remote_operation_summary_recorded"
+  },
   "runtime_event_sample": [
     {
       "event": "remote_dispatch_selected",

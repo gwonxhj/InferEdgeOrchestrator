@@ -14,6 +14,9 @@ REGISTRY_SCHEMA_VERSION = "inferedge-remote-worker-registry-v1"
 REQUEST_SCHEMA_VERSION = "inferedge-remote-task-request-v1"
 RESULT_SCHEMA_VERSION = "inferedge-remote-dispatch-result-v1"
 EXECUTION_RESULT_SCHEMA_VERSION = "inferedge-remote-execution-result-v1"
+REMOTE_RUNTIME_EVENT_SUMMARY_SCHEMA_VERSION = (
+    "inferedge-remote-runtime-event-summary-v1"
+)
 
 
 @dataclass(frozen=True)
@@ -240,6 +243,11 @@ def _build_result(
             "fallback_final_status": remote_operation_summary["fallback_final_status"],
         }
     )
+    remote_runtime_event_summary = _build_remote_runtime_event_summary(
+        runtime_events=runtime_events,
+        worker_selection=worker_selection,
+        remote_operation_summary=remote_operation_summary,
+    )
     result = {
         "schema_version": RESULT_SCHEMA_VERSION,
         "dispatch_status": status,
@@ -262,11 +270,48 @@ def _build_result(
             "workers": worker_snapshot,
         },
         "remote_operation_summary": remote_operation_summary,
+        "remote_runtime_event_summary": remote_runtime_event_summary,
         "runtime_events": runtime_events,
     }
     if fallback_execution_result:
         result["fallback_execution_result"] = fallback_execution_result
     return result
+
+
+def _build_remote_runtime_event_summary(
+    *,
+    runtime_events: list[dict[str, Any]],
+    worker_selection: dict[str, Any],
+    remote_operation_summary: dict[str, Any],
+) -> dict[str, Any]:
+    event_counts = _count_event_values(runtime_events, "event")
+    status_counts = _count_event_values(runtime_events, "status")
+    error_counts = _count_event_values(runtime_events, "error_category")
+    fallback_worker_ids = worker_selection.get("fallback_worker_ids", [])
+    if not isinstance(fallback_worker_ids, list):
+        fallback_worker_ids = []
+    fallback_event_count = sum(
+        1
+        for event in runtime_events
+        if str(event.get("event", "")).startswith("remote_fallback_")
+    )
+    return {
+        "schema_version": REMOTE_RUNTIME_EVENT_SUMMARY_SCHEMA_VERSION,
+        "event_count": len(runtime_events),
+        "event_type_counts": event_counts,
+        "status_counts": status_counts,
+        "error_category_counts": error_counts,
+        "selected_worker_id": remote_operation_summary.get("selected_worker_id"),
+        "fallback_worker_ids": [str(worker_id) for worker_id in fallback_worker_ids],
+        "fallback_event_count": fallback_event_count,
+        "fallback_recovered": bool(
+            remote_operation_summary.get("fallback_recovered")
+        ),
+        "final_status": remote_operation_summary.get("final_status"),
+        "production_remote_execution": False,
+        "evidence_role": "remote_dispatch_runtime_event_compact_summary",
+        "latest_event": runtime_events[-1].get("event") if runtime_events else None,
+    }
 
 
 def _build_remote_operation_summary(
@@ -341,6 +386,18 @@ def _build_remote_operation_summary(
         "production_remote_execution": False,
         "evidence_role": "remote_worker_selection_and_starter_execution_evidence",
     }
+
+
+def _count_event_values(
+    events: list[dict[str, Any]],
+    key: str,
+) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for event in events:
+        value = event.get(key)
+        if isinstance(value, str) and value:
+            counts[value] = counts.get(value, 0) + 1
+    return counts
 
 
 def _evaluate_worker(worker: RemoteWorker, request: dict[str, Any]) -> dict[str, Any]:
