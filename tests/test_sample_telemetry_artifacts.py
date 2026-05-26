@@ -98,6 +98,9 @@ def test_remote_fallback_recovery_sample_records_starter_boundary() -> None:
     assert event_summary["schema_version"] == (  # type: ignore[index]
         "inferedge-remote-runtime-event-summary-v1"
     )
+    assert event_summary["runtime_event_count"] == (  # type: ignore[index]
+        event_summary["event_count"]  # type: ignore[index]
+    )
     assert event_summary["event_type_counts"] == {  # type: ignore[index]
         "remote_dispatch_selected": 1,
         "remote_execution_failed": 1,
@@ -110,6 +113,9 @@ def test_remote_fallback_recovery_sample_records_starter_boundary() -> None:
     assert event_summary["fallback_recovered"] is True  # type: ignore[index]
     assert event_summary["final_status"] == "succeeded"  # type: ignore[index]
     assert event_summary["production_remote_execution"] is False  # type: ignore[index]
+    assert event_summary["operation_boundary"] == (  # type: ignore[index]
+        "remote dispatch starter evidence only"
+    )
 
     events = sample["runtime_event_sample"]  # type: ignore[index]
     assert [event["event"] for event in events] == [

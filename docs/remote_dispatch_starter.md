@@ -164,6 +164,9 @@ When execution is requested:
 - `remote_runtime_event_summary` records the same remote-dispatch event stream
   as a compact additive summary: event counts, status counts, error categories,
   fallback event count, fallback recovery status, and final starter status.
+  It preserves both `event_count` and the Lab-facing `runtime_event_count`
+  alias so downstream reports can consume the producer summary without
+  recalculating the event stream.
 - fallback execution remains bounded to starter evidence. Production-grade
   retry, heartbeat, failover state, and worker lifecycle management remain
   future hardening.

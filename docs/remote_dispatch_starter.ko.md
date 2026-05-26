@@ -161,7 +161,9 @@ starter는 기본적으로 execution planning만 기록하고 network connection
 - `remote_runtime_event_summary`는 같은 remote-dispatch event stream을 compact
   additive summary로 기록한다. 여기에는 event count, status count, error
   category, fallback event count, fallback recovery status, final starter status가
-  포함된다.
+  포함된다. downstream Lab report가 event stream을 다시 계산하지 않고 producer
+  summary를 소비할 수 있도록 `event_count`와 Lab-facing `runtime_event_count`
+  alias를 함께 보존한다.
 - fallback execution은 starter evidence로만 제한한다. production-grade retry,
   heartbeat, failover state, worker lifecycle management는 future hardening이다.
 

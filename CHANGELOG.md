@@ -28,6 +28,9 @@ helps reviewers understand the project state.
 - Added a compact `remote_runtime_event_summary` to the remote dispatch starter
   result so downstream reports can read event, status, error, fallback, and final
   starter status evidence without replaying the full event list.
+- Preserved a Lab-facing `runtime_event_count` alias and starter boundary marker
+  in `remote_runtime_event_summary` so downstream Runtime Intelligence reports
+  can consume the producer summary without recalculating remote events.
 
 ## v0.1.2 - 2026-05-07
 

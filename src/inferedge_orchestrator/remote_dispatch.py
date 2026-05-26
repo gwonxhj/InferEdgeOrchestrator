@@ -298,6 +298,7 @@ def _build_remote_runtime_event_summary(
     return {
         "schema_version": REMOTE_RUNTIME_EVENT_SUMMARY_SCHEMA_VERSION,
         "event_count": len(runtime_events),
+        "runtime_event_count": len(runtime_events),
         "event_type_counts": event_counts,
         "status_counts": status_counts,
         "error_category_counts": error_counts,
@@ -310,6 +311,7 @@ def _build_remote_runtime_event_summary(
         "final_status": remote_operation_summary.get("final_status"),
         "production_remote_execution": False,
         "evidence_role": "remote_dispatch_runtime_event_compact_summary",
+        "operation_boundary": "remote dispatch starter evidence only",
         "latest_event": runtime_events[-1].get("event") if runtime_events else None,
     }
 
