@@ -130,6 +130,10 @@ The boundary is intentional:
 - The feed declares its mapping contract explicitly: Orchestrator provides
   supplemental candidate operation context, while EdgeEnv remains the owner of
   history-level telemetry coverage summaries.
+- The feed also declares downstream guard alignment with
+  `producer_lineage_evidence_type=edgeenv_orchestrator_producer_lineage` so
+  AIGuard/Lab can preserve producer-lineage reasoning without making
+  Orchestrator the final decision owner.
 - Device-local producer traces are preserved inside the feed as additive
   `candidate_context.producer` evidence, including producer sources, per-task
   producer stages, and device-local event counts. This lets EdgeEnv preserve
@@ -308,6 +312,9 @@ counts.
 The feed export validates the EdgeEnv/AIGuard/Lab handoff markers before
 writing, so stale mapping hints fail locally instead of reaching downstream
 bundle gates.
+It also validates the downstream guard alignment marker
+`producer_lineage_evidence_type=edgeenv_orchestrator_producer_lineage`, keeping
+producer-lineage evidence distinct from queue/thermal operation evidence.
 You can also run the standalone contract gate against a saved feed:
 
 ```bash

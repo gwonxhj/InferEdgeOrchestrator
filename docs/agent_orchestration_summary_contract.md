@@ -258,6 +258,10 @@ EdgeEnv feed preserves the same producer lineage under
 device-local event counts, and producer source mappings. This field is
 supplemental operation evidence; EdgeEnv still owns comparability and runtime
 regression judgement.
+The feed also carries
+`downstream_guard_alignment.producer_lineage_evidence_type=edgeenv_orchestrator_producer_lineage`
+so AIGuard/Lab can validate producer-lineage reasoning separately from
+queue/thermal operation evidence while keeping Lab as the final decision owner.
 Use `scripts/check_edgeenv_runtime_feed_contract.py --require-device-local-producer`
 to gate a saved feed before handing it to EdgeEnv. The gate validates producer
 lineage, per-task source/stage mappings, positive event counts, and ownership
