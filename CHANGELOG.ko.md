@@ -26,6 +26,9 @@ Language: [English](CHANGELOG.md) | 한국어
   smoke가 보이도록 하되, 핵심 positioning은 바꾸지 않았다.
 - validation evidence index를 갱신해 CI evidence가 package install과 설치된 CLI
   smoke coverage를 포함하도록 했다.
+- remote dispatch starter result에 compact `remote_runtime_event_summary`를
+  추가해 downstream report가 전체 event list를 다시 해석하지 않고도 event,
+  status, error, fallback, final starter status evidence를 읽을 수 있게 했다.
 
 ## v0.1.2 - 2026-05-07
 

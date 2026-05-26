@@ -134,6 +134,8 @@ The result preserves:
 - remote execution result showing skipped/succeeded/failed starter execution
 - remote operation summary showing comparable dispatch, execution, fallback, and
   final starter status evidence
+- remote runtime event summary with compact event, status, error, fallback, and
+  final status counts for downstream report ingestion
 
 This output is intended to become an input to AIGuard and Lab reports once the
 remote execution path grows beyond the starter contract.
@@ -159,6 +161,9 @@ When execution is requested:
   health state, eligible/rejected worker counts, primary execution status,
   fallback recovery status, and `final_status` as compact operation evidence for
   downstream registry/report ingestion.
+- `remote_runtime_event_summary` records the same remote-dispatch event stream
+  as a compact additive summary: event counts, status counts, error categories,
+  fallback event count, fallback recovery status, and final starter status.
 - fallback execution remains bounded to starter evidence. Production-grade
   retry, heartbeat, failover state, and worker lifecycle management remain
   future hardening.
@@ -167,8 +172,10 @@ A small curated sample of this recovery path is available at
 [`examples/telemetry/remote_fallback_recovery_sample.json`](../examples/telemetry/remote_fallback_recovery_sample.json).
 It records a primary HTTP starter `connection_error`, a successful fallback
 starter attempt, the retry/fallback plan fields, and the downstream
-`remote_execution_recovered_by_fallback` signal expected by AIGuard/Lab. The
-sample is documentation evidence only, not a benchmark or production retry
+`remote_execution_recovered_by_fallback` signal expected by AIGuard/Lab. It also
+includes the additive `remote_runtime_event_summary` so reviewers can inspect
+the compact event/error/fallback counts without replaying the full event list.
+The sample is documentation evidence only, not a benchmark or production retry
 claim.
 
 ## Boundary

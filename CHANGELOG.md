@@ -25,6 +25,9 @@ helps reviewers understand the project state.
   reflects the new package/CLI smoke without changing the core positioning.
 - Updated the validation evidence index so CI evidence includes package install
   and installed CLI smoke coverage.
+- Added a compact `remote_runtime_event_summary` to the remote dispatch starter
+  result so downstream reports can read event, status, error, fallback, and final
+  starter status evidence without replaying the full event list.
 
 ## v0.1.2 - 2026-05-07
 

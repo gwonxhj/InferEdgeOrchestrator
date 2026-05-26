@@ -49,6 +49,26 @@ def test_remote_dispatch_selects_matching_healthy_worker(tmp_path: Path) -> None
     }
     assert result["runtime_events"][0]["event"] == "remote_dispatch_selected"
     assert result["runtime_events"][-1]["event"] == "remote_operation_summary_recorded"
+    event_summary = result["remote_runtime_event_summary"]
+    assert event_summary["schema_version"] == (
+        "inferedge-remote-runtime-event-summary-v1"
+    )
+    assert event_summary["event_count"] == len(result["runtime_events"])
+    assert event_summary["event_type_counts"] == {
+        "remote_dispatch_selected": 1,
+        "remote_operation_summary_recorded": 1,
+    }
+    assert event_summary["status_counts"] == {}
+    assert event_summary["error_category_counts"] == {}
+    assert event_summary["fallback_worker_ids"] == []
+    assert event_summary["fallback_event_count"] == 0
+    assert event_summary["fallback_recovered"] is False
+    assert event_summary["final_status"] == "skipped"
+    assert event_summary["production_remote_execution"] is False
+    assert event_summary["evidence_role"] == (
+        "remote_dispatch_runtime_event_compact_summary"
+    )
+    assert event_summary["latest_event"] == "remote_operation_summary_recorded"
     summary = result["remote_operation_summary"]
     assert summary["schema_version"] == "inferedge-remote-operation-summary-v1"
     assert summary["dispatch_status"] == "accepted"
@@ -413,6 +433,28 @@ def test_remote_dispatch_execute_plan_falls_back_after_primary_connection_error(
         "remote_fallback_execution_completed",
         "remote_operation_summary_recorded",
     ]
+    event_summary = result["remote_runtime_event_summary"]
+    assert event_summary["schema_version"] == (
+        "inferedge-remote-runtime-event-summary-v1"
+    )
+    assert event_summary["event_count"] == 4
+    assert event_summary["event_type_counts"] == {
+        "remote_dispatch_selected": 1,
+        "remote_execution_failed": 1,
+        "remote_fallback_execution_completed": 1,
+        "remote_operation_summary_recorded": 1,
+    }
+    assert event_summary["status_counts"] == {
+        "failed": 1,
+        "succeeded": 1,
+    }
+    assert event_summary["error_category_counts"] == {"connection_error": 1}
+    assert event_summary["selected_worker_id"] == "primary-http-worker"
+    assert event_summary["fallback_worker_ids"] == ["fallback-http-worker"]
+    assert event_summary["fallback_event_count"] == 1
+    assert event_summary["fallback_recovered"] is True
+    assert event_summary["final_status"] == "succeeded"
+    assert event_summary["production_remote_execution"] is False
     summary = result["remote_operation_summary"]
     assert summary["remote_execution_status"] == "failed"
     assert summary["remote_error_category"] == "connection_error"
