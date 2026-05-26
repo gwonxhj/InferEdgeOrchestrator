@@ -29,6 +29,9 @@ Language: [English](CHANGELOG.md) | 한국어
 - remote dispatch starter result에 compact `remote_runtime_event_summary`를
   추가해 downstream report가 전체 event list를 다시 해석하지 않고도 event,
   status, error, fallback, final starter status evidence를 읽을 수 있게 했다.
+- downstream Runtime Intelligence report가 remote event를 다시 계산하지 않고
+  producer summary를 소비할 수 있도록 `remote_runtime_event_summary`에
+  Lab-facing `runtime_event_count` alias와 starter boundary marker를 보존했다.
 
 ## v0.1.2 - 2026-05-07
 

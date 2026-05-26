@@ -54,6 +54,7 @@ def test_remote_dispatch_selects_matching_healthy_worker(tmp_path: Path) -> None
         "inferedge-remote-runtime-event-summary-v1"
     )
     assert event_summary["event_count"] == len(result["runtime_events"])
+    assert event_summary["runtime_event_count"] == len(result["runtime_events"])
     assert event_summary["event_type_counts"] == {
         "remote_dispatch_selected": 1,
         "remote_operation_summary_recorded": 1,
@@ -67,6 +68,9 @@ def test_remote_dispatch_selects_matching_healthy_worker(tmp_path: Path) -> None
     assert event_summary["production_remote_execution"] is False
     assert event_summary["evidence_role"] == (
         "remote_dispatch_runtime_event_compact_summary"
+    )
+    assert event_summary["operation_boundary"] == (
+        "remote dispatch starter evidence only"
     )
     assert event_summary["latest_event"] == "remote_operation_summary_recorded"
     summary = result["remote_operation_summary"]
@@ -438,6 +442,7 @@ def test_remote_dispatch_execute_plan_falls_back_after_primary_connection_error(
         "inferedge-remote-runtime-event-summary-v1"
     )
     assert event_summary["event_count"] == 4
+    assert event_summary["runtime_event_count"] == 4
     assert event_summary["event_type_counts"] == {
         "remote_dispatch_selected": 1,
         "remote_execution_failed": 1,
@@ -455,6 +460,16 @@ def test_remote_dispatch_execute_plan_falls_back_after_primary_connection_error(
     assert event_summary["fallback_recovered"] is True
     assert event_summary["final_status"] == "succeeded"
     assert event_summary["production_remote_execution"] is False
+    assert event_summary["operation_boundary"] == (
+        "remote dispatch starter evidence only"
+    )
+    assert event_summary["event_count"] == event_summary["runtime_event_count"]
+    assert event_summary["final_status"] == result["remote_operation_summary"][
+        "final_status"
+    ]
+    assert event_summary["fallback_recovered"] == result["remote_operation_summary"][
+        "fallback_recovered"
+    ]
     summary = result["remote_operation_summary"]
     assert summary["remote_execution_status"] == "failed"
     assert summary["remote_error_category"] == "connection_error"

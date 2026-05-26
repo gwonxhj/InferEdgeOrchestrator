@@ -102,6 +102,7 @@
   "remote_runtime_event_summary": {
     "schema_version": "inferedge-remote-runtime-event-summary-v1",
     "event_count": 4,
+    "runtime_event_count": 4,
     "event_type_counts": {
       "remote_dispatch_selected": 1,
       "remote_execution_failed": 1,
@@ -124,6 +125,7 @@
     "final_status": "succeeded",
     "production_remote_execution": false,
     "evidence_role": "remote_dispatch_runtime_event_compact_summary",
+    "operation_boundary": "remote dispatch starter evidence only",
     "latest_event": "remote_operation_summary_recorded"
   },
   "runtime_event_sample": [
