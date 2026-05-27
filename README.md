@@ -171,6 +171,11 @@ Remote dispatch starter boundary:
   aliases, `operation_boundary=remote dispatch starter evidence only`, and
   Lab/AIGuard-facing signal names such as
   `remote_execution_recovered_by_fallback`.
+- Producer marker: `remote_runtime_event_summary` carries
+  `evidence_role=remote_dispatch_runtime_event_compact_summary`,
+  `operation_boundary=remote dispatch starter evidence only`, and
+  `production_remote_execution=false` so the InferEdge entrypoint smoke can
+  verify the same boundary through AIGuard, Lab, and evidence-index artifacts.
 - Not implemented: production remote execution, long-lived worker lifecycle,
   secure tunnel operation, production SSH/HTTP dispatch hardening, production
   retry/failover orchestration, or cloud control plane behavior.
