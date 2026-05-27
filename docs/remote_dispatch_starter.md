@@ -37,6 +37,10 @@ Implemented in the current starter:
 - compact `remote_runtime_event_summary` with `event_count`,
   `runtime_event_count`, fallback recovery status, final starter status, and
   `operation_boundary=remote dispatch starter evidence only`
+- producer boundary markers in `remote_runtime_event_summary`:
+  `evidence_role=remote_dispatch_runtime_event_compact_summary`,
+  `operation_boundary=remote dispatch starter evidence only`, and
+  `production_remote_execution=false`
 - downstream signal names such as `remote_execution_recovered_by_fallback` for
   AIGuard/Lab report ingestion
 
@@ -197,7 +201,9 @@ When execution is requested:
   fallback event count, fallback recovery status, and final starter status.
   It preserves both `event_count` and the Lab-facing `runtime_event_count`
   alias so downstream reports can consume the producer summary without
-  recalculating the event stream.
+  recalculating the event stream. InferEdge entrypoint smoke also verifies that
+  the same producer role, starter boundary, and non-production flag survive
+  through AIGuard, Lab JSON/Markdown, and the generated evidence index.
 - fallback execution remains bounded to starter evidence. Production-grade
   retry, heartbeat, failover state, and worker lifecycle management remain
   future hardening.
