@@ -49,7 +49,7 @@ Portfolio brief: [PORTFOLIO.md](PORTFOLIO.md) ([한국어](PORTFOLIO.ko.md))
 | Worker abstraction | Shared worker interface with `dummy`, `onnxruntime`, and TensorRT-backed workers |
 | Runtime evidence | Telemetry JSON records executed/dropped counts, latency, backlog, result events, resource snapshots, and policy decisions |
 | Agent contract bridge | Optional task references to Forge agent manifests and Runtime agent results, exported as orchestration summary evidence |
-| Remote dispatch starter | File-based worker registry + task request contract selects an edge worker and records decision, fallback, plan-only evidence, and optional explicit HTTP/SSH starter execution evidence |
+| Remote dispatch starter | File-based worker registry + task request contract selects an edge worker and records worker-selection, fallback, plan-only, compact event-summary, and optional explicit HTTP/SSH starter evidence without claiming production remote execution |
 | Jetson smoke coverage | Jetson Orin Nano smoke scripts exercise CLI, telemetry, `tegrastats` parsing, ONNX Runtime execution, and TensorRT-backed contention |
 
 ## Runtime Model
@@ -163,6 +163,20 @@ The boundary is intentional:
 | Device-Local Sustained Starter | Device-local mode using committed image, request, and resource snapshot producers before live device integrations | `configs/agent_multi_workload_sustained_device_local.json` |
 | EdgeEnv Telemetry Feed Candidate | Additive sustained report block that maps Orchestrator queue/deadline/fallback/resource context into an EdgeEnv runtime telemetry context candidate | `edgeenv_runtime_telemetry_feed` in sustained reports |
 | Remote Dispatch Starter | File-based worker registry and task request contract for selecting a remote edge worker; optional `--execute-plan` records explicit HTTP/SSH starter and bounded fallback evidence without claiming production remote execution | [`docs/remote_dispatch_starter.md`](docs/remote_dispatch_starter.md) |
+
+Remote dispatch starter boundary:
+
+- Implemented: file-based worker registry ingestion, selected/rejected worker
+  evidence, bounded fallback recovery context, remote runtime event count
+  aliases, `operation_boundary=remote dispatch starter evidence only`, and
+  Lab/AIGuard-facing signal names such as
+  `remote_execution_recovered_by_fallback`.
+- Not implemented: production remote execution, long-lived worker lifecycle,
+  secure tunnel operation, production SSH/HTTP dispatch hardening, production
+  retry/failover orchestration, or cloud control plane behavior.
+- Review meaning: Orchestrator produces operation evidence for downstream
+  review, while AIGuard may provide deterministic warning context and Lab
+  remains the final deployment decision owner.
 
 ## Validation Evidence
 

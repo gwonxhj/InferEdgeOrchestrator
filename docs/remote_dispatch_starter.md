@@ -25,6 +25,37 @@ it. It still does not manage Cloudflare tunnels, auth, heartbeat, long-lived
 production workers, or production retry orchestration. Those remain future
 hardening steps.
 
+## Starter Boundary
+
+Implemented in the current starter:
+
+- file-based worker registry and task request ingestion
+- selected/rejected worker evidence with decision reasons
+- plan-only remote execution context by default
+- bounded HTTP/SSH starter execution only when `--execute-plan` is explicit
+- bounded fallback recovery evidence when the task retry policy allows it
+- compact `remote_runtime_event_summary` with `event_count`,
+  `runtime_event_count`, fallback recovery status, final starter status, and
+  `operation_boundary=remote dispatch starter evidence only`
+- downstream signal names such as `remote_execution_recovered_by_fallback` for
+  AIGuard/Lab report ingestion
+
+Not implemented in the current starter:
+
+- production remote execution
+- long-lived worker lifecycle management
+- Cloudflare Tunnel / Zero Trust operation
+- production SSH/HTTP dispatch hardening
+- production retry/failover orchestration
+- cloud control plane or Kubernetes-style scheduling
+
+Review meaning:
+
+- Orchestrator produces operation evidence.
+- AIGuard may explain deterministic warning context when that evidence is
+  passed downstream.
+- Lab remains the final deployment decision owner.
+
 ## Inputs
 
 Worker registry:
