@@ -48,7 +48,7 @@ Portfolio brief: [PORTFOLIO.ko.md](PORTFOLIO.ko.md) ([English](PORTFOLIO.md))
 | Worker abstraction | `dummy`, `onnxruntime`, TensorRT-backed worker를 같은 interface로 실행 |
 | Runtime evidence | executed/dropped count, latency, backlog, result event, resource snapshot, policy decision을 telemetry JSON으로 기록 |
 | Agent contract bridge | Forge agent manifest와 Runtime agent result를 task에서 optional 참조하고 orchestration summary evidence로 export |
-| Remote dispatch starter | file-based worker registry와 task request contract로 edge worker를 선택하고 decision reason을 기록 |
+| Remote dispatch starter | file-based worker registry와 task request contract로 edge worker를 선택하고 worker-selection, fallback, plan-only, compact event-summary, optional HTTP/SSH starter evidence를 기록하되 production remote execution을 주장하지 않음 |
 | Jetson smoke coverage | Jetson Orin Nano smoke script로 CLI, telemetry, `tegrastats` parsing, ONNX Runtime execution, TensorRT-backed contention 경로를 실행 |
 
 ## Runtime Model
@@ -158,6 +158,19 @@ flowchart LR
 | Device-Local Sustained Starter | committed image/request/resource snapshot producer를 하나의 `device_local` mode로 실행하는 starter | `configs/agent_multi_workload_sustained_device_local.json` |
 | EdgeEnv Telemetry Feed Candidate | Orchestrator queue/deadline/fallback/resource context를 EdgeEnv runtime telemetry context candidate로 매핑하는 additive sustained report block | sustained report의 `edgeenv_runtime_telemetry_feed` |
 | Remote Dispatch Starter | production remote execution을 주장하지 않고 file-based worker registry와 task request contract로 remote edge worker selection, 명시적 HTTP/SSH starter 실행, bounded fallback evidence를 검증 | [`docs/remote_dispatch_starter.ko.md`](docs/remote_dispatch_starter.ko.md) |
+
+Remote dispatch starter boundary:
+
+- 구현됨: file-based worker registry ingestion, selected/rejected worker
+  evidence, bounded fallback recovery context, remote runtime event count
+  alias, `operation_boundary=remote dispatch starter evidence only`,
+  `remote_execution_recovered_by_fallback` 같은 Lab/AIGuard-facing signal name.
+- 미구현: production remote execution, long-lived worker lifecycle, secure
+  tunnel operation, production SSH/HTTP dispatch hardening, production
+  retry/failover orchestration, cloud control plane behavior.
+- 리뷰 의미: Orchestrator는 downstream review를 위한 operation evidence를
+  생산하고, AIGuard는 필요 시 deterministic warning context를 제공하며,
+  최종 deployment decision owner는 Lab으로 유지된다.
 
 ## Validation Evidence
 

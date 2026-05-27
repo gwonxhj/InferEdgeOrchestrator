@@ -85,6 +85,7 @@ low-priority 또는 stale frame을 drop한다.
 | Jetson TensorRT inference smoke | local identity ONNX를 TensorRT engine으로 build하고 TensorRT worker로 실행, runtime telemetry에 backend metadata 기록 |
 | Jetson TensorRT contention smoke | Jetson에서 TensorRT-backed high/low-priority task를 scheduler/load shedding으로 실행, low-priority work 제한과 TensorRT backend metadata 확인 |
 | Jetson TensorRT diverse contention smoke | 서로 다른 generated detector/classifier TensorRT engine으로 scheduler/load-shedding evidence 생성: detector `6/0`, classifier `1/5` executed/dropped, overload event `5` |
+| Remote dispatch starter | file-based worker registry와 task request contract로 worker-selection, bounded fallback, compact event-summary, Lab/AIGuard-facing starter evidence를 생성하되 production remote execution을 주장하지 않음 |
 | CI | GitHub Actions가 Python 3.11 기준 pytest와 설치된 package의 `run`, `report`, `compare-overload` CLI smoke 실행 |
 | Release | `v0.1.2`로 TensorRT evidence 및 portfolio wording patch snapshot 고정 |
 
@@ -117,6 +118,11 @@ integration은 artifact 기반으로 유지한다.
 ```text
 InferEdge result.json -> recommended Orchestrator task config
 ```
+
+Remote dispatch는 starter boundary로 유지한다. Orchestrator는 worker-selection과
+runtime operation evidence를 담당하고, AIGuard는 이 evidence가 downstream으로
+전달될 때 deterministic warning context를 제공할 수 있으며, 최종 deployment
+decision은 Lab이 소유한다.
 
 ## What This Is Not
 
