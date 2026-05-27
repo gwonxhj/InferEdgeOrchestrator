@@ -460,6 +460,9 @@ def test_remote_dispatch_execute_plan_falls_back_after_primary_connection_error(
     assert event_summary["fallback_recovered"] is True
     assert event_summary["final_status"] == "succeeded"
     assert event_summary["production_remote_execution"] is False
+    assert event_summary["evidence_role"] == (
+        "remote_dispatch_runtime_event_compact_summary"
+    )
     assert event_summary["operation_boundary"] == (
         "remote dispatch starter evidence only"
     )
