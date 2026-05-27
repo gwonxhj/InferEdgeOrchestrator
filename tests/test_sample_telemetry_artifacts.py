@@ -113,6 +113,9 @@ def test_remote_fallback_recovery_sample_records_starter_boundary() -> None:
     assert event_summary["fallback_recovered"] is True  # type: ignore[index]
     assert event_summary["final_status"] == "succeeded"  # type: ignore[index]
     assert event_summary["production_remote_execution"] is False  # type: ignore[index]
+    assert event_summary["evidence_role"] == (  # type: ignore[index]
+        "remote_dispatch_runtime_event_compact_summary"
+    )
     assert event_summary["operation_boundary"] == (  # type: ignore[index]
         "remote dispatch starter evidence only"
     )
