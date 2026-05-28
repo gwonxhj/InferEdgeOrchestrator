@@ -140,6 +140,15 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     assert candidate["operation"]["policy_decision_reasons"] == (
         report["queue_state_summary"]["policy_decision_reasons"]
     )
+    assert candidate["operation"]["runtime_task_event_summary"] == (
+        report["runtime_event_summary"]["task_event_summary"]
+    )
+    assert candidate["operation"]["tasks_with_scheduler_delay"] == (
+        report["runtime_event_summary"]["tasks_with_scheduler_delay"]
+    )
+    assert candidate["operation"]["tasks_with_fallback"] == (
+        report["runtime_event_summary"]["tasks_with_fallback"]
+    )
     assert candidate["resource"]["source"] == "tegrastats_timeline"
     assert candidate["resource"]["gpu_temperature"] == 44.0
     assert candidate["resource"]["cpu_temperature"] == 45.5

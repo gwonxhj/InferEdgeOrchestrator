@@ -122,8 +122,12 @@ Top-level summary:
   `deadline_miss_rate`, `fallback_rate`, producer context field도 기록합니다.
 - `runtime_event_summary`: runtime event type별 개수와 함께 policy decision
   reason, drop reason, deadline miss, fallback decision, scheduler-delay event
-  count를 additive field로 기록합니다. Device-local run에서는 producer source와
-  device-local event coverage도 요약합니다.
+  count를 additive field로 기록합니다. 또한 additive `task_event_summary`,
+  `tasks_with_deadline_miss`, `tasks_with_fallback`,
+  `tasks_with_scheduler_delay`를 포함해 downstream reviewer가 전체 timeline을
+  직접 훑지 않아도 어떤 task가 delay/limit/protect 되었는지 확인할 수 있게
+  합니다. Device-local run에서는 producer source와 device-local event
+  coverage도 요약합니다.
 - `runtime_event_timeline`: queue snapshot, drop, scheduler selection,
   execution, policy decision, resource snapshot을 순서대로 남기는 event log입니다.
   execution event는 backlog/delay 확인을 위한 additive

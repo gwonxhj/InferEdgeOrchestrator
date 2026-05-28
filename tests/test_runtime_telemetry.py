@@ -204,6 +204,27 @@ def test_sustained_high_load_records_timeline_and_policy_reasons(tmp_path) -> No
     ] > 0
     assert event_summary["fallback_decision_count"] > 0
     assert event_summary["scheduler_delay_event_count"] > 0
+    task_event_summary = event_summary["task_event_summary"]
+    assert set(task_event_summary) == {
+        "safety_monitor_agent",
+        "vision_agent",
+        "voice_command_agent",
+    }
+    assert task_event_summary["voice_command_agent"]["event_count"] > 0
+    assert task_event_summary["voice_command_agent"]["event_type_counts"][
+        "policy_decision"
+    ] > 0
+    assert task_event_summary["voice_command_agent"]["policy_decision_reason_counts"][
+        "queue_backlog_threshold_exceeded"
+    ] > 0
+    assert task_event_summary["voice_command_agent"]["fallback_decision_count"] > 0
+    assert task_event_summary["voice_command_agent"]["latest_event_index"] is not None
+    assert event_summary["tasks_with_fallback"]
+    assert event_summary["tasks_with_scheduler_delay"]
+    assert any(
+        task_event_summary[task]["scheduler_delay_event_count"] > 0
+        for task in event_summary["tasks_with_scheduler_delay"]
+    )
     assert event_summary["latest_event_index"] == len(data["runtime_event_timeline"]) - 1
     assert event_summary["latest_event_type"] in {
         "queue_snapshot",

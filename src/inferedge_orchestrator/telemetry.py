@@ -525,6 +525,23 @@ class TelemetryCollector:
         policy_reason_counts: dict[str, int] = {}
         drop_reason_counts: dict[str, int] = {}
         queue_pressure_reason_counts: dict[str, int] = {}
+        task_event_summary: dict[str, dict[str, Any]] = {
+            task_name: {
+                "event_count": 0,
+                "event_type_counts": {},
+                "reason_counts": {},
+                "policy_decision_reason_counts": {},
+                "drop_reason_counts": {},
+                "deadline_missed_count": 0,
+                "fallback_decision_count": 0,
+                "scheduler_delay_event_count": 0,
+                "max_scheduler_delay_cycles": 0,
+                "max_queue_wait_ms": 0.0,
+                "latest_event_index": None,
+                "latest_event_type": None,
+            }
+            for task_name in self.tasks
+        }
         producer_sources: list[str] = []
         deadline_missed_count = 0
         fallback_decision_count = 0
@@ -536,13 +553,30 @@ class TelemetryCollector:
             if not isinstance(event_type, str):
                 continue
             counts[event_type] = counts.get(event_type, 0) + 1
+            task_summary = task_event_summary.get(_runtime_event_task_name(event))
+            if task_summary is not None:
+                task_summary["event_count"] += 1
+                _increment_count(task_summary["event_type_counts"], event_type)
+                event_index = event.get("event_index")
+                if isinstance(event_index, int) and not isinstance(event_index, bool):
+                    task_summary["latest_event_index"] = event_index
+                task_summary["latest_event_type"] = event_type
             reason = event.get("reason")
             if isinstance(reason, str):
                 reason_counts[reason] = reason_counts.get(reason, 0) + 1
+                if task_summary is not None:
+                    _increment_count(task_summary["reason_counts"], reason)
                 if event_type == "policy_decision":
                     policy_reason_counts[reason] = policy_reason_counts.get(reason, 0) + 1
+                    if task_summary is not None:
+                        _increment_count(
+                            task_summary["policy_decision_reason_counts"],
+                            reason,
+                        )
                 if event_type == "drop":
                     drop_reason_counts[reason] = drop_reason_counts.get(reason, 0) + 1
+                    if task_summary is not None:
+                        _increment_count(task_summary["drop_reason_counts"], reason)
                 if event_type == "queue_snapshot":
                     pressure_reason = event.get("queue_pressure_reason")
                     if isinstance(pressure_reason, str):
@@ -551,11 +585,31 @@ class TelemetryCollector:
                         )
             if bool(event.get("deadline_missed")):
                 deadline_missed_count += 1
+                if task_summary is not None:
+                    task_summary["deadline_missed_count"] += 1
             if bool(event.get("fallback_used")):
                 fallback_decision_count += 1
+                if task_summary is not None:
+                    task_summary["fallback_decision_count"] += 1
             scheduler_delay_cycles = event.get("scheduler_delay_cycles")
             if isinstance(scheduler_delay_cycles, int) and scheduler_delay_cycles > 0:
                 scheduler_delay_event_count += 1
+                if task_summary is not None:
+                    task_summary["scheduler_delay_event_count"] += 1
+                    task_summary["max_scheduler_delay_cycles"] = max(
+                        task_summary["max_scheduler_delay_cycles"],
+                        scheduler_delay_cycles,
+                    )
+            queue_wait_ms = event.get("queue_wait_ms")
+            if (
+                task_summary is not None
+                and isinstance(queue_wait_ms, int | float)
+                and not isinstance(queue_wait_ms, bool)
+            ):
+                task_summary["max_queue_wait_ms"] = max(
+                    task_summary["max_queue_wait_ms"],
+                    _rounded(float(queue_wait_ms)) or 0.0,
+                )
             task_name = event.get("task")
             if isinstance(task_name, str) and self._is_device_local_task(task_name):
                 device_local_event_count += 1
@@ -577,6 +631,22 @@ class TelemetryCollector:
             "deadline_missed_count": deadline_missed_count,
             "fallback_decision_count": fallback_decision_count,
             "scheduler_delay_event_count": scheduler_delay_event_count,
+            "task_event_summary": task_event_summary,
+            "tasks_with_deadline_miss": [
+                task_name
+                for task_name, summary in task_event_summary.items()
+                if summary["deadline_missed_count"] > 0
+            ],
+            "tasks_with_fallback": [
+                task_name
+                for task_name, summary in task_event_summary.items()
+                if summary["fallback_decision_count"] > 0
+            ],
+            "tasks_with_scheduler_delay": [
+                task_name
+                for task_name, summary in task_event_summary.items()
+                if summary["scheduler_delay_event_count"] > 0
+            ],
             "producer_sources": producer_sources,
             "producer_event_count": producer_event_count,
             "device_local_event_count": device_local_event_count,
@@ -772,6 +842,20 @@ def _count_by_key(
             continue
         counts[value] = counts.get(value, 0) + 1
     return counts
+
+
+def _increment_count(counts: dict[str, int], key: str) -> None:
+    counts[key] = counts.get(key, 0) + 1
+
+
+def _runtime_event_task_name(event: dict[str, Any]) -> str | None:
+    task = event.get("task")
+    if isinstance(task, str):
+        return task
+    limited_task = event.get("limited_task")
+    if isinstance(limited_task, str):
+        return limited_task
+    return None
 
 
 def _ordered_unique(values: Any) -> list[str]:

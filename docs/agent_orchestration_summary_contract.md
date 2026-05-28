@@ -122,8 +122,12 @@ Additive operation-health fields:
   `deadline_miss_rate`, `fallback_rate`, and producer context fields.
 - `runtime_event_summary`: counts runtime event types and additive reason
   counts for policy decisions, drops, deadline misses, fallback decisions, and
-  scheduler-delay events. Device-local runs also summarize producer sources and
-  device-local event coverage.
+  scheduler-delay events. It also includes additive `task_event_summary`,
+  `tasks_with_deadline_miss`, `tasks_with_fallback`, and
+  `tasks_with_scheduler_delay` fields so downstream reviewers can see which
+  task was delayed, limited, or protected without walking the full timeline.
+  Device-local runs also summarize producer sources and device-local event
+  coverage.
 - `runtime_event_timeline`: ordered event log for queue snapshots, drops,
   scheduler selections, executions, policy decisions, and resource snapshots.
   Execution events include additive `scheduler_delay_cycles` and
