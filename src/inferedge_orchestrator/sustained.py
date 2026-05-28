@@ -298,6 +298,19 @@ def _edgeenv_runtime_telemetry_feed(
         "drop_reason_counts": queue_summary.get("drop_reason_counts", {}),
         "runtime_event_counts": runtime_event_summary.get("event_type_counts", {}),
         "runtime_event_reason_counts": runtime_event_summary.get("reason_counts", {}),
+        "runtime_task_event_summary": runtime_event_summary.get(
+            "task_event_summary",
+            {},
+        ),
+        "tasks_with_deadline_miss": runtime_event_summary.get(
+            "tasks_with_deadline_miss",
+            [],
+        ),
+        "tasks_with_fallback": runtime_event_summary.get("tasks_with_fallback", []),
+        "tasks_with_scheduler_delay": runtime_event_summary.get(
+            "tasks_with_scheduler_delay",
+            [],
+        ),
     }
     producer = _edgeenv_producer_context(report)
     available_sections = [

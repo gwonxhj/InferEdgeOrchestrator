@@ -122,6 +122,11 @@ The boundary is intentional:
 - Sustained Orchestrator reports include an additive `edgeenv_runtime_telemetry_feed`
   block so EdgeEnv/AIGuard/Lab can reuse queue, deadline, fallback, and resource
   context without treating Orchestrator as the regression or deployment-decision owner.
+- The feed preserves task-level runtime event rollups through
+  `candidate_context.operation.runtime_task_event_summary`, plus
+  `tasks_with_deadline_miss`, `tasks_with_fallback`, and
+  `tasks_with_scheduler_delay`, so reviewers can trace which workload was
+  delayed or limited without replaying the full event timeline.
 - The standalone feed declares `source_repository=InferEdgeOrchestrator`,
   `artifact_role=orchestrator-supplemental-operation-context`, and
   `producer_contract=inferedge-orchestrator-edgeenv-runtime-telemetry-feed-v1`

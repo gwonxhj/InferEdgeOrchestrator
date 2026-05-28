@@ -122,6 +122,11 @@ flowchart LR
   block이 포함되어 EdgeEnv/AIGuard/Lab이 queue, deadline, fallback, resource
   context를 재사용할 수 있다. 단, Orchestrator가 regression 또는 deployment
   decision owner가 되는 것은 아니다.
+- feed는 `candidate_context.operation.runtime_task_event_summary`와
+  `tasks_with_deadline_miss`, `tasks_with_fallback`,
+  `tasks_with_scheduler_delay`를 통해 task-level runtime event rollup을
+  보존한다. 이를 통해 reviewer가 전체 event timeline을 다시 재생하지 않아도
+  어떤 workload가 delay 또는 limit 되었는지 추적할 수 있다.
 - standalone feed는 `source_repository=InferEdgeOrchestrator`,
   `artifact_role=orchestrator-supplemental-operation-context`,
   `producer_contract=inferedge-orchestrator-edgeenv-runtime-telemetry-feed-v1`를
