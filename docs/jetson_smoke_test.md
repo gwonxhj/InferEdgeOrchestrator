@@ -214,3 +214,79 @@ Notes:
 - ONNX Runtime printed a GPU discovery warning during smoke, but the run passed
   because GPU execution is not required for this worker path.
 - This is not TensorRT or GPU benchmark evidence.
+
+## Device-Local Sustained Starter Smoke
+
+Current device-local sustained starter validation:
+
+- Jetson Orin Nano hardware execution: validated on `nano01`.
+- Python environment: `$HOME/miniconda3/envs/yolo_env/bin/python`.
+- Config: `configs/agent_multi_workload_sustained_device_local.json`.
+- Vision producer: `examples/inputs/vision_frame.ppm` with
+  `models/generated/detector_tiny.onnx`.
+- Voice producer: `examples/inputs/voice_ingress_requests.json`.
+- Safety producer: `--capture-process-resource-snapshot`.
+- Live telemetry: `tegrastats` captured during the sustained run.
+- EdgeEnv feed contract: validated with
+  `scripts/check_edgeenv_runtime_feed_contract.py --require-device-local-producer`.
+
+Latest device-local physical-device validation:
+
+```text
+Timestamp UTC: 2026-05-29T03:27:34Z
+Device: Linux nano01 5.15.148-tegra aarch64
+Python: 3.10.12
+ONNX Runtime: 1.23.2
+Command: run-multi-workload-sustained with device-local input overrides,
+         detector_tiny ONNX probe, live tegrastats, and EdgeEnv feed export
+Frames: 32
+Output directory: reports/jetson_device_local_20260529T032734Z
+Orchestration summary: orchestration_summary.json
+EdgeEnv feed: edgeenv_runtime_telemetry_feed.json
+Result: PASS
+```
+
+Observed operation evidence:
+
+```text
+max_total_queue_depth=6
+dropped_count=29
+fallback_count=29
+deadline_missed_count=1
+policy_decision_reason=queue_backlog_threshold_exceeded
+queue_pressure_reason=max_total_queue_depth_exceeded_overload_threshold
+producer_sources=process_resource_snapshot,image_file,fastapi_request_fixture
+device_local_producer_count=35
+device_local_event_count=99
+tegrastats_samples=2
+EdgeEnv feed schema=inferedge-orchestrator-edgeenv-runtime-telemetry-feed-v1
+```
+
+Workload summary:
+
+```text
+safety_monitor_agent: executed=16 dropped=0 fallback=0 mean=2.882ms p95=3.549ms
+vision_agent: executed=18 dropped=14 fallback=14 mean=40.987ms p95=329.488ms
+voice_command_agent: executed=1 dropped=15 fallback=15 mean=46.955ms p95=46.955ms
+```
+
+Vision ONNX probe evidence:
+
+```text
+backend=onnxruntime
+provider=CPUExecutionProvider
+input_shape=[1, 3, 16, 16]
+output_shape=[1, 6]
+probe_elapsed_ms=5.05
+```
+
+Notes:
+
+- This validates the device-local producer override, ONNX probe, live
+  `tegrastats` handoff, runtime event summary, and standalone EdgeEnv feed
+  contract on Jetson hardware.
+- ONNX Runtime printed the same GPU discovery warning as the ONNX worker smoke,
+  but this path intentionally records `CPUExecutionProvider` probe evidence.
+- This is still a starter smoke. It is not decoded YOLO accuracy validation,
+  live camera operation, a production scheduler, or a thermal endurance
+  benchmark.
