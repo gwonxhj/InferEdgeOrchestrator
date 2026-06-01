@@ -38,6 +38,15 @@ Portfolio brief: [PORTFOLIO.md](PORTFOLIO.md) ([한국어](PORTFOLIO.ko.md))
   overload comparison, Jetson dummy/ONNX smoke, and Jetson TensorRT-backed
   contention evidence.
 
+## Role Boundary At A Glance
+
+| Area | Orchestrator owns | Orchestrator does not own |
+| --- | --- | --- |
+| Runtime operation control | Schedules tasks, bounds queues, applies deadline/priority policy, and records drop/fallback/latency evidence | Decide whether a model is deployable or overwrite Lab `deployment_decision` |
+| EdgeEnv / Lab handoff | Exports supplemental queue/deadline/fallback/resource context through `edgeenv_runtime_telemetry_feed` | Own comparability, regression calculation, evidence registry, or deployment decision |
+| Remote dispatch starter | Records file-based worker registry, task request, worker selection, and bounded fallback evidence | Claim production remote execution, long-lived worker lifecycle, secure tunnel operation, or cloud control plane behavior |
+| Serving boundary | Demonstrates lightweight scheduler/load-shedding behavior under constrained edge workloads | Replace Triton, DeepStream, Kubernetes, or a production inference server |
+
 ## What It Does
 
 | Runtime concern | Implementation |
