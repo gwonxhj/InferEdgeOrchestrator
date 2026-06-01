@@ -93,6 +93,32 @@ def test_internal_markdown_links_resolve() -> None:
             assert resolved.exists(), f"{path} links to missing target: {target}"
 
 
+def test_readmes_expose_orchestrator_role_boundaries() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    readme_ko = Path("README.ko.md").read_text(encoding="utf-8")
+
+    assert "Language: English | [한국어](README.ko.md)" in readme
+    assert "Language: [English](README.md) | 한국어" in readme_ko
+
+    for required in [
+        "## Role Boundary At A Glance",
+        "Decide whether a model is deployable",
+        "Own comparability, regression calculation, evidence registry",
+        "Claim production remote execution",
+        "Replace Triton, DeepStream, Kubernetes, or a production inference server",
+    ]:
+        assert required in readme
+
+    for required in [
+        "## 역할 경계 한눈에 보기",
+        "모델이 deployable한지 결정하거나 Lab `deployment_decision`을 덮어쓰지 않음",
+        "comparability, regression 계산, evidence registry, deployment decision을 소유하지 않음",
+        "production remote execution",
+        "Triton, DeepStream, Kubernetes, production inference server를 대체하지 않음",
+    ]:
+        assert required in readme_ko
+
+
 def test_sample_telemetry_artifacts_are_linked_from_evidence_docs() -> None:
     evidence_docs = (
         Path("docs/validation_evidence.md"),

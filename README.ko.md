@@ -37,6 +37,15 @@ Portfolio brief: [PORTFOLIO.ko.md](PORTFOLIO.ko.md) ([English](PORTFOLIO.md))
 - Local pytest, GitHub Actions package/CLI smoke, synthetic overload comparison,
   Jetson dummy/ONNX smoke, Jetson TensorRT-backed contention evidence로 검증했다.
 
+## 역할 경계 한눈에 보기
+
+| 영역 | Orchestrator가 담당하는 일 | Orchestrator가 담당하지 않는 일 |
+| --- | --- | --- |
+| Runtime operation control | task scheduling, bounded queue, deadline/priority policy, drop/fallback/latency evidence 기록 | 모델이 deployable한지 결정하거나 Lab `deployment_decision`을 덮어쓰지 않음 |
+| EdgeEnv / Lab handoff | `edgeenv_runtime_telemetry_feed`로 queue/deadline/fallback/resource context를 supplemental evidence로 export | comparability, regression 계산, evidence registry, deployment decision을 소유하지 않음 |
+| Remote dispatch starter | file-based worker registry, task request, worker selection, bounded fallback evidence를 기록 | production remote execution, long-lived worker lifecycle, secure tunnel operation, cloud control plane behavior를 주장하지 않음 |
+| Serving boundary | 제한된 Edge workload에서 lightweight scheduler/load-shedding 동작을 재현 | Triton, DeepStream, Kubernetes, production inference server를 대체하지 않음 |
+
 ## What It Does
 
 | Runtime concern | Implementation |
