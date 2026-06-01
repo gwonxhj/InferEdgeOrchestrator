@@ -131,6 +131,9 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
         "inferedge_orchestrator_operation_summary"
     )
     assert candidate["queue_depth"] == signals["max_total_queue_depth"]
+    assert candidate["operation"]["max_total_queue_depth"] == (
+        signals["max_total_queue_depth"]
+    )
     assert candidate["operation"]["deadline_missed_count"] == (
         report["agent_runtime_summary"]["totals"]["deadline_missed_count"]
     )
@@ -203,6 +206,9 @@ def test_write_edgeenv_runtime_telemetry_feed_exports_standalone_artifact(
     assert feed["regression_owner"] == "edgeenv"
     assert feed["candidate_context"]["run_id"] == report["run"]["name"]
     assert feed["candidate_context"]["operation"]["queue_depth"] == (
+        report["queue_state_summary"]["max_total_queue_depth"]
+    )
+    assert feed["candidate_context"]["operation"]["max_total_queue_depth"] == (
         report["queue_state_summary"]["max_total_queue_depth"]
     )
     assert feed["edgeenv_mapping_hint"]["copy_candidate_context_to"] == (
@@ -1014,6 +1020,9 @@ def test_cli_device_local_overrides_write_edgeenv_feed_output(
     }
     assert candidate["producer"]["operation_context_role"] == "supplemental"
     assert candidate["operation"]["queue_depth"] == (
+        report["queue_state_summary"]["max_total_queue_depth"]
+    )
+    assert candidate["operation"]["max_total_queue_depth"] == (
         report["queue_state_summary"]["max_total_queue_depth"]
     )
     assert candidate["resource"]["temperature_c"] == 42.0

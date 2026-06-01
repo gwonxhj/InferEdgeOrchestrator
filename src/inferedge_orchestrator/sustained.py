@@ -271,11 +271,13 @@ def _edgeenv_runtime_telemetry_feed(
     runtime_event_summary = report.get("runtime_event_summary", {})
     totals = report.get("agent_runtime_summary", {}).get("totals", {})
     resource = _edgeenv_resource_context(report, tegrastats)
+    max_total_queue_depth = queue_summary.get(
+        "max_total_queue_depth",
+        sustained.get("max_total_queue_depth", 0),
+    )
     operation = {
-        "queue_depth": queue_summary.get(
-            "max_total_queue_depth",
-            sustained.get("max_total_queue_depth", 0),
-        ),
+        "queue_depth": max_total_queue_depth,
+        "max_total_queue_depth": max_total_queue_depth,
         "deadline_missed_count": totals.get(
             "deadline_missed_count",
             sustained.get("deadline_missed_count", 0),
