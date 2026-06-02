@@ -119,6 +119,58 @@ def test_readmes_expose_orchestrator_role_boundaries() -> None:
         assert required in readme_ko
 
 
+def test_operation_control_guides_expose_runtime_boundaries() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    readme_ko = Path("README.ko.md").read_text(encoding="utf-8")
+    guide = Path("docs/operation_control.md").read_text(encoding="utf-8")
+    guide_ko = Path("docs/operation_control.ko.md").read_text(encoding="utf-8")
+
+    assert "[docs/operation_control.md](docs/operation_control.md)" in readme
+    assert "[한국어](docs/operation_control.ko.md)" in readme
+    assert (
+        "[docs/operation_control.ko.md](docs/operation_control.ko.md)"
+        in readme_ko
+    )
+    assert "[English](docs/operation_control.md)" in readme_ko
+
+    assert "Language: English | [한국어](operation_control.ko.md)" in guide
+    assert "Language: [English](operation_control.md) | 한국어" in guide_ko
+
+    for required in [
+        "runtime operation control layer",
+        "not a benchmark tool",
+        "Queue control",
+        "Overload handling",
+        "Latency budget protection",
+        "Fallback evidence",
+        "`edgeenv_runtime_telemetry_feed`",
+        "Lab remains the final deployment decision owner",
+        "production remote execution",
+        "cloud control plane",
+        "Kubernetes-style orchestration",
+        "Triton replacement",
+        "Jetson device is required only when collecting new live device-local evidence",
+    ]:
+        assert required in guide
+
+    for required in [
+        "runtime operation control layer",
+        "benchmark tool이 아니다",
+        "Queue control",
+        "Overload handling",
+        "Latency budget protection",
+        "Fallback evidence",
+        "`edgeenv_runtime_telemetry_feed`",
+        "Lab remains the final deployment decision owner",
+        "production remote execution",
+        "cloud control plane",
+        "Kubernetes-style orchestration",
+        "Triton replacement",
+        "Jetson 필요 여부",
+    ]:
+        assert required in guide_ko
+
+
 def test_sample_telemetry_artifacts_are_linked_from_evidence_docs() -> None:
     evidence_docs = (
         Path("docs/validation_evidence.md"),
