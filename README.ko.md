@@ -23,6 +23,9 @@ Portfolio positioning: Triton/DeepStream 대체나 throughput serving이 아니�
 deployment 이후 runtime operation control.
 
 Portfolio brief: [PORTFOLIO.ko.md](PORTFOLIO.ko.md) ([English](PORTFOLIO.md))
+Operation control guide:
+[docs/operation_control.ko.md](docs/operation_control.ko.md)
+([English](docs/operation_control.md))
 
 ## 30-Second Read
 

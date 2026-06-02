@@ -23,6 +23,8 @@ Portfolio positioning: post-deployment runtime operation control, not
 Triton/DeepStream replacement or throughput serving.
 
 Portfolio brief: [PORTFOLIO.md](PORTFOLIO.md) ([한국어](PORTFOLIO.ko.md))
+Operation control guide: [docs/operation_control.md](docs/operation_control.md)
+([한국어](docs/operation_control.ko.md))
 
 ## 30-Second Read
 
