@@ -32,6 +32,9 @@ EDGEENV_AIGUARD_EVIDENCE_CANDIDATES = [
 EDGEENV_PRODUCER_LINEAGE_AIGUARD_EVIDENCE_TYPE = (
     "edgeenv_orchestrator_producer_lineage"
 )
+LATENCY_BUDGET_PROTECTION_SCHEMA = (
+    "inferedge-orchestrator-latency-budget-protection-v1"
+)
 
 
 def apply_device_local_input_overrides(
@@ -314,6 +317,10 @@ def _edgeenv_runtime_telemetry_feed(
             [],
         ),
     }
+    operation["latency_budget_protection"] = _latency_budget_protection_context(
+        config,
+        report,
+    )
     producer = _edgeenv_producer_context(report)
     available_sections = [
         "operation",
@@ -449,6 +456,16 @@ def validate_edgeenv_runtime_telemetry_feed(
             "edgeenv_runtime_telemetry_feed.candidate_context.operation must be "
             "an object"
         )
+    latency_budget_protection = candidate_context["operation"].get(
+        "latency_budget_protection"
+    )
+    if latency_budget_protection is not None:
+        if not isinstance(latency_budget_protection, dict):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                "latency_budget_protection must be an object"
+            )
+        _validate_latency_budget_protection(latency_budget_protection)
     if not isinstance(candidate_context.get("resource"), dict):
         raise ValueError(
             "edgeenv_runtime_telemetry_feed.candidate_context.resource must be "
@@ -573,6 +590,58 @@ def validate_edgeenv_runtime_telemetry_feed(
             "edgeenv_runtime_telemetry_feed.candidate_context.producer is "
             "required for device-local feed validation"
         )
+
+
+def _validate_latency_budget_protection(payload: dict[str, Any]) -> None:
+    if payload.get("schema_version") != LATENCY_BUDGET_PROTECTION_SCHEMA:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "latency_budget_protection.schema_version must be "
+            f"{LATENCY_BUDGET_PROTECTION_SCHEMA}"
+        )
+    if payload.get("operation_context_role") != "supplemental":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "latency_budget_protection.operation_context_role must be supplemental"
+        )
+    if payload.get("scheduler_owner") != "orchestrator":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "latency_budget_protection.scheduler_owner must be orchestrator"
+        )
+    if payload.get("decision_owner") != "lab":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "latency_budget_protection.decision_owner must be lab"
+        )
+    if payload.get("regression_owner") != "edgeenv":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "latency_budget_protection.regression_owner must be edgeenv"
+        )
+    if payload.get("not_a_deployment_decision") is not True:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "latency_budget_protection.not_a_deployment_decision must be true"
+        )
+    task_budget_context = payload.get("task_budget_context")
+    if not isinstance(task_budget_context, dict) or not task_budget_context:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "latency_budget_protection.task_budget_context must be a non-empty "
+            "object"
+        )
+    for field in (
+        "protected_task_candidates",
+        "tasks_with_latency_budget_risk",
+        "risk_reasons",
+    ):
+        value = payload.get(field)
+        if not isinstance(value, list):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                f"latency_budget_protection.{field} must be a list"
+            )
 
 
 def _validate_edgeenv_producer_context(producer: dict[str, Any]) -> None:
@@ -738,6 +807,146 @@ def _edgeenv_producer_context(report: dict[str, Any]) -> dict[str, Any]:
         "device_local_task_count": queue_summary.get("device_local_task_count", 0),
         "operation_context_role": "supplemental",
     }
+
+
+def _latency_budget_protection_context(
+    config: OrchestratorConfig,
+    report: dict[str, Any],
+) -> dict[str, Any]:
+    runtime_event_summary = report.get("runtime_event_summary", {})
+    queue_summary = report.get("queue_state_summary", {})
+    workers = report.get("worker_health_snapshot", {}).get("workers", {})
+    task_event_summary = runtime_event_summary.get("task_event_summary", {})
+    if not isinstance(runtime_event_summary, dict):
+        runtime_event_summary = {}
+    if not isinstance(queue_summary, dict):
+        queue_summary = {}
+    if not isinstance(workers, dict):
+        workers = {}
+    if not isinstance(task_event_summary, dict):
+        task_event_summary = {}
+
+    task_budget_context: dict[str, Any] = {}
+    for task in config.tasks:
+        worker = workers.get(task.name, {})
+        if not isinstance(worker, dict):
+            worker = {}
+        task_events = task_event_summary.get(task.name, {})
+        if not isinstance(task_events, dict):
+            task_events = {}
+        task_budget_context[task.name] = {
+            "agent_id": task.agent_id,
+            "agent_type": task.agent_type,
+            "priority": task.priority,
+            "latency_budget_ms": task.latency_budget_ms,
+            "executed_count": worker.get("executed_count", 0),
+            "deadline_missed_count": worker.get("deadline_missed_count", 0),
+            "fallback_count": worker.get("fallback_count", 0),
+            "dropped_count": worker.get("dropped_count", 0),
+            "scheduler_delay_event_count": task_events.get(
+                "scheduler_delay_event_count",
+                0,
+            ),
+            "max_scheduler_delay_cycles": task_events.get(
+                "max_scheduler_delay_cycles",
+                0,
+            ),
+            "max_queue_wait_ms": task_events.get("max_queue_wait_ms", 0.0),
+            "health_state": worker.get("health_state"),
+            "operation_risk_summary": worker.get("operation_risk_summary"),
+            "queue_pressure_state": worker.get("queue_pressure_state"),
+        }
+
+    tasks_with_latency_budget_risk = _tasks_with_latency_budget_risk(
+        task_budget_context
+    )
+    return {
+        "schema_version": LATENCY_BUDGET_PROTECTION_SCHEMA,
+        "operation_context_role": "supplemental",
+        "scheduler_owner": "orchestrator",
+        "decision_owner": "lab",
+        "regression_owner": "edgeenv",
+        "not_a_deployment_decision": True,
+        "source": "runtime_event_summary+worker_health_snapshot+queue_state_summary",
+        "protected_task_candidates": _protected_task_candidates(
+            config,
+            task_budget_context,
+        ),
+        "tasks_with_latency_budget_risk": tasks_with_latency_budget_risk,
+        "risk_reasons": _latency_budget_risk_reasons(
+            runtime_event_summary,
+            queue_summary,
+            task_budget_context,
+        ),
+        "first_read": (
+            "review_latency_budget_context"
+            if tasks_with_latency_budget_risk
+            else "latency_budget_context_preserved"
+        ),
+        "task_budget_context": task_budget_context,
+    }
+
+
+def _protected_task_candidates(
+    config: OrchestratorConfig,
+    task_budget_context: dict[str, Any],
+) -> list[str]:
+    if not config.tasks:
+        return []
+    highest_priority = max(task.priority for task in config.tasks)
+    candidates: list[str] = []
+    for task in config.tasks:
+        context = task_budget_context.get(task.name, {})
+        if not isinstance(context, dict):
+            continue
+        if task.priority == highest_priority and _positive_int(
+            context.get("executed_count")
+        ):
+            candidates.append(task.name)
+    return candidates
+
+
+def _tasks_with_latency_budget_risk(task_budget_context: dict[str, Any]) -> list[str]:
+    risky: list[str] = []
+    for task_name, context in task_budget_context.items():
+        if not isinstance(context, dict):
+            continue
+        if (
+            _positive_int(context.get("deadline_missed_count"))
+            or _positive_int(context.get("fallback_count"))
+            or _positive_int(context.get("scheduler_delay_event_count"))
+        ):
+            risky.append(task_name)
+    return risky
+
+
+def _latency_budget_risk_reasons(
+    runtime_event_summary: dict[str, Any],
+    queue_summary: dict[str, Any],
+    task_budget_context: dict[str, Any],
+) -> list[str]:
+    reasons: list[str] = []
+    if _positive_int(runtime_event_summary.get("deadline_missed_count")):
+        reasons.append("deadline_miss_present")
+    if _positive_int(runtime_event_summary.get("scheduler_delay_event_count")):
+        reasons.append("scheduler_delay_present")
+    if _positive_int(runtime_event_summary.get("fallback_decision_count")):
+        reasons.append("fallback_used")
+    if queue_summary.get("queue_pressure_state") == "overloaded":
+        reasons.append("queue_pressure_overloaded")
+    if _positive_int(queue_summary.get("overload_event_count")):
+        reasons.append("load_shedding_applied")
+    if not reasons and any(
+        _positive_int(context.get("dropped_count"))
+        for context in task_budget_context.values()
+        if isinstance(context, dict)
+    ):
+        reasons.append("drop_pressure_present")
+    return reasons
+
+
+def _positive_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
 
 
 def _scenario_identity(config: OrchestratorConfig) -> dict[str, str]:

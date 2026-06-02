@@ -136,6 +136,11 @@ The boundary is intentional:
   `tasks_with_deadline_miss`, `tasks_with_fallback`, and
   `tasks_with_scheduler_delay`, so reviewers can trace which workload was
   delayed or limited without replaying the full event timeline.
+- The feed also preserves a compact
+  `candidate_context.operation.latency_budget_protection` marker. It summarizes
+  protected high-priority task candidates, tasks with deadline/fallback/scheduler
+  delay risk, and per-task latency-budget context as supplemental operation
+  evidence, not a deployment decision.
 - The standalone feed declares `source_repository=InferEdgeOrchestrator`,
   `artifact_role=orchestrator-supplemental-operation-context`, and
   `producer_contract=inferedge-orchestrator-edgeenv-runtime-telemetry-feed-v1`

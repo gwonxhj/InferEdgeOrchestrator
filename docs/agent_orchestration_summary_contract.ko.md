@@ -261,6 +261,13 @@ feed는 같은 producer lineage를 `candidate_context.producer` 아래에 보존
 producer source mapping이 포함됩니다. 이 field는 supplemental operation
 evidence이며, comparability와 runtime regression judgement의 owner는 계속
 EdgeEnv입니다.
+같은 feed는
+`candidate_context.operation.latency_budget_protection`도 compact reviewer
+navigation marker로 보존합니다. 이 marker는 보호된 high-priority task 후보,
+deadline/fallback/scheduler-delay risk가 있는 task, task별 latency budget
+context, 그리고 `scheduler_owner=orchestrator`, `decision_owner=lab`,
+`regression_owner=edgeenv`, `not_a_deployment_decision=true` ownership marker를
+기록합니다.
 또한 feed는
 `downstream_guard_alignment.producer_lineage_evidence_type=edgeenv_orchestrator_producer_lineage`
 를 포함하므로 AIGuard/Lab이 producer-lineage reasoning을 queue/thermal operation

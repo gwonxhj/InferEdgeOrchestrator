@@ -78,6 +78,8 @@ def test_edgeenv_runtime_feed_contract_checker_passes_device_local_feed(
     assert "device_local_producer_sources" in out
     assert "producer_stage_by_task" in out
     assert "producer_event_count" in out
+    assert "latency_budget_protection:" in out
+    assert "protected=safety_monitor_agent" in out
 
 
 def test_edgeenv_runtime_feed_contract_checker_fails_bad_guard_alignment(

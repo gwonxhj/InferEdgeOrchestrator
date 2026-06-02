@@ -18,6 +18,7 @@ from inferedge_orchestrator.sustained import (
     EDGEENV_TELEMETRY_FEED_PRODUCER_CONTRACT,
     EDGEENV_TELEMETRY_FEED_SCHEMA,
     EDGEENV_TELEMETRY_FEED_SOURCE_REPOSITORY,
+    LATENCY_BUDGET_PROTECTION_SCHEMA,
     MULTI_WORKLOAD_SCHEMA,
     apply_device_local_input_overrides,
     load_tegrastats_timeline,
@@ -151,6 +152,29 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     )
     assert candidate["operation"]["tasks_with_fallback"] == (
         report["runtime_event_summary"]["tasks_with_fallback"]
+    )
+    protection = candidate["operation"]["latency_budget_protection"]
+    assert protection["schema_version"] == LATENCY_BUDGET_PROTECTION_SCHEMA
+    assert protection["operation_context_role"] == "supplemental"
+    assert protection["scheduler_owner"] == "orchestrator"
+    assert protection["decision_owner"] == "lab"
+    assert protection["regression_owner"] == "edgeenv"
+    assert protection["not_a_deployment_decision"] is True
+    assert protection["first_read"] == "review_latency_budget_context"
+    assert protection["protected_task_candidates"] == ["safety_monitor_agent"]
+    assert set(protection["tasks_with_latency_budget_risk"]) >= {
+        "vision_agent",
+        "voice_command_agent",
+    }
+    assert "scheduler_delay_present" in protection["risk_reasons"]
+    assert "load_shedding_applied" in protection["risk_reasons"]
+    voice_budget = protection["task_budget_context"]["voice_command_agent"]
+    assert voice_budget["priority"] == 50
+    assert voice_budget["latency_budget_ms"] == 120.0
+    assert voice_budget["max_scheduler_delay_cycles"] == (
+        report["runtime_event_summary"]["task_event_summary"][
+            "voice_command_agent"
+        ]["max_scheduler_delay_cycles"]
     )
     assert candidate["resource"]["source"] == "tegrastats_timeline"
     assert candidate["resource"]["gpu_temperature"] == 44.0
@@ -382,6 +406,32 @@ def test_write_edgeenv_runtime_telemetry_feed_requires_candidate_operation_conte
     with pytest.raises(
         ValueError,
         match="candidate_context must include operation",
+    ):
+        write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
+
+
+def test_write_edgeenv_runtime_telemetry_feed_requires_latency_budget_marker(
+    tmp_path,
+) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    report = write_multi_workload_sustained(
+        config,
+        output=tmp_path / "report.json",
+        frames=4,
+    )
+    report["edgeenv_runtime_telemetry_feed"]["candidate_context"]["operation"][
+        "latency_budget_protection"
+    ]["decision_owner"] = "orchestrator"
+
+    with pytest.raises(
+        ValueError,
+        match="latency_budget_protection.decision_owner must be lab",
     ):
         write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
 
@@ -782,6 +832,18 @@ def test_run_multi_workload_sustained_device_local_starter(tmp_path) -> None:
     assert feed["candidate_context"]["operation"]["queue_depth"] == (
         queue_summary["max_total_queue_depth"]
     )
+    protection = feed["candidate_context"]["operation"]["latency_budget_protection"]
+    assert protection["schema_version"] == LATENCY_BUDGET_PROTECTION_SCHEMA
+    assert protection["operation_context_role"] == "supplemental"
+    assert protection["decision_owner"] == "lab"
+    assert protection["scheduler_owner"] == "orchestrator"
+    assert protection["regression_owner"] == "edgeenv"
+    assert protection["not_a_deployment_decision"] is True
+    assert "safety_monitor_agent" in protection["protected_task_candidates"]
+    assert "voice_command_agent" in protection["task_budget_context"]
+    assert protection["task_budget_context"]["voice_command_agent"][
+        "latency_budget_ms"
+    ] == 120.0
     assert feed["candidate_context"]["resource"]["source"] == (
         "result_events_resource_snapshot"
     )
@@ -1025,6 +1087,12 @@ def test_cli_device_local_overrides_write_edgeenv_feed_output(
     assert candidate["operation"]["max_total_queue_depth"] == (
         report["queue_state_summary"]["max_total_queue_depth"]
     )
+    protection = candidate["operation"]["latency_budget_protection"]
+    assert protection["schema_version"] == LATENCY_BUDGET_PROTECTION_SCHEMA
+    assert protection["not_a_deployment_decision"] is True
+    assert protection["task_budget_context"]["voice_command_agent"][
+        "max_queue_wait_ms"
+    ] >= 0
     assert candidate["resource"]["temperature_c"] == 42.0
     assert feed["edgeenv_mapping_hint"]["coverage_summary_owner"] == "edgeenv"
     assert feed["edgeenv_mapping_hint"]["coverage_summary_path"] == (
