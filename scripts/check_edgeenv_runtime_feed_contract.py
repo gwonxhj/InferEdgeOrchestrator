@@ -53,6 +53,8 @@ def main(argv: list[str] | None = None) -> int:
     producer_stage_by_task = producer.get("producer_stage_by_task") or {}
     producer_event_count = producer.get("producer_event_count")
     device_local_event_count = producer.get("device_local_event_count")
+    operation = candidate_context.get("operation") or {}
+    latency_budget_protection = operation.get("latency_budget_protection") or {}
     guard_alignment = feed.get("downstream_guard_alignment") or {}
     print("EdgeEnv runtime telemetry feed contract passed.")
     if guard_alignment:
@@ -83,6 +85,16 @@ def main(argv: list[str] | None = None) -> int:
             "producer_event_count: "
             f"{producer_event_count}; device_local_event_count: "
             f"{device_local_event_count}"
+        )
+    if latency_budget_protection:
+        protected = latency_budget_protection.get("protected_task_candidates") or []
+        risky = latency_budget_protection.get("tasks_with_latency_budget_risk") or []
+        reasons = latency_budget_protection.get("risk_reasons") or []
+        print(
+            "latency_budget_protection: "
+            f"protected={','.join(str(item) for item in protected) or 'none'}; "
+            f"risk={','.join(str(item) for item in risky) or 'none'}; "
+            f"reasons={','.join(str(item) for item in reasons) or 'none'}"
         )
     return 0
 

@@ -262,6 +262,12 @@ EdgeEnv feed preserves the same producer lineage under
 device-local event counts, and producer source mappings. This field is
 supplemental operation evidence; EdgeEnv still owns comparability and runtime
 regression judgement.
+The same feed also preserves
+`candidate_context.operation.latency_budget_protection` as a compact reviewer
+navigation marker. It records protected high-priority task candidates, tasks
+with deadline/fallback/scheduler-delay risk, per-task latency budget context,
+and the ownership markers `scheduler_owner=orchestrator`, `decision_owner=lab`,
+`regression_owner=edgeenv`, and `not_a_deployment_decision=true`.
 The feed also carries
 `downstream_guard_alignment.producer_lineage_evidence_type=edgeenv_orchestrator_producer_lineage`
 so AIGuard/Lab can validate producer-lineage reasoning separately from
