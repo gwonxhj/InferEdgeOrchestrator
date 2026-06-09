@@ -209,14 +209,18 @@ def _run_multi_workload_sustained(args: argparse.Namespace) -> int:
         write_edgeenv_runtime_telemetry_feed(report, args.edgeenv_feed_output)
     summary = report["multi_workload_sustained_summary"]
     signals = summary["observed_runtime_signals"]
+    queue_summary = report.get("queue_state_summary", {})
     print(f"wrote sustained telemetry: {args.output}")
     if args.edgeenv_feed_output:
         print(f"wrote EdgeEnv telemetry feed: {args.edgeenv_feed_output}")
     print(
         "multi-workload sustained: "
+        f"mode={summary['scenario_mode']} "
         f"max_queue={signals['max_total_queue_depth']} "
         f"dropped={signals['dropped_count']} "
+        f"deadline_missed={signals['deadline_missed_count']} "
         f"fallback={signals['fallback_count']} "
+        f"queue_pressure={queue_summary.get('queue_pressure_state', 'unknown')} "
         f"tegrastats_samples={signals['tegrastats_sample_count']}"
     )
     return 0

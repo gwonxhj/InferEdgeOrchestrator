@@ -67,6 +67,12 @@ def test_edgeenv_runtime_feed_contract_checker_passes_device_local_feed(
     assert result == 0
     out = capsys.readouterr().out
     assert "EdgeEnv runtime telemetry feed contract passed" in out
+    assert "operation_summary: mode=device_local;" in out
+    assert "max_queue=" in out
+    assert "queue_pressure=" in out
+    assert "deadline_missed=" in out
+    assert "fallback=" in out
+    assert "dropped=" in out
     assert (
         "producer_lineage_evidence_type: "
         "edgeenv_orchestrator_producer_lineage"
