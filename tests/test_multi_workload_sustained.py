@@ -580,6 +580,9 @@ def test_cli_run_multi_workload_sustained_writes_edgeenv_feed_output(
     captured = capsys.readouterr()
     assert exit_code == 0
     assert "wrote EdgeEnv telemetry feed" in captured.out
+    assert "multi-workload sustained: mode=device_local" in captured.out
+    assert "deadline_missed=" in captured.out
+    assert "queue_pressure=" in captured.out
     report = json.loads(output.read_text(encoding="utf-8"))
     feed = json.loads(feed_output.read_text(encoding="utf-8"))
     assert feed == report["edgeenv_runtime_telemetry_feed"]
@@ -1054,6 +1057,9 @@ def test_cli_device_local_overrides_write_edgeenv_feed_output(
     captured = capsys.readouterr()
     assert exit_code == 0
     assert "wrote EdgeEnv telemetry feed" in captured.out
+    assert "multi-workload sustained: mode=device_local" in captured.out
+    assert "deadline_missed=" in captured.out
+    assert "queue_pressure=" in captured.out
     report = json.loads(output.read_text(encoding="utf-8"))
     feed = json.loads(feed_output.read_text(encoding="utf-8"))
     assert feed == report["edgeenv_runtime_telemetry_feed"]

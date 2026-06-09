@@ -57,6 +57,15 @@ def main(argv: list[str] | None = None) -> int:
     latency_budget_protection = operation.get("latency_budget_protection") or {}
     guard_alignment = feed.get("downstream_guard_alignment") or {}
     print("EdgeEnv runtime telemetry feed contract passed.")
+    print(
+        "operation_summary: "
+        f"mode={feed.get('scenario_mode') or 'unknown'}; "
+        f"max_queue={operation.get('max_total_queue_depth', operation.get('queue_depth', 'unknown'))}; "
+        f"queue_pressure={operation.get('queue_pressure_state') or 'unknown'}; "
+        f"deadline_missed={operation.get('deadline_missed_count', 0)}; "
+        f"fallback={operation.get('fallback_count', 0)}; "
+        f"dropped={operation.get('dropped_count', 0)}"
+    )
     if guard_alignment:
         print(
             "producer_lineage_evidence_type: "
