@@ -268,6 +268,12 @@ deadline/fallback/scheduler-delay risk가 있는 task, task별 latency budget
 context, 그리고 `scheduler_owner=orchestrator`, `decision_owner=lab`,
 `regression_owner=edgeenv`, `not_a_deployment_decision=true` ownership marker를
 기록합니다.
+`multi_workload_sustained_summary.operation_timeline_summary`와 mirror field인
+`candidate_context.operation.operation_timeline_summary`는 queue pressure,
+latency wait, policy decision, affected task, review hint를 compact하게
+보여줍니다. 이 summary는 AIGuard/Lab/Env가 raw timeline을 훑기 전에 보는
+additive navigation aid이며 `queue_depth_timeline`, `latency_timeline`,
+`policy_decision_log`를 대체하지 않습니다.
 또한 feed는
 `downstream_guard_alignment.producer_lineage_evidence_type=edgeenv_orchestrator_producer_lineage`
 를 포함하므로 AIGuard/Lab이 producer-lineage reasoning을 queue/thermal operation
@@ -277,6 +283,9 @@ EdgeEnv로 넘기기 전에 저장된 feed를 검증하려면
 사용합니다. 이 gate는 producer lineage, task별 source/stage mapping,
 양수 event count, ownership marker만 검증하며, regression analysis나
 deployment judgement를 수행하지 않습니다.
+checker 출력은 compact `operation_timeline` review hint도 함께 보여주므로,
+reviewer가 전체 JSON을 열기 전에 queue delay/fallback/deadline pressure를
+확인할 수 있습니다.
 
 ## Compatibility Rules
 

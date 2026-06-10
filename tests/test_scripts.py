@@ -86,6 +86,10 @@ def test_edgeenv_runtime_feed_contract_checker_passes_device_local_feed(
     assert "producer_event_count" in out
     assert "latency_budget_protection:" in out
     assert "protected=safety_monitor_agent" in out
+    assert "operation_timeline:" in out
+    assert "review_hints=" in out
+    assert "scheduler_delay=" in out
+    assert "max_queue_wait_ms=" in out
 
 
 def test_edgeenv_runtime_feed_contract_checker_fails_bad_guard_alignment(

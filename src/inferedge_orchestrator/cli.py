@@ -210,6 +210,10 @@ def _run_multi_workload_sustained(args: argparse.Namespace) -> int:
     summary = report["multi_workload_sustained_summary"]
     signals = summary["observed_runtime_signals"]
     queue_summary = report.get("queue_state_summary", {})
+    timeline = summary.get("operation_timeline_summary", {})
+    affected_tasks = timeline.get("affected_tasks", {}) if isinstance(timeline, dict) else {}
+    latency = timeline.get("latency", {}) if isinstance(timeline, dict) else {}
+    review_hints = timeline.get("review_hints", []) if isinstance(timeline, dict) else []
     print(f"wrote sustained telemetry: {args.output}")
     if args.edgeenv_feed_output:
         print(f"wrote EdgeEnv telemetry feed: {args.edgeenv_feed_output}")
@@ -222,6 +226,14 @@ def _run_multi_workload_sustained(args: argparse.Namespace) -> int:
         f"fallback={signals['fallback_count']} "
         f"queue_pressure={queue_summary.get('queue_pressure_state', 'unknown')} "
         f"tegrastats_samples={signals['tegrastats_sample_count']}"
+    )
+    print(
+        "operation-timeline: "
+        f"review_hints={_format_cli_list(review_hints)} "
+        f"scheduler_delay={_format_cli_list(affected_tasks.get('scheduler_delay'))} "
+        f"fallback={_format_cli_list(affected_tasks.get('fallback'))} "
+        f"deadline_missed={_format_cli_list(affected_tasks.get('deadline_missed'))} "
+        f"max_queue_wait_ms={latency.get('max_queue_wait_ms', 0)}"
     )
     return 0
 
@@ -296,3 +308,10 @@ def _remote_dispatch(args: argparse.Namespace) -> int:
         f"reason={result['decision_reason']}"
     )
     return 0
+
+
+def _format_cli_list(value: object) -> str:
+    if not isinstance(value, list):
+        return "none"
+    items = [str(item) for item in value if isinstance(item, str) and item]
+    return ",".join(items) if items else "none"
