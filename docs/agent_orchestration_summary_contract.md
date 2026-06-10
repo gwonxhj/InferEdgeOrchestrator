@@ -268,6 +268,12 @@ navigation marker. It records protected high-priority task candidates, tasks
 with deadline/fallback/scheduler-delay risk, per-task latency budget context,
 and the ownership markers `scheduler_owner=orchestrator`, `decision_owner=lab`,
 `regression_owner=edgeenv`, and `not_a_deployment_decision=true`.
+`multi_workload_sustained_summary.operation_timeline_summary` and the mirrored
+`candidate_context.operation.operation_timeline_summary` provide a compact
+readout of queue pressure, latency wait, policy decisions, affected tasks, and
+review hints. This summary is an additive navigation aid for AIGuard/Lab/Env; it
+does not replace `queue_depth_timeline`, `latency_timeline`, or
+`policy_decision_log`.
 The feed also carries
 `downstream_guard_alignment.producer_lineage_evidence_type=edgeenv_orchestrator_producer_lineage`
 so AIGuard/Lab can validate producer-lineage reasoning separately from
@@ -276,6 +282,9 @@ Use `scripts/check_edgeenv_runtime_feed_contract.py --require-device-local-produ
 to gate a saved feed before handing it to EdgeEnv. The gate validates producer
 lineage, per-task source/stage mappings, positive event counts, and ownership
 markers only; it does not perform regression analysis or deployment judgement.
+The checker output also prints the compact `operation_timeline` review hints so
+reviewers can see queue delay/fallback/deadline pressure without opening the
+full JSON first.
 
 ## Compatibility Rules
 

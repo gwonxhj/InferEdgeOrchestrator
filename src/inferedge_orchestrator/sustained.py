@@ -35,6 +35,9 @@ EDGEENV_PRODUCER_LINEAGE_AIGUARD_EVIDENCE_TYPE = (
 LATENCY_BUDGET_PROTECTION_SCHEMA = (
     "inferedge-orchestrator-latency-budget-protection-v1"
 )
+OPERATION_TIMELINE_SUMMARY_SCHEMA = (
+    "inferedge-orchestrator-operation-timeline-summary-v1"
+)
 
 
 def apply_device_local_input_overrides(
@@ -259,6 +262,7 @@ def _multi_workload_summary(
             **_local_profile_signals(report),
             **_producer_source_signals(report),
         },
+        "operation_timeline_summary": _operation_timeline_summary(report),
         "next_validation_step": _next_validation_step(config),
     }
 
@@ -316,6 +320,7 @@ def _edgeenv_runtime_telemetry_feed(
             "tasks_with_scheduler_delay",
             [],
         ),
+        "operation_timeline_summary": _operation_timeline_summary(report),
     }
     operation["latency_budget_protection"] = _latency_budget_protection_context(
         config,
@@ -466,6 +471,16 @@ def validate_edgeenv_runtime_telemetry_feed(
                 "latency_budget_protection must be an object"
             )
         _validate_latency_budget_protection(latency_budget_protection)
+    operation_timeline_summary = candidate_context["operation"].get(
+        "operation_timeline_summary"
+    )
+    if operation_timeline_summary is not None:
+        if not isinstance(operation_timeline_summary, dict):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                "operation_timeline_summary must be an object"
+            )
+        _validate_operation_timeline_summary(operation_timeline_summary)
     if not isinstance(candidate_context.get("resource"), dict):
         raise ValueError(
             "edgeenv_runtime_telemetry_feed.candidate_context.resource must be "
@@ -642,6 +657,32 @@ def _validate_latency_budget_protection(payload: dict[str, Any]) -> None:
                 "edgeenv_runtime_telemetry_feed.candidate_context.operation."
                 f"latency_budget_protection.{field} must be a list"
             )
+
+
+def _validate_operation_timeline_summary(payload: dict[str, Any]) -> None:
+    if payload.get("schema_version") != OPERATION_TIMELINE_SUMMARY_SCHEMA:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "operation_timeline_summary.schema_version must be "
+            f"{OPERATION_TIMELINE_SUMMARY_SCHEMA}"
+        )
+    for field in ("sample_counts", "queue", "latency", "policy", "affected_tasks"):
+        if not isinstance(payload.get(field), dict):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                f"operation_timeline_summary.{field} must be an object"
+            )
+    review_hints = payload.get("review_hints")
+    if (
+        not isinstance(review_hints, list)
+        or not review_hints
+        or not all(isinstance(item, str) and item for item in review_hints)
+    ):
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "operation_timeline_summary.review_hints must be a non-empty "
+            "string list"
+        )
 
 
 def _validate_edgeenv_producer_context(producer: dict[str, Any]) -> None:
@@ -1171,6 +1212,160 @@ def _producer_source_signals(report: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _operation_timeline_summary(report: dict[str, Any]) -> dict[str, Any]:
+    queue_summary = _dict_value(report.get("queue_state_summary"))
+    runtime_event_summary = _dict_value(report.get("runtime_event_summary"))
+    worker_health = _dict_value(report.get("worker_health_snapshot"))
+    workers = _dict_value(worker_health.get("workers"))
+    return {
+        "schema_version": OPERATION_TIMELINE_SUMMARY_SCHEMA,
+        "source": (
+            "queue_depth_timeline+latency_timeline+policy_decision_log+"
+            "runtime_event_summary"
+        ),
+        "sample_counts": {
+            "queue_depth": len(_dict_list(report.get("queue_depth_timeline"))),
+            "latency": len(_dict_list(report.get("latency_timeline"))),
+            "policy_decision": len(_dict_list(report.get("policy_decision_log"))),
+            "runtime_event": runtime_event_summary.get("event_count", 0),
+        },
+        "queue": {
+            "max_total_queue_depth": queue_summary.get("max_total_queue_depth", 0),
+            "average_total_queue_depth": queue_summary.get(
+                "average_total_queue_depth",
+                0.0,
+            ),
+            "overload_backlog_threshold": queue_summary.get(
+                "overload_backlog_threshold",
+                0,
+            ),
+            "pressure_state": queue_summary.get("queue_pressure_state"),
+            "pressure_reason": queue_summary.get("queue_pressure_reason"),
+            "max_pressure_task": queue_summary.get("max_pressure_task"),
+            "max_queue_depth_by_task": queue_summary.get("max_queue_depth_by_task", {}),
+        },
+        "latency": _latency_timeline_summary(report),
+        "policy": _policy_timeline_summary(report),
+        "affected_tasks": {
+            "deadline_missed": _string_list(
+                runtime_event_summary.get("tasks_with_deadline_miss")
+            ),
+            "fallback": _string_list(runtime_event_summary.get("tasks_with_fallback")),
+            "scheduler_delay": _string_list(
+                runtime_event_summary.get("tasks_with_scheduler_delay")
+            ),
+            "degraded": _worker_names_with_health_state(workers, "degraded"),
+            "constrained": _worker_names_with_health_state(workers, "constrained"),
+        },
+        "review_hints": _operation_timeline_review_hints(
+            queue_summary,
+            runtime_event_summary,
+        ),
+    }
+
+
+def _latency_timeline_summary(report: dict[str, Any]) -> dict[str, Any]:
+    events = _dict_list(report.get("latency_timeline"))
+    max_latency_ms = 0.0
+    max_queue_wait_ms = 0.0
+    max_queue_wait_ms_by_task: dict[str, float] = {}
+    tasks_with_deadline_miss: list[str] = []
+    for event in events:
+        task = event.get("task")
+        latency_ms = _number_value(event.get("latency_ms"))
+        queue_wait_ms = _number_value(event.get("queue_wait_ms"))
+        if latency_ms is not None:
+            max_latency_ms = max(max_latency_ms, latency_ms)
+        if queue_wait_ms is not None:
+            max_queue_wait_ms = max(max_queue_wait_ms, queue_wait_ms)
+            if isinstance(task, str) and task:
+                max_queue_wait_ms_by_task[task] = max(
+                    max_queue_wait_ms_by_task.get(task, 0.0),
+                    queue_wait_ms,
+                )
+        if bool(event.get("deadline_missed")) and isinstance(task, str) and task:
+            if task not in tasks_with_deadline_miss:
+                tasks_with_deadline_miss.append(task)
+    return {
+        "sample_count": len(events),
+        "max_latency_ms": round(max_latency_ms, 3),
+        "max_queue_wait_ms": round(max_queue_wait_ms, 3),
+        "max_queue_wait_ms_by_task": {
+            task: round(value, 3)
+            for task, value in max_queue_wait_ms_by_task.items()
+        },
+        "tasks_with_deadline_miss": tasks_with_deadline_miss,
+    }
+
+
+def _policy_timeline_summary(report: dict[str, Any]) -> dict[str, Any]:
+    decisions = _dict_list(report.get("policy_decision_log"))
+    return {
+        "decision_count": len(decisions),
+        "decision_reasons": _policy_decision_reasons(report),
+        "first_decision": (
+            _compact_policy_decision(decisions[0]) if decisions else None
+        ),
+        "latest_decision": (
+            _compact_policy_decision(decisions[-1]) if decisions else None
+        ),
+    }
+
+
+def _compact_policy_decision(decision: dict[str, Any]) -> dict[str, Any]:
+    compact = {
+        key: decision.get(key)
+        for key in (
+            "event",
+            "decision_reason",
+            "protected_task",
+            "protected_agent_id",
+            "limited_task",
+            "agent_id",
+            "agent_type",
+            "dropped_frames",
+            "total_backlog_before",
+            "backlog_threshold",
+            "fallback_used",
+        )
+        if key in decision
+    }
+    queue_depth = decision.get("queue_depth_snapshot")
+    if isinstance(queue_depth, dict):
+        compact["queue_depth_snapshot"] = dict(queue_depth)
+    return compact
+
+
+def _operation_timeline_review_hints(
+    queue_summary: dict[str, Any],
+    runtime_event_summary: dict[str, Any],
+) -> list[str]:
+    hints: list[str] = []
+    if queue_summary.get("queue_pressure_state") == "overloaded":
+        hints.append("review_queue_pressure")
+    if _positive_int(runtime_event_summary.get("scheduler_delay_event_count")):
+        hints.append("review_scheduler_delay")
+    if _positive_int(runtime_event_summary.get("deadline_missed_count")):
+        hints.append("review_deadline_miss")
+    if _positive_int(runtime_event_summary.get("fallback_decision_count")):
+        hints.append("review_fallback_use")
+    if _positive_int(queue_summary.get("overload_event_count")):
+        hints.append("review_load_shedding")
+    return hints or ["operation_timeline_nominal"]
+
+
+def _worker_names_with_health_state(
+    workers: dict[str, Any],
+    health_state: str,
+) -> list[str]:
+    names: list[str] = []
+    for name, worker in workers.items():
+        if isinstance(name, str) and isinstance(worker, dict):
+            if worker.get("health_state") == health_state:
+                names.append(name)
+    return names
+
+
 def _resource_context_source(
     report: dict[str, Any],
     tegrastats: dict[str, Any],
@@ -1238,6 +1433,28 @@ def _first_number(*values: Any) -> float | None:
         if isinstance(value, int | float) and not isinstance(value, bool):
             return round(float(value), 3)
     return None
+
+
+def _number_value(value: Any) -> float | None:
+    if isinstance(value, int | float) and not isinstance(value, bool):
+        return float(value)
+    return None
+
+
+def _dict_value(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _dict_list(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str) and item]
 
 
 def _policy_decision_reasons(report: dict[str, Any]) -> list[str]:

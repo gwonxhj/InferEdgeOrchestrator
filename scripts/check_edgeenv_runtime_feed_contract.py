@@ -55,6 +55,7 @@ def main(argv: list[str] | None = None) -> int:
     device_local_event_count = producer.get("device_local_event_count")
     operation = candidate_context.get("operation") or {}
     latency_budget_protection = operation.get("latency_budget_protection") or {}
+    operation_timeline_summary = operation.get("operation_timeline_summary") or {}
     guard_alignment = feed.get("downstream_guard_alignment") or {}
     print("EdgeEnv runtime telemetry feed contract passed.")
     print(
@@ -105,7 +106,26 @@ def main(argv: list[str] | None = None) -> int:
             f"risk={','.join(str(item) for item in risky) or 'none'}; "
             f"reasons={','.join(str(item) for item in reasons) or 'none'}"
         )
+    if operation_timeline_summary:
+        latency = operation_timeline_summary.get("latency") or {}
+        affected = operation_timeline_summary.get("affected_tasks") or {}
+        review_hints = operation_timeline_summary.get("review_hints") or []
+        print(
+            "operation_timeline: "
+            f"review_hints={_format_list(review_hints)}; "
+            f"scheduler_delay={_format_list(affected.get('scheduler_delay'))}; "
+            f"fallback={_format_list(affected.get('fallback'))}; "
+            f"deadline_missed={_format_list(affected.get('deadline_missed'))}; "
+            f"max_queue_wait_ms={latency.get('max_queue_wait_ms', 0)}"
+        )
     return 0
+
+
+def _format_list(value: Any) -> str:
+    if not isinstance(value, list):
+        return "none"
+    items = [str(item) for item in value if isinstance(item, str) and item]
+    return ",".join(items) if items else "none"
 
 
 if __name__ == "__main__":

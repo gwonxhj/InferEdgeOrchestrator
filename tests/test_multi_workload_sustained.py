@@ -20,6 +20,7 @@ from inferedge_orchestrator.sustained import (
     EDGEENV_TELEMETRY_FEED_SOURCE_REPOSITORY,
     LATENCY_BUDGET_PROTECTION_SCHEMA,
     MULTI_WORKLOAD_SCHEMA,
+    OPERATION_TIMELINE_SUMMARY_SCHEMA,
     apply_device_local_input_overrides,
     load_tegrastats_timeline,
     validate_edgeenv_runtime_telemetry_feed,
@@ -102,6 +103,39 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
         "vision_frame_loop",
         "voice_command_burst",
     }
+    timeline = summary["operation_timeline_summary"]
+    assert timeline["schema_version"] == OPERATION_TIMELINE_SUMMARY_SCHEMA
+    assert timeline["sample_counts"] == {
+        "queue_depth": len(report["queue_depth_timeline"]),
+        "latency": len(report["latency_timeline"]),
+        "policy_decision": len(report["policy_decision_log"]),
+        "runtime_event": report["runtime_event_summary"]["event_count"],
+    }
+    assert timeline["queue"]["max_total_queue_depth"] == (
+        report["queue_state_summary"]["max_total_queue_depth"]
+    )
+    assert timeline["queue"]["pressure_state"] == (
+        report["queue_state_summary"]["queue_pressure_state"]
+    )
+    assert timeline["queue"]["pressure_reason"] == (
+        report["queue_state_summary"]["queue_pressure_reason"]
+    )
+    assert timeline["latency"]["sample_count"] == len(report["latency_timeline"])
+    assert timeline["latency"]["max_latency_ms"] >= 0
+    assert timeline["latency"]["max_queue_wait_ms"] > 0
+    assert timeline["policy"]["decision_count"] == len(report["policy_decision_log"])
+    assert timeline["policy"]["decision_reasons"] == [
+        "queue_backlog_threshold_exceeded"
+    ]
+    assert timeline["policy"]["first_decision"]["decision_reason"] == (
+        "queue_backlog_threshold_exceeded"
+    )
+    assert timeline["policy"]["first_decision"]["queue_depth_snapshot"]
+    assert "voice_command_agent" in timeline["affected_tasks"]["scheduler_delay"]
+    assert "voice_command_agent" in timeline["affected_tasks"]["fallback"]
+    assert "voice_command_agent" in timeline["affected_tasks"]["degraded"]
+    assert "review_queue_pressure" in timeline["review_hints"]
+    assert "review_scheduler_delay" in timeline["review_hints"]
 
     profiles = {profile["agent_id"]: profile for profile in summary["workload_profiles"]}
     assert profiles["vision_agent"]["runtime_loop"] == "yolo_detection_loop"
@@ -153,6 +187,7 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     assert candidate["operation"]["tasks_with_fallback"] == (
         report["runtime_event_summary"]["tasks_with_fallback"]
     )
+    assert candidate["operation"]["operation_timeline_summary"] == timeline
     protection = candidate["operation"]["latency_budget_protection"]
     assert protection["schema_version"] == LATENCY_BUDGET_PROTECTION_SCHEMA
     assert protection["operation_context_role"] == "supplemental"
@@ -436,6 +471,32 @@ def test_write_edgeenv_runtime_telemetry_feed_requires_latency_budget_marker(
         write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
 
 
+def test_write_edgeenv_runtime_telemetry_feed_requires_operation_timeline_schema(
+    tmp_path,
+) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    report = write_multi_workload_sustained(
+        config,
+        output=tmp_path / "report.json",
+        frames=4,
+    )
+    report["edgeenv_runtime_telemetry_feed"]["candidate_context"]["operation"][
+        "operation_timeline_summary"
+    ]["schema_version"] = "wrong"
+
+    with pytest.raises(
+        ValueError,
+        match="operation_timeline_summary.schema_version must be",
+    ):
+        write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
+
+
 def test_validate_edgeenv_runtime_telemetry_feed_requires_device_local_producer(
     tmp_path,
 ) -> None:
@@ -583,6 +644,9 @@ def test_cli_run_multi_workload_sustained_writes_edgeenv_feed_output(
     assert "multi-workload sustained: mode=device_local" in captured.out
     assert "deadline_missed=" in captured.out
     assert "queue_pressure=" in captured.out
+    assert "operation-timeline: review_hints=" in captured.out
+    assert "scheduler_delay=" in captured.out
+    assert "max_queue_wait_ms=" in captured.out
     report = json.loads(output.read_text(encoding="utf-8"))
     feed = json.loads(feed_output.read_text(encoding="utf-8"))
     assert feed == report["edgeenv_runtime_telemetry_feed"]
@@ -1060,6 +1124,9 @@ def test_cli_device_local_overrides_write_edgeenv_feed_output(
     assert "multi-workload sustained: mode=device_local" in captured.out
     assert "deadline_missed=" in captured.out
     assert "queue_pressure=" in captured.out
+    assert "operation-timeline: review_hints=" in captured.out
+    assert "scheduler_delay=" in captured.out
+    assert "max_queue_wait_ms=" in captured.out
     report = json.loads(output.read_text(encoding="utf-8"))
     feed = json.loads(feed_output.read_text(encoding="utf-8"))
     assert feed == report["edgeenv_runtime_telemetry_feed"]
