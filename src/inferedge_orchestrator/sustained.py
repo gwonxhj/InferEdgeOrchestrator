@@ -38,6 +38,11 @@ LATENCY_BUDGET_PROTECTION_SCHEMA = (
 OPERATION_TIMELINE_SUMMARY_SCHEMA = (
     "inferedge-orchestrator-operation-timeline-summary-v1"
 )
+STALE_DROP_SUMMARY_SCHEMA = "inferedge-orchestrator-stale-drop-summary-v1"
+STALE_DROP_REASON_CLASSES = {
+    "queue_overflow_drop_oldest": "stale_queue_overflow",
+    "load_shedding_backlog_threshold_exceeded": "load_shedding_stale_backlog",
+}
 
 
 def apply_device_local_input_overrides(
@@ -307,6 +312,7 @@ def _edgeenv_runtime_telemetry_feed(
         "queue_pressure_reason": queue_summary.get("queue_pressure_reason"),
         "policy_decision_reasons": queue_summary.get("policy_decision_reasons", []),
         "drop_reason_counts": queue_summary.get("drop_reason_counts", {}),
+        "stale_drop_summary": _stale_drop_summary(report),
         "runtime_event_counts": runtime_event_summary.get("event_type_counts", {}),
         "runtime_event_reason_counts": runtime_event_summary.get("reason_counts", {}),
         "runtime_task_event_summary": runtime_event_summary.get(
@@ -484,6 +490,14 @@ def validate_edgeenv_runtime_telemetry_feed(
                 "operation_timeline_summary must be an object"
             )
         _validate_operation_timeline_summary(operation_timeline_summary)
+    stale_drop_summary = candidate_context["operation"].get("stale_drop_summary")
+    if stale_drop_summary is not None:
+        if not isinstance(stale_drop_summary, dict):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                "stale_drop_summary must be an object"
+            )
+        _validate_stale_drop_summary(stale_drop_summary)
     if not isinstance(candidate_context.get("resource"), dict):
         raise ValueError(
             "edgeenv_runtime_telemetry_feed.candidate_context.resource must be "
@@ -685,6 +699,65 @@ def _validate_operation_timeline_summary(payload: dict[str, Any]) -> None:
             "edgeenv_runtime_telemetry_feed.candidate_context.operation."
             "operation_timeline_summary.review_hints must be a non-empty "
             "string list"
+        )
+    stale_drop = payload.get("stale_drop")
+    if stale_drop is not None:
+        if not isinstance(stale_drop, dict):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                "operation_timeline_summary.stale_drop must be an object"
+            )
+        _validate_stale_drop_summary(stale_drop)
+
+
+def _validate_stale_drop_summary(payload: dict[str, Any]) -> None:
+    if payload.get("schema_version") != STALE_DROP_SUMMARY_SCHEMA:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "stale_drop_summary.schema_version must be "
+            f"{STALE_DROP_SUMMARY_SCHEMA}"
+        )
+    if payload.get("operation_context_role") != "supplemental":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "stale_drop_summary.operation_context_role must be supplemental"
+        )
+    if payload.get("scheduler_owner") != "orchestrator":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "stale_drop_summary.scheduler_owner must be orchestrator"
+        )
+    if payload.get("decision_owner") != "lab":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "stale_drop_summary.decision_owner must be lab"
+        )
+    if payload.get("not_a_deployment_decision") is not True:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "stale_drop_summary.not_a_deployment_decision must be true"
+        )
+    for field in ("stale_drop_count", "total_drop_count"):
+        value = payload.get(field)
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                f"stale_drop_summary.{field} must be a non-negative integer"
+            )
+    for field in ("stale_drop_reasons", "task_counts"):
+        value = payload.get(field)
+        if not isinstance(value, dict):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                f"stale_drop_summary.{field} must be an object"
+            )
+    tasks = payload.get("tasks_with_stale_drop")
+    if not isinstance(tasks, list) or not all(
+        isinstance(item, str) and item for item in tasks
+    ):
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "stale_drop_summary.tasks_with_stale_drop must be a string list"
         )
 
 
@@ -1220,6 +1293,7 @@ def _operation_timeline_summary(report: dict[str, Any]) -> dict[str, Any]:
     runtime_event_summary = _dict_value(report.get("runtime_event_summary"))
     worker_health = _dict_value(report.get("worker_health_snapshot"))
     workers = _dict_value(worker_health.get("workers"))
+    stale_drop = _stale_drop_summary(report)
     return {
         "schema_version": OPERATION_TIMELINE_SUMMARY_SCHEMA,
         "source": (
@@ -1249,6 +1323,7 @@ def _operation_timeline_summary(report: dict[str, Any]) -> dict[str, Any]:
         },
         "latency": _latency_timeline_summary(report),
         "policy": _policy_timeline_summary(report),
+        "stale_drop": stale_drop,
         "affected_tasks": {
             "deadline_missed": _string_list(
                 runtime_event_summary.get("tasks_with_deadline_miss")
@@ -1257,12 +1332,14 @@ def _operation_timeline_summary(report: dict[str, Any]) -> dict[str, Any]:
             "scheduler_delay": _string_list(
                 runtime_event_summary.get("tasks_with_scheduler_delay")
             ),
+            "stale_drop": stale_drop["tasks_with_stale_drop"],
             "degraded": _worker_names_with_health_state(workers, "degraded"),
             "constrained": _worker_names_with_health_state(workers, "constrained"),
         },
         "review_hints": _operation_timeline_review_hints(
             queue_summary,
             runtime_event_summary,
+            stale_drop,
         ),
     }
 
@@ -1315,6 +1392,71 @@ def _policy_timeline_summary(report: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _stale_drop_summary(report: dict[str, Any]) -> dict[str, Any]:
+    events = _dict_list(report.get("drop_events"))
+    stale_reason_counts: dict[str, int] = {}
+    task_counts: dict[str, int] = {}
+    reason_classes: list[str] = []
+    latest_event: dict[str, Any] | None = None
+
+    for event in events:
+        reason = event.get("reason")
+        task = event.get("task")
+        if not isinstance(reason, str) or reason not in STALE_DROP_REASON_CLASSES:
+            continue
+        if not isinstance(task, str) or not task:
+            continue
+        stale_reason_counts[reason] = stale_reason_counts.get(reason, 0) + 1
+        task_counts[task] = task_counts.get(task, 0) + 1
+        reason_class = STALE_DROP_REASON_CLASSES[reason]
+        if reason_class not in reason_classes:
+            reason_classes.append(reason_class)
+        latest_event = {
+            key: event.get(key)
+            for key in (
+                "task",
+                "agent_id",
+                "agent_type",
+                "frame_id",
+                "reason",
+            )
+            if key in event
+        }
+        latest_event["stale_drop_class"] = reason_class
+
+    stale_drop_count = sum(stale_reason_counts.values())
+    total_drop_count = len(events)
+    return {
+        "schema_version": STALE_DROP_SUMMARY_SCHEMA,
+        "operation_context_role": "supplemental",
+        "scheduler_owner": "orchestrator",
+        "decision_owner": "lab",
+        "not_a_deployment_decision": True,
+        "source": "drop_events",
+        "first_read": (
+            "review_stale_drop_context"
+            if stale_drop_count
+            else "stale_drop_context_nominal"
+        ),
+        "stale_drop_count": stale_drop_count,
+        "total_drop_count": total_drop_count,
+        "stale_drop_rate": (
+            round(stale_drop_count / total_drop_count, 3)
+            if total_drop_count
+            else 0.0
+        ),
+        "stale_drop_reasons": stale_reason_counts,
+        "stale_drop_reason_classes": reason_classes,
+        "tasks_with_stale_drop": list(task_counts),
+        "task_counts": task_counts,
+        "latest_stale_drop_event": latest_event,
+        "interpretation": (
+            "Queued stale/backlog work was dropped as scheduler evidence only; "
+            "Lab remains the final deployment decision owner."
+        ),
+    }
+
+
 def _compact_policy_decision(decision: dict[str, Any]) -> dict[str, Any]:
     compact = {
         key: decision.get(key)
@@ -1342,6 +1484,7 @@ def _compact_policy_decision(decision: dict[str, Any]) -> dict[str, Any]:
 def _operation_timeline_review_hints(
     queue_summary: dict[str, Any],
     runtime_event_summary: dict[str, Any],
+    stale_drop_summary: dict[str, Any],
 ) -> list[str]:
     hints: list[str] = []
     if queue_summary.get("queue_pressure_state") == "overloaded":
@@ -1354,6 +1497,8 @@ def _operation_timeline_review_hints(
         hints.append("review_fallback_use")
     if _positive_int(queue_summary.get("overload_event_count")):
         hints.append("review_load_shedding")
+    if _positive_int(stale_drop_summary.get("stale_drop_count")):
+        hints.append("review_stale_drop")
     return hints or ["operation_timeline_nominal"]
 
 

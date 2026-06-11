@@ -110,12 +110,15 @@ def main(argv: list[str] | None = None) -> int:
         latency = operation_timeline_summary.get("latency") or {}
         affected = operation_timeline_summary.get("affected_tasks") or {}
         review_hints = operation_timeline_summary.get("review_hints") or []
+        stale_drop = operation_timeline_summary.get("stale_drop") or {}
         print(
             "operation_timeline: "
             f"review_hints={_format_list(review_hints)}; "
             f"scheduler_delay={_format_list(affected.get('scheduler_delay'))}; "
             f"fallback={_format_list(affected.get('fallback'))}; "
             f"deadline_missed={_format_list(affected.get('deadline_missed'))}; "
+            f"stale_drop={stale_drop.get('stale_drop_count', 0)}; "
+            f"stale_drop_tasks={_format_list(affected.get('stale_drop'))}; "
             f"max_queue_wait_ms={latency.get('max_queue_wait_ms', 0)}"
         )
     return 0
