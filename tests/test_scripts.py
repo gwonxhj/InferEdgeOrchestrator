@@ -89,6 +89,8 @@ def test_edgeenv_runtime_feed_contract_checker_passes_device_local_feed(
     assert "operation_timeline:" in out
     assert "review_hints=" in out
     assert "scheduler_delay=" in out
+    assert "stale_drop=" in out
+    assert "stale_drop_tasks=" in out
     assert "max_queue_wait_ms=" in out
 
 

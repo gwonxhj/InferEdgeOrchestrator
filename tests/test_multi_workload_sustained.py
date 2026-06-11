@@ -21,6 +21,7 @@ from inferedge_orchestrator.sustained import (
     LATENCY_BUDGET_PROTECTION_SCHEMA,
     MULTI_WORKLOAD_SCHEMA,
     OPERATION_TIMELINE_SUMMARY_SCHEMA,
+    STALE_DROP_SUMMARY_SCHEMA,
     apply_device_local_input_overrides,
     load_tegrastats_timeline,
     validate_edgeenv_runtime_telemetry_feed,
@@ -131,11 +132,35 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
         "queue_backlog_threshold_exceeded"
     )
     assert timeline["policy"]["first_decision"]["queue_depth_snapshot"]
+    stale_drop = timeline["stale_drop"]
+    assert stale_drop["schema_version"] == STALE_DROP_SUMMARY_SCHEMA
+    assert stale_drop["operation_context_role"] == "supplemental"
+    assert stale_drop["scheduler_owner"] == "orchestrator"
+    assert stale_drop["decision_owner"] == "lab"
+    assert stale_drop["not_a_deployment_decision"] is True
+    assert stale_drop["first_read"] == "review_stale_drop_context"
+    assert stale_drop["stale_drop_count"] > 0
+    assert stale_drop["total_drop_count"] == signals["dropped_count"]
+    assert stale_drop["stale_drop_rate"] > 0
+    assert stale_drop["stale_drop_reasons"]
+    assert stale_drop["tasks_with_stale_drop"]
+    assert stale_drop["task_counts"]
+    assert stale_drop["latest_stale_drop_event"]["reason"] in {
+        "queue_overflow_drop_oldest",
+        "load_shedding_backlog_threshold_exceeded",
+    }
+    assert "Lab remains the final deployment decision owner" in (
+        stale_drop["interpretation"]
+    )
     assert "voice_command_agent" in timeline["affected_tasks"]["scheduler_delay"]
     assert "voice_command_agent" in timeline["affected_tasks"]["fallback"]
     assert "voice_command_agent" in timeline["affected_tasks"]["degraded"]
+    assert timeline["affected_tasks"]["stale_drop"] == (
+        stale_drop["tasks_with_stale_drop"]
+    )
     assert "review_queue_pressure" in timeline["review_hints"]
     assert "review_scheduler_delay" in timeline["review_hints"]
+    assert "review_stale_drop" in timeline["review_hints"]
     risk_rollup = report["operation_risk_rollup"]
     assert risk_rollup["schema_version"] == (
         "inferedge-orchestrator-operation-risk-rollup-v1"
@@ -208,6 +233,7 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
         report["runtime_event_summary"]["tasks_with_fallback"]
     )
     assert candidate["operation"]["operation_timeline_summary"] == timeline
+    assert candidate["operation"]["stale_drop_summary"] == stale_drop
     assert candidate["operation"]["operation_risk_rollup"] == risk_rollup
     protection = candidate["operation"]["latency_budget_protection"]
     assert protection["schema_version"] == LATENCY_BUDGET_PROTECTION_SCHEMA
@@ -518,6 +544,32 @@ def test_write_edgeenv_runtime_telemetry_feed_requires_operation_timeline_schema
         write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
 
 
+def test_write_edgeenv_runtime_telemetry_feed_requires_stale_drop_schema(
+    tmp_path,
+) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    report = write_multi_workload_sustained(
+        config,
+        output=tmp_path / "report.json",
+        frames=4,
+    )
+    report["edgeenv_runtime_telemetry_feed"]["candidate_context"]["operation"][
+        "stale_drop_summary"
+    ]["scheduler_owner"] = "lab"
+
+    with pytest.raises(
+        ValueError,
+        match="stale_drop_summary.scheduler_owner must be orchestrator",
+    ):
+        write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
+
+
 def test_validate_edgeenv_runtime_telemetry_feed_requires_device_local_producer(
     tmp_path,
 ) -> None:
@@ -667,6 +719,8 @@ def test_cli_run_multi_workload_sustained_writes_edgeenv_feed_output(
     assert "queue_pressure=" in captured.out
     assert "operation-timeline: review_hints=" in captured.out
     assert "scheduler_delay=" in captured.out
+    assert "stale_drop=" in captured.out
+    assert "stale_drop_tasks=" in captured.out
     assert "max_queue_wait_ms=" in captured.out
     report = json.loads(output.read_text(encoding="utf-8"))
     feed = json.loads(feed_output.read_text(encoding="utf-8"))
@@ -1153,6 +1207,8 @@ def test_cli_device_local_overrides_write_edgeenv_feed_output(
     assert "queue_pressure=" in captured.out
     assert "operation-timeline: review_hints=" in captured.out
     assert "scheduler_delay=" in captured.out
+    assert "stale_drop=" in captured.out
+    assert "stale_drop_tasks=" in captured.out
     assert "max_queue_wait_ms=" in captured.out
     report = json.loads(output.read_text(encoding="utf-8"))
     feed = json.loads(feed_output.read_text(encoding="utf-8"))

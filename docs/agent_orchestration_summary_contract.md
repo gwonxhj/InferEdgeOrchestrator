@@ -283,9 +283,12 @@ and the ownership markers `scheduler_owner=orchestrator`, `decision_owner=lab`,
 `multi_workload_sustained_summary.operation_timeline_summary` and the mirrored
 `candidate_context.operation.operation_timeline_summary` provide a compact
 readout of queue pressure, latency wait, policy decisions, affected tasks, and
-review hints. This summary is an additive navigation aid for AIGuard/Lab/Env; it
-does not replace `queue_depth_timeline`, `latency_timeline`, or
-`policy_decision_log`.
+review hints. The same block now includes a `stale_drop` summary that classifies
+oldest-queued-frame drops and load-shedding drops as stale/backlog evidence,
+including `tasks_with_stale_drop`, reason counts, and `review_stale_drop` hints.
+This summary is an additive navigation aid for AIGuard/Lab/Env; it does not
+replace `drop_events`, `queue_depth_timeline`, `latency_timeline`, or
+`policy_decision_log`, and it is not a deployment decision.
 The feed also carries
 `downstream_guard_alignment.producer_lineage_evidence_type=edgeenv_orchestrator_producer_lineage`
 so AIGuard/Lab can validate producer-lineage reasoning separately from
@@ -294,9 +297,9 @@ Use `scripts/check_edgeenv_runtime_feed_contract.py --require-device-local-produ
 to gate a saved feed before handing it to EdgeEnv. The gate validates producer
 lineage, per-task source/stage mappings, positive event counts, and ownership
 markers only; it does not perform regression analysis or deployment judgement.
-The checker output also prints the compact `operation_timeline` review hints so
-reviewers can see queue delay/fallback/deadline pressure without opening the
-full JSON first.
+The checker output also prints the compact `operation_timeline` review hints and
+stale-drop count/tasks so reviewers can see queue delay/fallback/deadline/stale
+drop pressure without opening the full JSON first.
 
 ## Compatibility Rules
 

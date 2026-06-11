@@ -213,6 +213,7 @@ def _run_multi_workload_sustained(args: argparse.Namespace) -> int:
     timeline = summary.get("operation_timeline_summary", {})
     affected_tasks = timeline.get("affected_tasks", {}) if isinstance(timeline, dict) else {}
     latency = timeline.get("latency", {}) if isinstance(timeline, dict) else {}
+    stale_drop = timeline.get("stale_drop", {}) if isinstance(timeline, dict) else {}
     review_hints = timeline.get("review_hints", []) if isinstance(timeline, dict) else []
     print(f"wrote sustained telemetry: {args.output}")
     if args.edgeenv_feed_output:
@@ -233,6 +234,8 @@ def _run_multi_workload_sustained(args: argparse.Namespace) -> int:
         f"scheduler_delay={_format_cli_list(affected_tasks.get('scheduler_delay'))} "
         f"fallback={_format_cli_list(affected_tasks.get('fallback'))} "
         f"deadline_missed={_format_cli_list(affected_tasks.get('deadline_missed'))} "
+        f"stale_drop={stale_drop.get('stale_drop_count', 0)} "
+        f"stale_drop_tasks={_format_cli_list(affected_tasks.get('stale_drop'))} "
         f"max_queue_wait_ms={latency.get('max_queue_wait_ms', 0)}"
     )
     return 0
