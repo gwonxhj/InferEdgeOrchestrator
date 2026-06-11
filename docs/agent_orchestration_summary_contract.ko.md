@@ -89,6 +89,14 @@ Top-level summary:
     "event_count": 0,
     "event_type_counts": {}
   },
+  "operation_risk_rollup": {
+    "schema_version": "inferedge-orchestrator-operation-risk-rollup-v1",
+    "operation_context_role": "supplemental",
+    "scheduler_owner": "orchestrator",
+    "decision_owner": "lab",
+    "not_a_deployment_decision": true,
+    "risk_level": "nominal"
+  },
   "queue_depth_timeline": [],
   "latency_timeline": [],
   "runtime_event_timeline": [],
@@ -128,6 +136,10 @@ Top-level summary:
   직접 훑지 않아도 어떤 task가 delay/limit/protect 되었는지 확인할 수 있게
   합니다. Device-local run에서는 producer source와 device-local event
   coverage도 요약합니다.
+- `operation_risk_rollup`: queue pressure, deadline/fallback/drop count,
+  scheduler-delay signal, affected task, worker health를 compact supplemental
+  risk context로 요약해 AIGuard/Lab/EdgeEnv가 사용할 수 있게 합니다.
+  `decision_owner=lab`과 `not_a_deployment_decision=true`를 명시합니다.
 - `runtime_event_timeline`: queue snapshot, drop, scheduler selection,
   execution, policy decision, resource snapshot을 순서대로 남기는 event log입니다.
   execution event는 backlog/delay 확인을 위한 additive

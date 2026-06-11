@@ -253,6 +253,17 @@ class TelemetryCollector:
 
     def to_report(self) -> dict[str, Any]:
         agent_totals = self._agent_totals()
+        sustained_runtime_summary = self._sustained_runtime_summary(agent_totals)
+        queue_state_summary = self._queue_state_summary()
+        worker_health_snapshot = self._worker_health_snapshot()
+        runtime_event_summary = self._runtime_event_summary()
+        operation_risk_rollup = _operation_risk_rollup(
+            queue_state_summary=queue_state_summary,
+            worker_health_snapshot=worker_health_snapshot,
+            runtime_event_summary=runtime_event_summary,
+            agent_totals=agent_totals,
+            resource_snapshots=self.resource_snapshots,
+        )
         return {
             "schema_version": "inferedge-orchestration-summary-v1",
             "run": {
@@ -269,10 +280,14 @@ class TelemetryCollector:
                 "agents": self._agent_summary(),
                 "totals": agent_totals,
             },
-            "sustained_runtime_summary": self._sustained_runtime_summary(agent_totals),
-            "queue_state_summary": self._queue_state_summary(),
-            "worker_health_snapshot": self._worker_health_snapshot(),
-            "runtime_event_summary": self._runtime_event_summary(),
+            "sustained_runtime_summary": {
+                **sustained_runtime_summary,
+                "operation_risk_rollup": operation_risk_rollup,
+            },
+            "queue_state_summary": queue_state_summary,
+            "worker_health_snapshot": worker_health_snapshot,
+            "runtime_event_summary": runtime_event_summary,
+            "operation_risk_rollup": operation_risk_rollup,
             "tasks": {
                 name: {
                     "agent": self._agent_task_summary(name),
@@ -827,6 +842,117 @@ def _worker_health_reasons(
     if not reasons:
         reasons.append(f"{health_state}_without_runtime_risk")
     return reasons
+
+
+def _operation_risk_rollup(
+    *,
+    queue_state_summary: dict[str, Any],
+    worker_health_snapshot: dict[str, Any],
+    runtime_event_summary: dict[str, Any],
+    agent_totals: dict[str, int],
+    resource_snapshots: list[dict[str, object]],
+) -> dict[str, Any]:
+    affected_tasks = {
+        "deadline_missed": _string_list(
+            runtime_event_summary.get("tasks_with_deadline_miss")
+        ),
+        "fallback": _string_list(runtime_event_summary.get("tasks_with_fallback")),
+        "scheduler_delay": _string_list(
+            runtime_event_summary.get("tasks_with_scheduler_delay")
+        ),
+        "degraded": _string_list(worker_health_snapshot.get("degraded_workers")),
+        "constrained": _string_list(worker_health_snapshot.get("constrained_workers")),
+    }
+    reasons = _operation_risk_reasons(
+        queue_state_summary=queue_state_summary,
+        runtime_event_summary=runtime_event_summary,
+        affected_tasks=affected_tasks,
+        agent_totals=agent_totals,
+    )
+    risk_level = _operation_risk_level(reasons)
+    return {
+        "schema_version": "inferedge-orchestrator-operation-risk-rollup-v1",
+        "operation_context_role": "supplemental",
+        "scheduler_owner": "orchestrator",
+        "decision_owner": "lab",
+        "not_a_deployment_decision": True,
+        "risk_level": risk_level,
+        "first_read": (
+            "review_operation_risk_context"
+            if risk_level != "nominal"
+            else "operation_context_nominal"
+        ),
+        "primary_reasons": reasons,
+        "affected_tasks": affected_tasks,
+        "max_total_queue_depth": queue_state_summary.get("max_total_queue_depth", 0),
+        "overload_backlog_threshold": queue_state_summary.get(
+            "overload_backlog_threshold",
+            0,
+        ),
+        "queue_pressure_state": queue_state_summary.get("queue_pressure_state"),
+        "queue_pressure_reason": queue_state_summary.get("queue_pressure_reason"),
+        "deadline_missed_count": agent_totals.get("deadline_missed_count", 0),
+        "fallback_count": agent_totals.get("fallback_count", 0),
+        "dropped_count": agent_totals.get("dropped_count", 0),
+        "policy_decision_count": agent_totals.get("policy_decision_count", 0),
+        "scheduler_delay_event_count": runtime_event_summary.get(
+            "scheduler_delay_event_count",
+            0,
+        ),
+        "resource_snapshot_count": len(resource_snapshots),
+    }
+
+
+def _operation_risk_reasons(
+    *,
+    queue_state_summary: dict[str, Any],
+    runtime_event_summary: dict[str, Any],
+    affected_tasks: dict[str, list[str]],
+    agent_totals: dict[str, int],
+) -> list[str]:
+    reasons: list[str] = []
+    if queue_state_summary.get("queue_pressure_state") == "overloaded":
+        reasons.append("queue_pressure_overloaded")
+    if _positive_int(agent_totals.get("deadline_missed_count")):
+        reasons.append("deadline_miss_present")
+    if _positive_int(agent_totals.get("fallback_count")):
+        reasons.append("fallback_used")
+    if _positive_int(runtime_event_summary.get("scheduler_delay_event_count")):
+        reasons.append("scheduler_delay_present")
+    if _positive_int(agent_totals.get("policy_decision_count")):
+        reasons.append("policy_decision_present")
+    if affected_tasks["degraded"]:
+        reasons.append("worker_degraded")
+    if affected_tasks["constrained"]:
+        reasons.append("worker_constrained")
+    if _positive_int(agent_totals.get("dropped_count")):
+        reasons.append("drop_pressure_present")
+    return reasons
+
+
+def _operation_risk_level(reasons: list[str]) -> str:
+    review_reasons = {
+        "queue_pressure_overloaded",
+        "deadline_miss_present",
+        "fallback_used",
+        "scheduler_delay_present",
+        "worker_degraded",
+    }
+    if any(reason in review_reasons for reason in reasons):
+        return "review"
+    if reasons:
+        return "watch"
+    return "nominal"
+
+
+def _positive_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
+
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str) and item]
 
 
 def _count_by_key(
