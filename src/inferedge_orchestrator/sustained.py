@@ -243,6 +243,7 @@ def _multi_workload_summary(
 ) -> dict[str, Any]:
     sustained = report.get("sustained_runtime_summary", {})
     totals = report.get("agent_runtime_summary", {}).get("totals", {})
+    operation_risk_rollup = report.get("operation_risk_rollup", {})
     reasons = _policy_decision_reasons(report)
     return {
         "schema_version": MULTI_WORKLOAD_SCHEMA,
@@ -263,6 +264,7 @@ def _multi_workload_summary(
             **_producer_source_signals(report),
         },
         "operation_timeline_summary": _operation_timeline_summary(report),
+        "operation_risk_rollup": operation_risk_rollup,
         "next_validation_step": _next_validation_step(config),
     }
 
@@ -311,6 +313,7 @@ def _edgeenv_runtime_telemetry_feed(
             "task_event_summary",
             {},
         ),
+        "operation_risk_rollup": report.get("operation_risk_rollup", {}),
         "tasks_with_deadline_miss": runtime_event_summary.get(
             "tasks_with_deadline_miss",
             [],

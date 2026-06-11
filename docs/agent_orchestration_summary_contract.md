@@ -89,6 +89,14 @@ Top-level summary:
     "event_count": 0,
     "event_type_counts": {}
   },
+  "operation_risk_rollup": {
+    "schema_version": "inferedge-orchestrator-operation-risk-rollup-v1",
+    "operation_context_role": "supplemental",
+    "scheduler_owner": "orchestrator",
+    "decision_owner": "lab",
+    "not_a_deployment_decision": true,
+    "risk_level": "nominal"
+  },
   "queue_depth_timeline": [],
   "latency_timeline": [],
   "runtime_event_timeline": [],
@@ -128,6 +136,10 @@ Additive operation-health fields:
   task was delayed, limited, or protected without walking the full timeline.
   Device-local runs also summarize producer sources and device-local event
   coverage.
+- `operation_risk_rollup`: summarizes queue pressure, deadline/fallback/drop
+  counts, scheduler-delay signals, affected tasks, and worker health into a
+  compact supplemental risk context for AIGuard/Lab/EdgeEnv. It explicitly
+  records `decision_owner=lab` and `not_a_deployment_decision=true`.
 - `runtime_event_timeline`: ordered event log for queue snapshots, drops,
   scheduler selections, executions, policy decisions, and resource snapshots.
   Execution events include additive `scheduler_delay_cycles` and

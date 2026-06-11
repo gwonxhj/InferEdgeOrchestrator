@@ -136,6 +136,26 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     assert "voice_command_agent" in timeline["affected_tasks"]["degraded"]
     assert "review_queue_pressure" in timeline["review_hints"]
     assert "review_scheduler_delay" in timeline["review_hints"]
+    risk_rollup = report["operation_risk_rollup"]
+    assert risk_rollup["schema_version"] == (
+        "inferedge-orchestrator-operation-risk-rollup-v1"
+    )
+    assert risk_rollup["operation_context_role"] == "supplemental"
+    assert risk_rollup["scheduler_owner"] == "orchestrator"
+    assert risk_rollup["decision_owner"] == "lab"
+    assert risk_rollup["not_a_deployment_decision"] is True
+    assert risk_rollup["risk_level"] == "review"
+    assert risk_rollup["first_read"] == "review_operation_risk_context"
+    assert "queue_pressure_overloaded" in risk_rollup["primary_reasons"]
+    assert "scheduler_delay_present" in risk_rollup["primary_reasons"]
+    assert "fallback_used" in risk_rollup["primary_reasons"]
+    assert "voice_command_agent" in risk_rollup["affected_tasks"]["scheduler_delay"]
+    assert "voice_command_agent" in risk_rollup["affected_tasks"]["fallback"]
+    assert "voice_command_agent" in risk_rollup["affected_tasks"]["degraded"]
+    assert report["sustained_runtime_summary"]["operation_risk_rollup"] == (
+        risk_rollup
+    )
+    assert summary["operation_risk_rollup"] == risk_rollup
 
     profiles = {profile["agent_id"]: profile for profile in summary["workload_profiles"]}
     assert profiles["vision_agent"]["runtime_loop"] == "yolo_detection_loop"
@@ -188,6 +208,7 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
         report["runtime_event_summary"]["tasks_with_fallback"]
     )
     assert candidate["operation"]["operation_timeline_summary"] == timeline
+    assert candidate["operation"]["operation_risk_rollup"] == risk_rollup
     protection = candidate["operation"]["latency_budget_protection"]
     assert protection["schema_version"] == LATENCY_BUDGET_PROTECTION_SCHEMA
     assert protection["operation_context_role"] == "supplemental"
@@ -899,6 +920,12 @@ def test_run_multi_workload_sustained_device_local_starter(tmp_path) -> None:
     assert feed["candidate_context"]["operation"]["queue_depth"] == (
         queue_summary["max_total_queue_depth"]
     )
+    risk_rollup = feed["candidate_context"]["operation"]["operation_risk_rollup"]
+    assert risk_rollup == report["operation_risk_rollup"]
+    assert risk_rollup["decision_owner"] == "lab"
+    assert risk_rollup["not_a_deployment_decision"] is True
+    assert risk_rollup["risk_level"] == "review"
+    assert "queue_pressure_overloaded" in risk_rollup["primary_reasons"]
     protection = feed["candidate_context"]["operation"]["latency_budget_protection"]
     assert protection["schema_version"] == LATENCY_BUDGET_PROTECTION_SCHEMA
     assert protection["operation_context_role"] == "supplemental"
