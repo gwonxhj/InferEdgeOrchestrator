@@ -15,7 +15,7 @@ portfolio evidence를 확인할 수 있도록 제공한다.
 | Question | Start with | Why |
 | --- | --- | --- |
 | scheduler가 overload에서 high-priority work를 보호하는가? | `phase3_overload_sample.json` | baseline vs scheduled p95 latency와 low-priority drop을 보여준다. |
-| 3-agent sustained path가 downstream review용 scheduler-delay evidence를 기록하는가? | `agent_scheduler_delay_sample.json` | 지연된 execution, policy/drop reason count, AIGuard/Lab signal name을 보여준다. |
+| 3-agent sustained path가 downstream review용 scheduler-delay evidence와 fairness context를 기록하는가? | `agent_scheduler_delay_sample.json` | 지연된 execution, scheduler fairness/starvation context, policy/drop reason count, AIGuard/Lab signal name을 보여준다. |
 | remote dispatch starter evidence가 production retry control을 주장하지 않고 bounded fallback recovery를 보여주는가? | `remote_fallback_recovery_sample.json` | primary failure, fallback recovery, compact runtime event summary, starter boundary field를 보여준다. |
 | 어떤 sample이 local CI가 아니라 기존 Jetson evidence를 전제로 하는가? | `jetson_*_sample.json` files | portable CI output이 아니라 curated physical-device 또는 TensorRT-backed evidence snapshot이다. |
 
@@ -24,7 +24,7 @@ portfolio evidence를 확인할 수 있도록 제공한다.
 | File | What it shows |
 | --- | --- |
 | `phase3_overload_sample.json` | synthetic FIFO baseline과 scheduler/load-shedding 비교. detector p95 end-to-end latency가 `782.0ms`에서 `8.0ms`로 개선되고 low-priority classifier work가 drop된다. |
-| `agent_scheduler_delay_sample.json` | 3-agent sustained high-load config에서 추출한 curated excerpt. `scheduler_delay_event_count`, 지연된 execution event, policy/drop reason count, downstream AIGuard/Lab signal name을 보여준다. |
+| `agent_scheduler_delay_sample.json` | 3-agent sustained high-load config에서 추출한 curated excerpt. `scheduler_delay_event_count`, `scheduler_fairness_summary`, 지연된 execution event, policy/drop reason count, downstream AIGuard/Lab signal name을 보여준다. |
 | `remote_fallback_recovery_sample.json` | remote dispatch starter에서 primary HTTP starter `connection_error`, 제한된 fallback worker recovery, retry/fallback plan field, downstream AIGuard/Lab signal name을 보여주는 curated excerpt. |
 | `jetson_smoke_dummy_sample.json` | Jetson dummy smoke path의 telemetry schema. task count, drop event, result event, scheduler decision, resource snapshot을 보여준다. |
 | `jetson_onnx_smoke_sample.json` | ONNX Runtime worker smoke path의 telemetry schema. result event metadata, output shape `[1, 2]`, resource snapshot을 보여준다. |
@@ -41,6 +41,7 @@ sample은 다음 telemetry signal을 포함한다.
 - drop events
 - overload 또는 policy decisions
 - scheduler delay event count와 queue wait evidence
+- scheduler fairness / starvation context
 - remote dispatch starter failure/fallback recovery evidence
 - result events
 - resource snapshots

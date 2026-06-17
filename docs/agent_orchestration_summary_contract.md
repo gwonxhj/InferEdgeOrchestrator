@@ -140,6 +140,11 @@ Additive operation-health fields:
   counts, scheduler-delay signals, affected tasks, and worker health into a
   compact supplemental risk context for AIGuard/Lab/EdgeEnv. It explicitly
   records `decision_owner=lab` and `not_a_deployment_decision=true`.
+- `scheduler_fairness_summary`: additive context inside sustained operation
+  evidence that summarizes protected high-priority tasks, tasks with
+  scheduler-delay or starvation risk, degraded/constrained workers, and
+  per-task fairness context. It is Orchestrator-owned supplemental scheduling
+  evidence, not a Lab deployment decision or EdgeEnv regression judgement.
 - `runtime_event_timeline`: ordered event log for queue snapshots, drops,
   scheduler selections, executions, policy decisions, and resource snapshots.
   Execution events include additive `scheduler_delay_cycles` and

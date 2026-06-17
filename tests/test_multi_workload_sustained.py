@@ -21,6 +21,7 @@ from inferedge_orchestrator.sustained import (
     LATENCY_BUDGET_PROTECTION_SCHEMA,
     MULTI_WORKLOAD_SCHEMA,
     OPERATION_TIMELINE_SUMMARY_SCHEMA,
+    SCHEDULER_FAIRNESS_SUMMARY_SCHEMA,
     STALE_DROP_SUMMARY_SCHEMA,
     apply_device_local_input_overrides,
     load_tegrastats_timeline,
@@ -158,6 +159,23 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     assert timeline["affected_tasks"]["stale_drop"] == (
         stale_drop["tasks_with_stale_drop"]
     )
+    fairness = timeline["scheduler_fairness"]
+    assert fairness["schema_version"] == SCHEDULER_FAIRNESS_SUMMARY_SCHEMA
+    assert fairness["operation_context_role"] == "supplemental"
+    assert fairness["scheduler_owner"] == "orchestrator"
+    assert fairness["decision_owner"] == "lab"
+    assert fairness["not_a_deployment_decision"] is True
+    assert fairness["protected_high_priority_tasks"] == ["safety_monitor_agent"]
+    assert "voice_command_agent" in fairness["tasks_with_scheduler_delay"]
+    assert "voice_command_agent" in fairness["tasks_with_starvation_risk"]
+    assert "voice_command_agent" in fairness["tasks_with_degradation"]
+    assert fairness["task_fairness"]["voice_command_agent"]["starvation_risk"] is True
+    assert "scheduler_delay_present" in (
+        fairness["task_fairness"]["voice_command_agent"]["starvation_reasons"]
+    )
+    assert "Lab remains the final deployment decision owner" in (
+        fairness["interpretation"]
+    )
     assert "review_queue_pressure" in timeline["review_hints"]
     assert "review_scheduler_delay" in timeline["review_hints"]
     assert "review_stale_drop" in timeline["review_hints"]
@@ -235,6 +253,7 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     assert candidate["operation"]["operation_timeline_summary"] == timeline
     assert candidate["operation"]["stale_drop_summary"] == stale_drop
     assert candidate["operation"]["operation_risk_rollup"] == risk_rollup
+    assert candidate["operation"]["scheduler_fairness_summary"] == fairness
     protection = candidate["operation"]["latency_budget_protection"]
     assert protection["schema_version"] == LATENCY_BUDGET_PROTECTION_SCHEMA
     assert protection["operation_context_role"] == "supplemental"

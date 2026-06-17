@@ -92,6 +92,9 @@ def test_edgeenv_runtime_feed_contract_checker_passes_device_local_feed(
     assert "stale_drop=" in out
     assert "stale_drop_tasks=" in out
     assert "max_queue_wait_ms=" in out
+    assert "scheduler_fairness:" in out
+    assert "starvation_risk=" in out
+    assert "degraded=" in out
 
 
 def test_edgeenv_runtime_feed_contract_checker_fails_bad_guard_alignment(
