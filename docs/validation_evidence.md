@@ -382,3 +382,6 @@ For sample-specific schema notes, see
   schema inspection.
 - CI package/install smoke validates portable install and CLI entrypoint health;
   it does not replace Jetson physical-device smoke evidence.
+- The default CI smoke intentionally stays portable: Jetson-only device access,
+  TensorRT engine execution, ONNX Runtime optional-backend validation, and
+  device SSH checks remain separate evidence paths.

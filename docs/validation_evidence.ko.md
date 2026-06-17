@@ -383,3 +383,6 @@ sample-specific schema note는
   documentation artifact다.
 - CI package/install smoke는 portable install과 CLI entrypoint 상태를 검증한다.
   Jetson physical-device smoke evidence를 대체하지 않는다.
+- default CI smoke는 의도적으로 portable하게 유지한다. Jetson-only device access,
+  TensorRT engine execution, ONNX Runtime optional-backend validation,
+  device SSH check는 별도 evidence path로 남긴다.

@@ -183,3 +183,21 @@ def test_sample_telemetry_artifacts_are_linked_from_evidence_docs() -> None:
             assert relative in doc.read_text(encoding="utf-8"), (
                 f"{doc} does not link to {artifact}"
             )
+
+
+def test_validation_evidence_docs_scope_ci_smoke_as_portable() -> None:
+    evidence = Path("docs/validation_evidence.md").read_text(encoding="utf-8")
+    evidence_ko = Path("docs/validation_evidence.ko.md").read_text(
+        encoding="utf-8"
+    )
+
+    for text in (evidence, evidence_ko):
+        assert "CI package/install smoke" in text
+        assert "portable" in text
+        assert "CLI entrypoint" in text
+        assert "Jetson physical-device smoke evidence" in text
+        assert "default CI smoke" in text
+        assert "Jetson-only device access" in text
+        assert "TensorRT engine execution" in text
+        assert "ONNX Runtime optional-backend validation" in text
+        assert "device SSH" in text
