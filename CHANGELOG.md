@@ -21,6 +21,8 @@ helps reviewers understand the project state.
   pytest command with the local no-cache test command.
 - Added a GitHub Actions package/install smoke step that runs the installed CLI
   through the dummy scheduler, report, and synthetic overload paths.
+- Added pytest coverage that guards the GitHub Actions package/install CLI smoke
+  commands and keeps device-specific backend paths out of the default CI smoke.
 - Refreshed README and portfolio evidence wording so the 30-second entry path
   reflects the new package/CLI smoke without changing the core positioning.
 - Updated the validation evidence index so CI evidence includes package install
