@@ -10,6 +10,15 @@ They are not benchmark artifacts. Raw runtime reports remain ignored under
 `reports/`, while these samples are curated documentation artifacts under
 `examples/telemetry/`.
 
+## Reviewer Quick Path
+
+| Question | Start with | Why |
+| --- | --- | --- |
+| Does the scheduler protect high-priority work under overload? | `phase3_overload_sample.json` | Shows baseline vs scheduled p95 latency and low-priority drops. |
+| Did the 3-agent sustained path record scheduler-delay evidence for downstream review? | `agent_scheduler_delay_sample.json` | Shows delayed execution, policy/drop reason counts, and AIGuard/Lab signal names. |
+| Does remote dispatch starter evidence show bounded fallback recovery without claiming production retry control? | `remote_fallback_recovery_sample.json` | Shows primary failure, fallback recovery, compact runtime event summary, and starter boundary fields. |
+| Which samples require prior Jetson evidence rather than local CI? | `jetson_*_sample.json` files | They are curated physical-device or TensorRT-backed evidence snapshots, not portable CI outputs. |
+
 ## Samples
 
 | File | What it shows |

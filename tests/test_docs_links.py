@@ -16,7 +16,9 @@ EXTERNAL_LINK_PREFIXES = (
     "mailto:",
 )
 EXPECTED_SAMPLE_ARTIFACTS = {
+    Path("examples/telemetry/agent_scheduler_delay_sample.json"),
     Path("examples/telemetry/phase3_overload_sample.json"),
+    Path("examples/telemetry/remote_fallback_recovery_sample.json"),
     Path("examples/telemetry/jetson_smoke_dummy_sample.json"),
     Path("examples/telemetry/jetson_onnx_smoke_sample.json"),
     Path("examples/telemetry/jetson_tensorrt_contention_sample.json"),
@@ -201,3 +203,21 @@ def test_validation_evidence_docs_scope_ci_smoke_as_portable() -> None:
         assert "TensorRT engine execution" in text
         assert "ONNX Runtime optional-backend validation" in text
         assert "device SSH" in text
+
+
+def test_telemetry_sample_readmes_offer_reviewer_quick_path() -> None:
+    readme = Path("examples/telemetry/README.md").read_text(encoding="utf-8")
+    readme_ko = Path("examples/telemetry/README.ko.md").read_text(
+        encoding="utf-8"
+    )
+
+    for text in (readme, readme_ko):
+        assert "## Reviewer Quick Path" in text
+        assert "phase3_overload_sample.json" in text
+        assert "agent_scheduler_delay_sample.json" in text
+        assert "remote_fallback_recovery_sample.json" in text
+        assert "jetson_*_sample.json" in text
+        assert "high-priority" in text
+        assert "scheduler-delay evidence" in text
+        assert "bounded fallback recovery" in text
+        assert "portable CI" in text
