@@ -140,6 +140,11 @@ Top-level summary:
   scheduler-delay signal, affected task, worker health를 compact supplemental
   risk context로 요약해 AIGuard/Lab/EdgeEnv가 사용할 수 있게 합니다.
   `decision_owner=lab`과 `not_a_deployment_decision=true`를 명시합니다.
+- `scheduler_fairness_summary`: sustained operation evidence 안의 additive
+  context로, 보호된 high-priority task, scheduler-delay 또는 starvation risk가
+  있는 task, degraded/constrained worker, task별 fairness context를
+  요약합니다. Orchestrator가 소유하는 supplemental scheduling evidence이며
+  Lab deployment decision이나 EdgeEnv regression judgement가 아닙니다.
 - `runtime_event_timeline`: queue snapshot, drop, scheduler selection,
   execution, policy decision, resource snapshot을 순서대로 남기는 event log입니다.
   execution event는 backlog/delay 확인을 위한 additive

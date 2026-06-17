@@ -43,6 +43,9 @@ STALE_DROP_REASON_CLASSES = {
     "queue_overflow_drop_oldest": "stale_queue_overflow",
     "load_shedding_backlog_threshold_exceeded": "load_shedding_stale_backlog",
 }
+SCHEDULER_FAIRNESS_SUMMARY_SCHEMA = (
+    "inferedge-orchestrator-scheduler-fairness-summary-v1"
+)
 
 
 def apply_device_local_input_overrides(
@@ -268,7 +271,7 @@ def _multi_workload_summary(
             **_local_profile_signals(report),
             **_producer_source_signals(report),
         },
-        "operation_timeline_summary": _operation_timeline_summary(report),
+        "operation_timeline_summary": _operation_timeline_summary(report, config),
         "operation_risk_rollup": operation_risk_rollup,
         "next_validation_step": _next_validation_step(config),
     }
@@ -320,6 +323,7 @@ def _edgeenv_runtime_telemetry_feed(
             {},
         ),
         "operation_risk_rollup": report.get("operation_risk_rollup", {}),
+        "scheduler_fairness_summary": _scheduler_fairness_summary(config, report),
         "tasks_with_deadline_miss": runtime_event_summary.get(
             "tasks_with_deadline_miss",
             [],
@@ -329,7 +333,7 @@ def _edgeenv_runtime_telemetry_feed(
             "tasks_with_scheduler_delay",
             [],
         ),
-        "operation_timeline_summary": _operation_timeline_summary(report),
+        "operation_timeline_summary": _operation_timeline_summary(report, config),
     }
     operation["latency_budget_protection"] = _latency_budget_protection_context(
         config,
@@ -498,6 +502,16 @@ def validate_edgeenv_runtime_telemetry_feed(
                 "stale_drop_summary must be an object"
             )
         _validate_stale_drop_summary(stale_drop_summary)
+    scheduler_fairness_summary = candidate_context["operation"].get(
+        "scheduler_fairness_summary"
+    )
+    if scheduler_fairness_summary is not None:
+        if not isinstance(scheduler_fairness_summary, dict):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                "scheduler_fairness_summary must be an object"
+            )
+        _validate_scheduler_fairness_summary(scheduler_fairness_summary)
     if not isinstance(candidate_context.get("resource"), dict):
         raise ValueError(
             "edgeenv_runtime_telemetry_feed.candidate_context.resource must be "
@@ -708,6 +722,14 @@ def _validate_operation_timeline_summary(payload: dict[str, Any]) -> None:
                 "operation_timeline_summary.stale_drop must be an object"
             )
         _validate_stale_drop_summary(stale_drop)
+    scheduler_fairness = payload.get("scheduler_fairness")
+    if scheduler_fairness is not None:
+        if not isinstance(scheduler_fairness, dict):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                "operation_timeline_summary.scheduler_fairness must be an object"
+            )
+        _validate_scheduler_fairness_summary(scheduler_fairness)
 
 
 def _validate_stale_drop_summary(payload: dict[str, Any]) -> None:
@@ -759,6 +781,66 @@ def _validate_stale_drop_summary(payload: dict[str, Any]) -> None:
             "edgeenv_runtime_telemetry_feed.candidate_context.operation."
             "stale_drop_summary.tasks_with_stale_drop must be a string list"
         )
+
+
+def _validate_scheduler_fairness_summary(payload: dict[str, Any]) -> None:
+    if payload.get("schema_version") != SCHEDULER_FAIRNESS_SUMMARY_SCHEMA:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "scheduler_fairness_summary.schema_version must be "
+            f"{SCHEDULER_FAIRNESS_SUMMARY_SCHEMA}"
+        )
+    if payload.get("operation_context_role") != "supplemental":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "scheduler_fairness_summary.operation_context_role must be supplemental"
+        )
+    if payload.get("scheduler_owner") != "orchestrator":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "scheduler_fairness_summary.scheduler_owner must be orchestrator"
+        )
+    if payload.get("decision_owner") != "lab":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "scheduler_fairness_summary.decision_owner must be lab"
+        )
+    if payload.get("not_a_deployment_decision") is not True:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "scheduler_fairness_summary.not_a_deployment_decision must be true"
+        )
+    for field in (
+        "protected_high_priority_tasks",
+        "tasks_with_starvation_risk",
+        "tasks_with_scheduler_delay",
+        "tasks_with_degradation",
+    ):
+        value = payload.get(field)
+        if not isinstance(value, list) or not all(
+            isinstance(item, str) and item for item in value
+        ):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                f"scheduler_fairness_summary.{field} must be a string list"
+            )
+    task_fairness = payload.get("task_fairness")
+    if not isinstance(task_fairness, dict) or not task_fairness:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "scheduler_fairness_summary.task_fairness must be a non-empty object"
+        )
+    for task_name, task_context in task_fairness.items():
+        if not isinstance(task_name, str) or not task_name:
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                "scheduler_fairness_summary.task_fairness keys must be strings"
+            )
+        if not isinstance(task_context, dict):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                "scheduler_fairness_summary.task_fairness values must be objects"
+            )
 
 
 def _validate_edgeenv_producer_context(producer: dict[str, Any]) -> None:
@@ -1066,6 +1148,16 @@ def _positive_int(value: Any) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value > 0
 
 
+def _non_negative_int_value(value: Any) -> int:
+    if isinstance(value, bool):
+        return 0
+    if isinstance(value, int):
+        return max(value, 0)
+    if isinstance(value, float):
+        return max(int(value), 0)
+    return 0
+
+
 def _scenario_identity(config: OrchestratorConfig) -> dict[str, str]:
     labels = {
         "normal": {
@@ -1288,7 +1380,10 @@ def _producer_source_signals(report: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _operation_timeline_summary(report: dict[str, Any]) -> dict[str, Any]:
+def _operation_timeline_summary(
+    report: dict[str, Any],
+    config: OrchestratorConfig | None = None,
+) -> dict[str, Any]:
     queue_summary = _dict_value(report.get("queue_state_summary"))
     runtime_event_summary = _dict_value(report.get("runtime_event_summary"))
     worker_health = _dict_value(report.get("worker_health_snapshot"))
@@ -1324,6 +1419,7 @@ def _operation_timeline_summary(report: dict[str, Any]) -> dict[str, Any]:
         "latency": _latency_timeline_summary(report),
         "policy": _policy_timeline_summary(report),
         "stale_drop": stale_drop,
+        "scheduler_fairness": _scheduler_fairness_summary(config, report),
         "affected_tasks": {
             "deadline_missed": _string_list(
                 runtime_event_summary.get("tasks_with_deadline_miss")
@@ -1500,6 +1596,175 @@ def _operation_timeline_review_hints(
     if _positive_int(stale_drop_summary.get("stale_drop_count")):
         hints.append("review_stale_drop")
     return hints or ["operation_timeline_nominal"]
+
+
+def _scheduler_fairness_summary(
+    config: OrchestratorConfig | None,
+    report: dict[str, Any],
+) -> dict[str, Any]:
+    runtime_event_summary = _dict_value(report.get("runtime_event_summary"))
+    task_event_summary = _dict_value(runtime_event_summary.get("task_event_summary"))
+    worker_health = _dict_value(report.get("worker_health_snapshot"))
+    workers = _dict_value(worker_health.get("workers"))
+    task_names = _configured_task_names(config, workers, task_event_summary)
+    task_fairness: dict[str, Any] = {}
+    tasks_with_starvation_risk: list[str] = []
+    tasks_with_scheduler_delay: list[str] = []
+    tasks_with_degradation: list[str] = []
+
+    for task_name in task_names:
+        worker = _dict_value(workers.get(task_name))
+        task_events = _dict_value(task_event_summary.get(task_name))
+        task_config = _task_config_by_name(config, task_name)
+        context = _task_fairness_context(task_name, task_config, worker, task_events)
+        task_fairness[task_name] = context
+        if context["starvation_risk"]:
+            tasks_with_starvation_risk.append(task_name)
+        if _positive_int(context.get("scheduler_delay_event_count")):
+            tasks_with_scheduler_delay.append(task_name)
+        if context.get("health_state") in {"constrained", "degraded"}:
+            tasks_with_degradation.append(task_name)
+
+    return {
+        "schema_version": SCHEDULER_FAIRNESS_SUMMARY_SCHEMA,
+        "operation_context_role": "supplemental",
+        "scheduler_owner": "orchestrator",
+        "decision_owner": "lab",
+        "not_a_deployment_decision": True,
+        "source": "task_config+worker_health_snapshot+runtime_event_summary",
+        "protected_high_priority_tasks": _protected_high_priority_tasks(
+            config,
+            task_fairness,
+        ),
+        "tasks_with_starvation_risk": tasks_with_starvation_risk,
+        "tasks_with_scheduler_delay": tasks_with_scheduler_delay,
+        "tasks_with_degradation": tasks_with_degradation,
+        "first_read": (
+            "review_scheduler_fairness_context"
+            if tasks_with_starvation_risk or tasks_with_scheduler_delay
+            else "scheduler_fairness_nominal"
+        ),
+        "task_fairness": task_fairness,
+        "interpretation": (
+            "Scheduler fairness is supplemental operation evidence for "
+            "reviewing protected, delayed, degraded, or starved workloads; "
+            "Lab remains the final deployment decision owner."
+        ),
+    }
+
+
+def _configured_task_names(
+    config: OrchestratorConfig | None,
+    workers: dict[str, Any],
+    task_event_summary: dict[str, Any],
+) -> list[str]:
+    names: list[str] = []
+    if config is not None:
+        for task in config.tasks:
+            if task.name not in names:
+                names.append(task.name)
+    for source in (workers, task_event_summary):
+        for task_name in source:
+            if isinstance(task_name, str) and task_name and task_name not in names:
+                names.append(task_name)
+    return names
+
+
+def _task_config_by_name(
+    config: OrchestratorConfig | None,
+    task_name: str,
+) -> TaskConfig | None:
+    if config is None:
+        return None
+    for task in config.tasks:
+        if task.name == task_name:
+            return task
+    return None
+
+
+def _task_fairness_context(
+    task_name: str,
+    task: TaskConfig | None,
+    worker: dict[str, Any],
+    task_events: dict[str, Any],
+) -> dict[str, Any]:
+    executed_count = _non_negative_int_value(worker.get("executed_count"))
+    dropped_count = _non_negative_int_value(worker.get("dropped_count"))
+    fallback_count = _non_negative_int_value(worker.get("fallback_count"))
+    scheduler_delay_count = _non_negative_int_value(
+        task_events.get("scheduler_delay_event_count")
+    )
+    max_delay_cycles = _non_negative_int_value(
+        task_events.get("max_scheduler_delay_cycles")
+    )
+    starvation_reasons = _starvation_reasons(
+        executed_count=executed_count,
+        dropped_count=dropped_count,
+        fallback_count=fallback_count,
+        scheduler_delay_count=scheduler_delay_count,
+        max_delay_cycles=max_delay_cycles,
+        health_state=worker.get("health_state"),
+    )
+    context = {
+        "agent_id": task.agent_id if task else worker.get("agent_id"),
+        "agent_type": task.agent_type if task else worker.get("agent_type"),
+        "priority": task.priority if task else worker.get("priority"),
+        "latency_budget_ms": task.latency_budget_ms if task else None,
+        "executed_count": executed_count,
+        "dropped_count": dropped_count,
+        "fallback_count": fallback_count,
+        "scheduler_delay_event_count": scheduler_delay_count,
+        "max_scheduler_delay_cycles": max_delay_cycles,
+        "health_state": worker.get("health_state"),
+        "operation_risk_summary": worker.get("operation_risk_summary"),
+        "starvation_risk": bool(starvation_reasons),
+        "starvation_reasons": starvation_reasons,
+    }
+    if task is None:
+        context["task_name"] = task_name
+    return context
+
+
+def _starvation_reasons(
+    *,
+    executed_count: int,
+    dropped_count: int,
+    fallback_count: int,
+    scheduler_delay_count: int,
+    max_delay_cycles: int,
+    health_state: Any,
+) -> list[str]:
+    reasons: list[str] = []
+    if executed_count == 0 and dropped_count > 0:
+        reasons.append("dropped_without_execution")
+    if scheduler_delay_count > 0:
+        reasons.append("scheduler_delay_present")
+    if max_delay_cycles >= 3:
+        reasons.append("multi_cycle_scheduler_delay")
+    if fallback_count > 0:
+        reasons.append("fallback_policy_used")
+    if health_state == "degraded":
+        reasons.append("worker_degraded")
+    return reasons
+
+
+def _protected_high_priority_tasks(
+    config: OrchestratorConfig | None,
+    task_fairness: dict[str, Any],
+) -> list[str]:
+    if config is None or not config.tasks:
+        return []
+    highest_priority = max(task.priority for task in config.tasks)
+    protected: list[str] = []
+    for task in config.tasks:
+        context = task_fairness.get(task.name, {})
+        if not isinstance(context, dict):
+            continue
+        if task.priority == highest_priority and _positive_int(
+            context.get("executed_count")
+        ):
+            protected.append(task.name)
+    return protected
 
 
 def _worker_names_with_health_state(

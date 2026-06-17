@@ -29,6 +29,68 @@
       "queue_overflow_drop_oldest": 12
     }
   },
+  "scheduler_fairness_summary": {
+    "schema_version": "inferedge-orchestrator-scheduler-fairness-summary-v1",
+    "operation_context_role": "supplemental",
+    "scheduler_owner": "orchestrator",
+    "decision_owner": "lab",
+    "not_a_deployment_decision": true,
+    "protected_high_priority_tasks": [
+      "safety_monitor_agent"
+    ],
+    "tasks_with_starvation_risk": [
+      "vision_agent"
+    ],
+    "tasks_with_scheduler_delay": [
+      "vision_agent"
+    ],
+    "tasks_with_degradation": [
+      "voice_command_agent"
+    ],
+    "first_read": "review_scheduler_fairness_context",
+    "task_fairness": {
+      "vision_agent": {
+        "priority": 80,
+        "executed_count": 3,
+        "dropped_count": 12,
+        "fallback_count": 0,
+        "scheduler_delay_event_count": 3,
+        "max_scheduler_delay_cycles": 3,
+        "health_state": "constrained",
+        "starvation_risk": true,
+        "starvation_reasons": [
+          "scheduler_delay_present",
+          "multi_cycle_scheduler_delay"
+        ]
+      },
+      "voice_command_agent": {
+        "priority": 50,
+        "executed_count": 1,
+        "dropped_count": 9,
+        "fallback_count": 9,
+        "scheduler_delay_event_count": 0,
+        "max_scheduler_delay_cycles": 0,
+        "health_state": "degraded",
+        "starvation_risk": true,
+        "starvation_reasons": [
+          "fallback_policy_used",
+          "worker_degraded"
+        ]
+      },
+      "safety_monitor_agent": {
+        "priority": 100,
+        "executed_count": 16,
+        "dropped_count": 0,
+        "fallback_count": 0,
+        "scheduler_delay_event_count": 0,
+        "max_scheduler_delay_cycles": 0,
+        "health_state": "healthy",
+        "starvation_risk": false,
+        "starvation_reasons": []
+      }
+    },
+    "interpretation": "Scheduler fairness is supplemental operation evidence; Lab remains the final deployment decision owner."
+  },
   "delayed_execution_sample": {
     "event_type": "execution",
     "agent_id": "vision_agent",

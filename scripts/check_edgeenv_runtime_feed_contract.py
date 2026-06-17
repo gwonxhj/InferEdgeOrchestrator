@@ -111,6 +111,9 @@ def main(argv: list[str] | None = None) -> int:
         affected = operation_timeline_summary.get("affected_tasks") or {}
         review_hints = operation_timeline_summary.get("review_hints") or []
         stale_drop = operation_timeline_summary.get("stale_drop") or {}
+        scheduler_fairness = operation_timeline_summary.get(
+            "scheduler_fairness"
+        ) or {}
         print(
             "operation_timeline: "
             f"review_hints={_format_list(review_hints)}; "
@@ -121,6 +124,16 @@ def main(argv: list[str] | None = None) -> int:
             f"stale_drop_tasks={_format_list(affected.get('stale_drop'))}; "
             f"max_queue_wait_ms={latency.get('max_queue_wait_ms', 0)}"
         )
+        if scheduler_fairness:
+            print(
+                "scheduler_fairness: "
+                "protected="
+                f"{_format_list(scheduler_fairness.get('protected_high_priority_tasks'))}; "
+                "starvation_risk="
+                f"{_format_list(scheduler_fairness.get('tasks_with_starvation_risk'))}; "
+                "degraded="
+                f"{_format_list(scheduler_fairness.get('tasks_with_degradation'))}"
+            )
     return 0
 
 

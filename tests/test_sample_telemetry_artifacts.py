@@ -43,6 +43,27 @@ def test_agent_scheduler_delay_sample_records_downstream_signal() -> None:
         "queue_overflow_drop_oldest": 12,
     }
 
+    fairness = sample["scheduler_fairness_summary"]  # type: ignore[index]
+    assert fairness["schema_version"] == (  # type: ignore[index]
+        "inferedge-orchestrator-scheduler-fairness-summary-v1"
+    )
+    assert fairness["scheduler_owner"] == "orchestrator"  # type: ignore[index]
+    assert fairness["decision_owner"] == "lab"  # type: ignore[index]
+    assert fairness["not_a_deployment_decision"] is True  # type: ignore[index]
+    assert fairness["protected_high_priority_tasks"] == [  # type: ignore[index]
+        "safety_monitor_agent"
+    ]
+    assert fairness["tasks_with_starvation_risk"] == [  # type: ignore[index]
+        "vision_agent"
+    ]
+    assert fairness["tasks_with_scheduler_delay"] == [  # type: ignore[index]
+        "vision_agent"
+    ]
+    assert "voice_command_agent" in fairness["tasks_with_degradation"]  # type: ignore[index]
+    assert "Lab remains the final deployment decision owner" in (  # type: ignore[index]
+        fairness["interpretation"]
+    )
+
     delayed = sample["delayed_execution_sample"]  # type: ignore[index]
     assert delayed["event_type"] == "execution"
     assert delayed["scheduler_delay_cycles"] == 3

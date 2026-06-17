@@ -15,7 +15,7 @@ They are not benchmark artifacts. Raw runtime reports remain ignored under
 | Question | Start with | Why |
 | --- | --- | --- |
 | Does the scheduler protect high-priority work under overload? | `phase3_overload_sample.json` | Shows baseline vs scheduled p95 latency and low-priority drops. |
-| Did the 3-agent sustained path record scheduler-delay evidence for downstream review? | `agent_scheduler_delay_sample.json` | Shows delayed execution, policy/drop reason counts, and AIGuard/Lab signal names. |
+| Did the 3-agent sustained path record scheduler-delay evidence and fairness context for downstream review? | `agent_scheduler_delay_sample.json` | Shows delayed execution, scheduler fairness/starvation context, policy/drop reason counts, and AIGuard/Lab signal names. |
 | Does remote dispatch starter evidence show bounded fallback recovery without claiming production retry control? | `remote_fallback_recovery_sample.json` | Shows primary failure, fallback recovery, compact runtime event summary, and starter boundary fields. |
 | Which samples require prior Jetson evidence rather than local CI? | `jetson_*_sample.json` files | They are curated physical-device or TensorRT-backed evidence snapshots, not portable CI outputs. |
 
@@ -24,7 +24,7 @@ They are not benchmark artifacts. Raw runtime reports remain ignored under
 | File | What it shows |
 | --- | --- |
 | `phase3_overload_sample.json` | Synthetic FIFO baseline vs scheduler/load-shedding comparison. The detector p95 end-to-end latency improves from `782.0ms` to `8.0ms`, while low-priority classifier work is dropped. |
-| `agent_scheduler_delay_sample.json` | Curated excerpt from the 3-agent sustained high-load config showing `scheduler_delay_event_count`, a delayed execution event, policy/drop reason counts, and the downstream AIGuard/Lab signal names. |
+| `agent_scheduler_delay_sample.json` | Curated excerpt from the 3-agent sustained high-load config showing `scheduler_delay_event_count`, `scheduler_fairness_summary`, a delayed execution event, policy/drop reason counts, and the downstream AIGuard/Lab signal names. |
 | `remote_fallback_recovery_sample.json` | Curated remote dispatch starter excerpt showing primary HTTP starter `connection_error`, bounded fallback worker recovery, retry/fallback plan fields, and downstream AIGuard/Lab signal names. |
 | `jetson_smoke_dummy_sample.json` | Telemetry schema from the Jetson dummy smoke path: task counts, drop events, result events, scheduler decisions, and resource snapshots. |
 | `jetson_onnx_smoke_sample.json` | Telemetry schema from the ONNX Runtime worker smoke path: result event metadata, output shape `[1, 2]`, and resource snapshots. |
@@ -41,6 +41,7 @@ The samples cover these telemetry signals:
 - drop events
 - overload or policy decisions
 - scheduler delay event counts and queue wait evidence
+- scheduler fairness / starvation context
 - remote dispatch starter failure/fallback recovery evidence
 - result events
 - resource snapshots
