@@ -353,6 +353,8 @@ InferEdgeOrchestrator = runtime operation control layer
 | File | Evidence path | Main signals |
 | --- | --- | --- |
 | [`examples/telemetry/phase3_overload_sample.json`](../examples/telemetry/phase3_overload_sample.json) | Synthetic overload comparison | protected task, baseline p95, scheduled p95, low-priority drops, overload events |
+| [`examples/telemetry/agent_scheduler_delay_sample.json`](../examples/telemetry/agent_scheduler_delay_sample.json) | 3-agent sustained high-load scheduler delay | scheduler delay count, queue wait, policy/drop reason counts, downstream AIGuard/Lab signal names |
+| [`examples/telemetry/remote_fallback_recovery_sample.json`](../examples/telemetry/remote_fallback_recovery_sample.json) | Remote dispatch starter fallback recovery | primary starter failure, bounded fallback recovery, compact remote runtime event summary, production-boundary marker |
 | [`examples/telemetry/jetson_smoke_dummy_sample.json`](../examples/telemetry/jetson_smoke_dummy_sample.json) | Jetson dummy smoke | executed/dropped counts, drop events, schedule decisions, result events, resource snapshots |
 | [`examples/telemetry/jetson_onnx_smoke_sample.json`](../examples/telemetry/jetson_onnx_smoke_sample.json) | Jetson ONNX Runtime smoke | ONNX worker output metadata, output shapes, result events, resource snapshots |
 | [`examples/telemetry/jetson_tensorrt_contention_sample.json`](../examples/telemetry/jetson_tensorrt_contention_sample.json) | Jetson TensorRT contention smoke | protected high-priority task, low-priority shedding, overload events, TensorRT backend metadata |

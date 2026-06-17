@@ -26,6 +26,8 @@ Language: [English](CHANGELOG.md) | 한국어
   device-specific backend path가 default CI smoke에 들어가지 않도록 검증한다.
 - README와 portfolio evidence 문구를 갱신해 30초 진입 경로에서 새 package/CLI
   smoke가 보이도록 하되, 핵심 positioning은 바꾸지 않았다.
+- curated telemetry sample index에 reviewer quick path를 추가하고,
+  scheduler-delay / remote-fallback sample을 validation evidence map에서 연결했다.
 - validation evidence index를 갱신해 CI evidence가 package install과 설치된 CLI
   smoke coverage를 포함하도록 했다.
 - remote dispatch starter result에 compact `remote_runtime_event_summary`를

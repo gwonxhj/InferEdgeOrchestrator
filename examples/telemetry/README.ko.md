@@ -10,6 +10,15 @@ portfolio evidence를 확인할 수 있도록 제공한다.
 `reports/` 아래에서 ignore하고, 이 sample들은 `examples/telemetry/` 아래에
 두는 문서용 artifact다.
 
+## Reviewer Quick Path
+
+| Question | Start with | Why |
+| --- | --- | --- |
+| scheduler가 overload에서 high-priority work를 보호하는가? | `phase3_overload_sample.json` | baseline vs scheduled p95 latency와 low-priority drop을 보여준다. |
+| 3-agent sustained path가 downstream review용 scheduler-delay evidence를 기록하는가? | `agent_scheduler_delay_sample.json` | 지연된 execution, policy/drop reason count, AIGuard/Lab signal name을 보여준다. |
+| remote dispatch starter evidence가 production retry control을 주장하지 않고 bounded fallback recovery를 보여주는가? | `remote_fallback_recovery_sample.json` | primary failure, fallback recovery, compact runtime event summary, starter boundary field를 보여준다. |
+| 어떤 sample이 local CI가 아니라 기존 Jetson evidence를 전제로 하는가? | `jetson_*_sample.json` files | portable CI output이 아니라 curated physical-device 또는 TensorRT-backed evidence snapshot이다. |
+
 ## Samples
 
 | File | What it shows |

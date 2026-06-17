@@ -25,6 +25,8 @@ helps reviewers understand the project state.
   commands and keeps device-specific backend paths out of the default CI smoke.
 - Refreshed README and portfolio evidence wording so the 30-second entry path
   reflects the new package/CLI smoke without changing the core positioning.
+- Added a reviewer quick path to the curated telemetry sample index and linked
+  scheduler-delay and remote-fallback samples from the validation evidence map.
 - Updated the validation evidence index so CI evidence includes package install
   and installed CLI smoke coverage.
 - Added a compact `remote_runtime_event_summary` to the remote dispatch starter
