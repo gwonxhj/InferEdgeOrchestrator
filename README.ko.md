@@ -165,6 +165,12 @@ flowchart LR
   candidate context 필수 필드를 검증한다. 또한 `aiguard_evidence_candidates`가
   `runtime_queue_overload`, `runtime_thermal_instability`를 유지하는지 확인해
   downstream diagnosis/report fixture의 deterministic anomaly 경계를 보존한다.
+- policy-pressure context는 operation timeline에서
+  `candidate_context.operation.policy_pressure_summary`로 mirror되며,
+  `role=supplemental`, `scheduler_owner=orchestrator`, `decision_owner=lab`,
+  `not_a_deployment_decision=true` marker를 함께 둔다. 이를 통해 EdgeEnv가
+  같은 scheduler-pressure evidence를 AIGuard/Lab handoff로 보존하더라도
+  Orchestrator가 decision owner가 되지 않는다.
 
 ## Implementation Map
 

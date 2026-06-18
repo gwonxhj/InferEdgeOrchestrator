@@ -168,6 +168,12 @@ The boundary is intentional:
   `aiguard_evidence_candidates` to keep `runtime_queue_overload` and
   `runtime_thermal_instability` so downstream diagnosis/report fixtures keep
   the same deterministic anomaly boundary.
+- Policy-pressure context is mirrored from the operation timeline into
+  `candidate_context.operation.policy_pressure_summary` with
+  `role=supplemental`, `scheduler_owner=orchestrator`, `decision_owner=lab`,
+  and `not_a_deployment_decision=true` so EdgeEnv can preserve the same
+  scheduler-pressure evidence for AIGuard/Lab handoff without making
+  Orchestrator a decision owner.
 
 ## Implementation Map
 

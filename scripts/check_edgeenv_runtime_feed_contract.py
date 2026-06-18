@@ -56,6 +56,7 @@ def main(argv: list[str] | None = None) -> int:
     operation = candidate_context.get("operation") or {}
     latency_budget_protection = operation.get("latency_budget_protection") or {}
     operation_timeline_summary = operation.get("operation_timeline_summary") or {}
+    policy_pressure_summary = operation.get("policy_pressure_summary") or {}
     guard_alignment = feed.get("downstream_guard_alignment") or {}
     print("EdgeEnv runtime telemetry feed contract passed.")
     print(
@@ -111,7 +112,11 @@ def main(argv: list[str] | None = None) -> int:
         affected = operation_timeline_summary.get("affected_tasks") or {}
         review_hints = operation_timeline_summary.get("review_hints") or []
         stale_drop = operation_timeline_summary.get("stale_drop") or {}
-        policy_pressure = operation_timeline_summary.get("policy_pressure") or {}
+        policy_pressure = (
+            policy_pressure_summary
+            or operation_timeline_summary.get("policy_pressure")
+            or {}
+        )
         scheduler_fairness = operation_timeline_summary.get(
             "scheduler_fairness"
         ) or {}

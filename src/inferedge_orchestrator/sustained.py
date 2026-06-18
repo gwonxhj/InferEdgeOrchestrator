@@ -338,6 +338,9 @@ def _edgeenv_runtime_telemetry_feed(
         ),
         "operation_timeline_summary": _operation_timeline_summary(report, config),
     }
+    operation["policy_pressure_summary"] = operation[
+        "operation_timeline_summary"
+    ]["policy_pressure"]
     operation["latency_budget_protection"] = _latency_budget_protection_context(
         config,
         report,
@@ -495,8 +498,18 @@ def validate_edgeenv_runtime_telemetry_feed(
             raise ValueError(
                 "edgeenv_runtime_telemetry_feed.candidate_context.operation."
                 "operation_timeline_summary must be an object"
-            )
+        )
         _validate_operation_timeline_summary(operation_timeline_summary)
+    policy_pressure_summary = candidate_context["operation"].get(
+        "policy_pressure_summary"
+    )
+    if policy_pressure_summary is not None:
+        if not isinstance(policy_pressure_summary, dict):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                "policy_pressure_summary must be an object"
+            )
+        _validate_policy_pressure_summary(policy_pressure_summary)
     stale_drop_summary = candidate_context["operation"].get("stale_drop_summary")
     if stale_drop_summary is not None:
         if not isinstance(stale_drop_summary, dict):
@@ -749,6 +762,11 @@ def _validate_policy_pressure_summary(payload: dict[str, Any]) -> None:
             "edgeenv_runtime_telemetry_feed.candidate_context.operation."
             "policy_pressure_summary.schema_version must be "
             f"{POLICY_PRESSURE_SUMMARY_SCHEMA}"
+        )
+    if payload.get("role") != "supplemental":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "policy_pressure_summary.role must be supplemental"
         )
     if payload.get("operation_context_role") != "supplemental":
         raise ValueError(
@@ -1619,6 +1637,7 @@ def _policy_pressure_summary(report: dict[str, Any]) -> dict[str, Any]:
     )
     return {
         "schema_version": POLICY_PRESSURE_SUMMARY_SCHEMA,
+        "role": "supplemental",
         "operation_context_role": "supplemental",
         "scheduler_owner": "orchestrator",
         "decision_owner": "lab",

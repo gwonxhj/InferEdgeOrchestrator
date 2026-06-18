@@ -294,6 +294,11 @@ including `tasks_with_stale_drop`, reason counts, and `review_stale_drop` hints.
 This summary is an additive navigation aid for AIGuard/Lab/Env; it does not
 replace `drop_events`, `queue_depth_timeline`, `latency_timeline`, or
 `policy_decision_log`, and it is not a deployment decision.
+For EdgeEnv handoff, the same policy-pressure payload is also mirrored as
+`candidate_context.operation.policy_pressure_summary` with `role=supplemental`,
+`scheduler_owner=orchestrator`, `decision_owner=lab`, and
+`not_a_deployment_decision=true` so downstream AIGuard/Lab checks can preserve
+scheduler-pressure context without treating it as a decision.
 The feed also carries
 `downstream_guard_alignment.producer_lineage_evidence_type=edgeenv_orchestrator_producer_lineage`
 so AIGuard/Lab can validate producer-lineage reasoning separately from
