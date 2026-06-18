@@ -294,6 +294,12 @@ drop과 load-shedding drop을 stale/backlog evidence로 분류하고,
 이 summary는 AIGuard/Lab/Env가 raw timeline을 훑기 전에 보는 additive
 navigation aid이며 `drop_events`, `queue_depth_timeline`, `latency_timeline`,
 `policy_decision_log`를 대체하지 않고 deployment decision도 아닙니다.
+EdgeEnv handoff에서는 같은 policy-pressure payload를
+`candidate_context.operation.policy_pressure_summary`로도 mirror하고,
+`role=supplemental`, `scheduler_owner=orchestrator`, `decision_owner=lab`,
+`not_a_deployment_decision=true` marker를 함께 둡니다. 이를 통해 downstream
+AIGuard/Lab check가 scheduler-pressure context를 보존하더라도 decision으로
+취급하지 않게 합니다.
 또한 feed는
 `downstream_guard_alignment.producer_lineage_evidence_type=edgeenv_orchestrator_producer_lineage`
 를 포함하므로 AIGuard/Lab이 producer-lineage reasoning을 queue/thermal operation

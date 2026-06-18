@@ -136,6 +136,7 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     assert timeline["policy"]["first_decision"]["queue_depth_snapshot"]
     policy_pressure = timeline["policy_pressure"]
     assert policy_pressure["schema_version"] == POLICY_PRESSURE_SUMMARY_SCHEMA
+    assert policy_pressure["role"] == "supplemental"
     assert policy_pressure["operation_context_role"] == "supplemental"
     assert policy_pressure["scheduler_owner"] == "orchestrator"
     assert policy_pressure["decision_owner"] == "lab"
@@ -293,6 +294,7 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
         candidate["operation"]["operation_timeline_summary"]["policy_pressure"]
         == policy_pressure
     )
+    assert candidate["operation"]["policy_pressure_summary"] == policy_pressure
     assert candidate["operation"]["stale_drop_summary"] == stale_drop
     assert candidate["operation"]["operation_risk_rollup"] == risk_rollup
     assert candidate["operation"]["scheduler_fairness_summary"] == fairness
@@ -647,8 +649,8 @@ def test_write_edgeenv_runtime_telemetry_feed_requires_policy_pressure_schema(
         frames=4,
     )
     report["edgeenv_runtime_telemetry_feed"]["candidate_context"]["operation"][
-        "operation_timeline_summary"
-    ]["policy_pressure"]["decision_owner"] = "orchestrator"
+        "policy_pressure_summary"
+    ]["decision_owner"] = "orchestrator"
 
     with pytest.raises(
         ValueError,
