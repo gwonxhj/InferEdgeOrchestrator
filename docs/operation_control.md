@@ -32,12 +32,15 @@ validated workload
 | Fallback evidence | fallback decision count, fallback final status, bounded recovery marker |
 | Worker health | worker status, runtime event summary, resource pressure context |
 | Telemetry evidence | JSON operation summary, compact event rollup, policy decision reason |
+| Policy pressure | limited/protected task summary, fallback policy use, backlog-over-threshold markers |
 
 ## Handoff Boundaries
 
 Orchestrator can export supplemental operation context through
 `edgeenv_runtime_telemetry_feed`. That feed can help EdgeEnv, AIGuard, and Lab
 show queue/deadline/fallback/resource context without changing ownership.
+The operation timeline may include a policy pressure summary so downstream
+reports can show which tasks were limited or protected under backlog pressure.
 
 - EdgeEnv remains the registry, comparability, and runtime regression evidence
   owner.

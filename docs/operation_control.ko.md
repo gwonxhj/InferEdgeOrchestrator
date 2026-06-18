@@ -32,6 +32,7 @@ validated workload
 | Fallback evidence | fallback decision count, fallback final status, bounded recovery marker |
 | Worker health | worker status, runtime event summary, resource pressure context |
 | Telemetry evidence | JSON operation summary, compact event rollup, policy decision reason |
+| Policy pressure | 제한/보호된 task 요약, fallback policy 사용, backlog threshold 초과 marker |
 
 ## Handoff 경계
 
@@ -39,6 +40,8 @@ Orchestrator는 `edgeenv_runtime_telemetry_feed`를 통해 supplemental operatio
 context를 export할 수 있다. 이 feed는 EdgeEnv, AIGuard, Lab이
 queue/deadline/fallback/resource context를 표시하는 데 도움을 주지만 ownership을
 바꾸지 않는다.
+operation timeline은 policy pressure summary를 포함할 수 있으며, downstream
+report가 backlog 압력에서 어떤 task가 제한되거나 보호됐는지 표시하는 데 쓴다.
 
 - EdgeEnv는 registry, comparability, runtime regression evidence owner로 남는다.
 - AIGuard는 deterministic runtime warning evidence를 제공할 수 있다.

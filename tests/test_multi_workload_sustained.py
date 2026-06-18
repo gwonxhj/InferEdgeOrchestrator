@@ -21,6 +21,7 @@ from inferedge_orchestrator.sustained import (
     LATENCY_BUDGET_PROTECTION_SCHEMA,
     MULTI_WORKLOAD_SCHEMA,
     OPERATION_TIMELINE_SUMMARY_SCHEMA,
+    POLICY_PRESSURE_SUMMARY_SCHEMA,
     SCHEDULER_FAIRNESS_SUMMARY_SCHEMA,
     STALE_DROP_SUMMARY_SCHEMA,
     apply_device_local_input_overrides,
@@ -133,6 +134,43 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
         "queue_backlog_threshold_exceeded"
     )
     assert timeline["policy"]["first_decision"]["queue_depth_snapshot"]
+    policy_pressure = timeline["policy_pressure"]
+    assert policy_pressure["schema_version"] == POLICY_PRESSURE_SUMMARY_SCHEMA
+    assert policy_pressure["operation_context_role"] == "supplemental"
+    assert policy_pressure["scheduler_owner"] == "orchestrator"
+    assert policy_pressure["decision_owner"] == "lab"
+    assert policy_pressure["not_a_deployment_decision"] is True
+    assert policy_pressure["first_read"] == "review_policy_pressure_context"
+    assert policy_pressure["decision_count"] == len(report["policy_decision_log"])
+    assert policy_pressure["decision_reason_counts"] == {
+        "queue_backlog_threshold_exceeded": len(report["policy_decision_log"])
+    }
+    assert policy_pressure["limited_tasks"] == [
+        "voice_command_agent",
+        "vision_agent",
+    ]
+    assert policy_pressure["protected_tasks"] == ["safety_monitor_agent"]
+    assert policy_pressure["fallback_tasks"] == [
+        "voice_command_agent",
+        "vision_agent",
+    ]
+    assert policy_pressure["fallback_decision_count"] == (
+        report["runtime_event_summary"]["fallback_decision_count"]
+    )
+    assert policy_pressure["max_total_backlog_before"] >= (
+        policy_pressure["backlog_thresholds"][0]
+    )
+    assert policy_pressure["max_backlog_over_threshold"] > 0
+    assert set(policy_pressure["pressure_markers"]) >= {
+        "policy_decision_present",
+        "backlog_exceeded_threshold",
+        "fallback_policy_used",
+        "workload_limited_by_policy",
+        "scheduler_delay_present",
+    }
+    assert "Lab remains the final deployment decision owner" in (
+        policy_pressure["interpretation"]
+    )
     stale_drop = timeline["stale_drop"]
     assert stale_drop["schema_version"] == STALE_DROP_SUMMARY_SCHEMA
     assert stale_drop["operation_context_role"] == "supplemental"
@@ -251,6 +289,10 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
         report["runtime_event_summary"]["tasks_with_fallback"]
     )
     assert candidate["operation"]["operation_timeline_summary"] == timeline
+    assert (
+        candidate["operation"]["operation_timeline_summary"]["policy_pressure"]
+        == policy_pressure
+    )
     assert candidate["operation"]["stale_drop_summary"] == stale_drop
     assert candidate["operation"]["operation_risk_rollup"] == risk_rollup
     assert candidate["operation"]["scheduler_fairness_summary"] == fairness
@@ -589,6 +631,32 @@ def test_write_edgeenv_runtime_telemetry_feed_requires_stale_drop_schema(
         write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
 
 
+def test_write_edgeenv_runtime_telemetry_feed_requires_policy_pressure_schema(
+    tmp_path,
+) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    report = write_multi_workload_sustained(
+        config,
+        output=tmp_path / "report.json",
+        frames=4,
+    )
+    report["edgeenv_runtime_telemetry_feed"]["candidate_context"]["operation"][
+        "operation_timeline_summary"
+    ]["policy_pressure"]["decision_owner"] = "orchestrator"
+
+    with pytest.raises(
+        ValueError,
+        match="policy_pressure_summary.decision_owner must be lab",
+    ):
+        write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
+
+
 def test_validate_edgeenv_runtime_telemetry_feed_requires_device_local_producer(
     tmp_path,
 ) -> None:
@@ -741,6 +809,10 @@ def test_cli_run_multi_workload_sustained_writes_edgeenv_feed_output(
     assert "stale_drop=" in captured.out
     assert "stale_drop_tasks=" in captured.out
     assert "max_queue_wait_ms=" in captured.out
+    assert "policy-pressure: decisions=" in captured.out
+    assert "limited=" in captured.out
+    assert "protected=" in captured.out
+    assert "markers=" in captured.out
     report = json.loads(output.read_text(encoding="utf-8"))
     feed = json.loads(feed_output.read_text(encoding="utf-8"))
     assert feed == report["edgeenv_runtime_telemetry_feed"]
