@@ -214,6 +214,9 @@ def _run_multi_workload_sustained(args: argparse.Namespace) -> int:
     affected_tasks = timeline.get("affected_tasks", {}) if isinstance(timeline, dict) else {}
     latency = timeline.get("latency", {}) if isinstance(timeline, dict) else {}
     stale_drop = timeline.get("stale_drop", {}) if isinstance(timeline, dict) else {}
+    policy_pressure = (
+        timeline.get("policy_pressure", {}) if isinstance(timeline, dict) else {}
+    )
     review_hints = timeline.get("review_hints", []) if isinstance(timeline, dict) else []
     print(f"wrote sustained telemetry: {args.output}")
     if args.edgeenv_feed_output:
@@ -238,6 +241,15 @@ def _run_multi_workload_sustained(args: argparse.Namespace) -> int:
         f"stale_drop_tasks={_format_cli_list(affected_tasks.get('stale_drop'))} "
         f"max_queue_wait_ms={latency.get('max_queue_wait_ms', 0)}"
     )
+    if policy_pressure:
+        print(
+            "policy-pressure: "
+            f"decisions={policy_pressure.get('decision_count', 0)} "
+            f"limited={_format_cli_list(policy_pressure.get('limited_tasks'))} "
+            f"protected={_format_cli_list(policy_pressure.get('protected_tasks'))} "
+            f"fallback={_format_cli_list(policy_pressure.get('fallback_tasks'))} "
+            f"markers={_format_cli_list(policy_pressure.get('pressure_markers'))}"
+        )
     return 0
 
 

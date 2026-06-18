@@ -46,6 +46,9 @@ STALE_DROP_REASON_CLASSES = {
 SCHEDULER_FAIRNESS_SUMMARY_SCHEMA = (
     "inferedge-orchestrator-scheduler-fairness-summary-v1"
 )
+POLICY_PRESSURE_SUMMARY_SCHEMA = (
+    "inferedge-orchestrator-policy-pressure-summary-v1"
+)
 
 
 def apply_device_local_input_overrides(
@@ -722,6 +725,14 @@ def _validate_operation_timeline_summary(payload: dict[str, Any]) -> None:
                 "operation_timeline_summary.stale_drop must be an object"
             )
         _validate_stale_drop_summary(stale_drop)
+    policy_pressure = payload.get("policy_pressure")
+    if policy_pressure is not None:
+        if not isinstance(policy_pressure, dict):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                "operation_timeline_summary.policy_pressure must be an object"
+            )
+        _validate_policy_pressure_summary(policy_pressure)
     scheduler_fairness = payload.get("scheduler_fairness")
     if scheduler_fairness is not None:
         if not isinstance(scheduler_fairness, dict):
@@ -730,6 +741,76 @@ def _validate_operation_timeline_summary(payload: dict[str, Any]) -> None:
                 "operation_timeline_summary.scheduler_fairness must be an object"
             )
         _validate_scheduler_fairness_summary(scheduler_fairness)
+
+
+def _validate_policy_pressure_summary(payload: dict[str, Any]) -> None:
+    if payload.get("schema_version") != POLICY_PRESSURE_SUMMARY_SCHEMA:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "policy_pressure_summary.schema_version must be "
+            f"{POLICY_PRESSURE_SUMMARY_SCHEMA}"
+        )
+    if payload.get("operation_context_role") != "supplemental":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "policy_pressure_summary.operation_context_role must be supplemental"
+        )
+    if payload.get("scheduler_owner") != "orchestrator":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "policy_pressure_summary.scheduler_owner must be orchestrator"
+        )
+    if payload.get("decision_owner") != "lab":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "policy_pressure_summary.decision_owner must be lab"
+        )
+    if payload.get("not_a_deployment_decision") is not True:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "policy_pressure_summary.not_a_deployment_decision must be true"
+        )
+    for field in (
+        "decision_count",
+        "fallback_decision_count",
+        "max_total_backlog_before",
+        "max_backlog_over_threshold",
+    ):
+        value = payload.get(field)
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                f"policy_pressure_summary.{field} must be a non-negative integer"
+            )
+    if not isinstance(payload.get("decision_reason_counts"), dict):
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "policy_pressure_summary.decision_reason_counts must be an object"
+        )
+    for field in (
+        "limited_tasks",
+        "protected_tasks",
+        "fallback_tasks",
+        "pressure_markers",
+    ):
+        value = payload.get(field)
+        if not isinstance(value, list) or not all(
+            isinstance(item, str) and item for item in value
+        ):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                f"policy_pressure_summary.{field} must be a string list"
+            )
+    thresholds = payload.get("backlog_thresholds")
+    if not isinstance(thresholds, list) or not all(
+        isinstance(item, int) and not isinstance(item, bool) and item >= 0
+        for item in thresholds
+    ):
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "policy_pressure_summary.backlog_thresholds must be a "
+            "non-negative integer list"
+        )
 
 
 def _validate_stale_drop_summary(payload: dict[str, Any]) -> None:
@@ -1418,6 +1499,7 @@ def _operation_timeline_summary(
         },
         "latency": _latency_timeline_summary(report),
         "policy": _policy_timeline_summary(report),
+        "policy_pressure": _policy_pressure_summary(report),
         "stale_drop": stale_drop,
         "scheduler_fairness": _scheduler_fairness_summary(config, report),
         "affected_tasks": {
@@ -1486,6 +1568,107 @@ def _policy_timeline_summary(report: dict[str, Any]) -> dict[str, Any]:
             _compact_policy_decision(decisions[-1]) if decisions else None
         ),
     }
+
+
+def _policy_pressure_summary(report: dict[str, Any]) -> dict[str, Any]:
+    decisions = _dict_list(report.get("policy_decision_log"))
+    runtime_event_summary = _dict_value(report.get("runtime_event_summary"))
+    limited_tasks: list[str] = []
+    protected_tasks: list[str] = []
+    fallback_tasks: list[str] = []
+    reason_counts: dict[str, int] = {}
+    max_total_backlog_before = 0
+    max_backlog_over_threshold = 0
+    backlog_thresholds: list[int] = []
+
+    for decision in decisions:
+        limited_task = decision.get("limited_task")
+        if isinstance(limited_task, str) and limited_task:
+            if limited_task not in limited_tasks:
+                limited_tasks.append(limited_task)
+            if (
+                bool(decision.get("fallback_used"))
+                and limited_task not in fallback_tasks
+            ):
+                fallback_tasks.append(limited_task)
+        protected_task = decision.get("protected_task")
+        if isinstance(protected_task, str) and protected_task not in protected_tasks:
+            protected_tasks.append(protected_task)
+        reason = decision.get("decision_reason") or decision.get("reason")
+        if isinstance(reason, str) and reason:
+            reason_counts[reason] = reason_counts.get(reason, 0) + 1
+        total_backlog = _non_negative_int_value(
+            decision.get("total_backlog_before")
+        )
+        threshold = _non_negative_int_value(decision.get("backlog_threshold"))
+        max_total_backlog_before = max(max_total_backlog_before, total_backlog)
+        if threshold:
+            if threshold not in backlog_thresholds:
+                backlog_thresholds.append(threshold)
+            max_backlog_over_threshold = max(
+                max_backlog_over_threshold,
+                max(total_backlog - threshold, 0),
+            )
+
+    pressure_markers = _policy_pressure_markers(
+        decision_count=len(decisions),
+        fallback_tasks=fallback_tasks,
+        limited_tasks=limited_tasks,
+        max_backlog_over_threshold=max_backlog_over_threshold,
+        runtime_event_summary=runtime_event_summary,
+    )
+    return {
+        "schema_version": POLICY_PRESSURE_SUMMARY_SCHEMA,
+        "operation_context_role": "supplemental",
+        "scheduler_owner": "orchestrator",
+        "decision_owner": "lab",
+        "not_a_deployment_decision": True,
+        "source": "policy_decision_log+runtime_event_summary",
+        "first_read": (
+            "review_policy_pressure_context"
+            if pressure_markers
+            else "policy_pressure_nominal"
+        ),
+        "decision_count": len(decisions),
+        "decision_reason_counts": reason_counts,
+        "limited_tasks": limited_tasks,
+        "protected_tasks": protected_tasks,
+        "fallback_tasks": fallback_tasks,
+        "fallback_decision_count": _non_negative_int_value(
+            runtime_event_summary.get("fallback_decision_count")
+        ),
+        "backlog_thresholds": backlog_thresholds,
+        "max_total_backlog_before": max_total_backlog_before,
+        "max_backlog_over_threshold": max_backlog_over_threshold,
+        "pressure_markers": pressure_markers,
+        "interpretation": (
+            "Policy pressure is supplemental evidence showing which scheduler "
+            "decisions limited or protected work under backlog pressure; Lab "
+            "remains the final deployment decision owner."
+        ),
+    }
+
+
+def _policy_pressure_markers(
+    *,
+    decision_count: int,
+    fallback_tasks: list[str],
+    limited_tasks: list[str],
+    max_backlog_over_threshold: int,
+    runtime_event_summary: dict[str, Any],
+) -> list[str]:
+    markers: list[str] = []
+    if decision_count:
+        markers.append("policy_decision_present")
+    if max_backlog_over_threshold > 0:
+        markers.append("backlog_exceeded_threshold")
+    if fallback_tasks:
+        markers.append("fallback_policy_used")
+    if limited_tasks:
+        markers.append("workload_limited_by_policy")
+    if _positive_int(runtime_event_summary.get("scheduler_delay_event_count")):
+        markers.append("scheduler_delay_present")
+    return markers
 
 
 def _stale_drop_summary(report: dict[str, Any]) -> dict[str, Any]:
