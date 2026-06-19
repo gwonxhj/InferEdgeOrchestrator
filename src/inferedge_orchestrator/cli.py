@@ -217,6 +217,7 @@ def _run_multi_workload_sustained(args: argparse.Namespace) -> int:
     policy_pressure = (
         timeline.get("policy_pressure", {}) if isinstance(timeline, dict) else {}
     )
+    risk_rollup = report.get("operation_risk_rollup", {})
     review_hints = timeline.get("review_hints", []) if isinstance(timeline, dict) else []
     print(f"wrote sustained telemetry: {args.output}")
     if args.edgeenv_feed_output:
@@ -249,6 +250,19 @@ def _run_multi_workload_sustained(args: argparse.Namespace) -> int:
             f"protected={_format_cli_list(policy_pressure.get('protected_tasks'))} "
             f"fallback={_format_cli_list(policy_pressure.get('fallback_tasks'))} "
             f"markers={_format_cli_list(policy_pressure.get('pressure_markers'))}"
+        )
+    if isinstance(risk_rollup, dict) and risk_rollup:
+        affected = risk_rollup.get("affected_tasks", {})
+        if not isinstance(affected, dict):
+            affected = {}
+        print(
+            "operation-risk: "
+            f"level={risk_rollup.get('risk_level', 'unknown')} "
+            f"first_read={risk_rollup.get('first_read', 'unknown')} "
+            f"reasons={_format_cli_list(risk_rollup.get('primary_reasons'))} "
+            f"scheduler_delay={_format_cli_list(affected.get('scheduler_delay'))} "
+            f"fallback={_format_cli_list(affected.get('fallback'))} "
+            f"degraded={_format_cli_list(affected.get('degraded'))}"
         )
     return 0
 

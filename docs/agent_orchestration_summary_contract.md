@@ -310,6 +310,10 @@ markers only; it does not perform regression analysis or deployment judgement.
 The checker output also prints the compact `operation_timeline` review hints and
 stale-drop count/tasks so reviewers can see queue delay/fallback/deadline/stale
 drop pressure without opening the full JSON first.
+The `run-multi-workload-sustained` CLI also prints an `operation-risk` first-read
+line from `operation_risk_rollup` with risk level, primary reasons, and affected
+tasks. This is a reviewer navigation aid only; the JSON rollup remains the
+source evidence, and Lab remains the deployment decision owner.
 
 ## Compatibility Rules
 
