@@ -291,6 +291,11 @@ latency wait, policy decision, affected task, review hint를 compact하게
 보여줍니다. 같은 block은 `stale_drop` summary도 포함해 oldest queued frame
 drop과 load-shedding drop을 stale/backlog evidence로 분류하고,
 `tasks_with_stale_drop`, reason count, `review_stale_drop` hint를 보존합니다.
+또한 `worker_health_trend`를 포함해 `worker_health_snapshot`과 runtime event를
+compact하게 묶고, health-state count, health state별 task, task별 scheduler
+delay/fallback/resource degradation context, `scheduler_owner=orchestrator`,
+`decision_owner=lab`, `not_a_deployment_decision=true` ownership marker를
+보존합니다.
 이 summary는 AIGuard/Lab/Env가 raw timeline을 훑기 전에 보는 additive
 navigation aid이며 `drop_events`, `queue_depth_timeline`, `latency_timeline`,
 `policy_decision_log`를 대체하지 않고 deployment decision도 아닙니다.

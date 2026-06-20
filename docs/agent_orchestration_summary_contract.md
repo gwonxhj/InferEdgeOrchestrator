@@ -291,6 +291,11 @@ readout of queue pressure, latency wait, policy decisions, affected tasks, and
 review hints. The same block now includes a `stale_drop` summary that classifies
 oldest-queued-frame drops and load-shedding drops as stale/backlog evidence,
 including `tasks_with_stale_drop`, reason counts, and `review_stale_drop` hints.
+It also includes `worker_health_trend`, a supplemental compact view of
+`worker_health_snapshot` plus runtime events with health-state counts,
+tasks-by-health-state, per-task scheduler delay/fallback/resource degradation
+context, and `scheduler_owner=orchestrator`, `decision_owner=lab`,
+`not_a_deployment_decision=true` ownership markers.
 This summary is an additive navigation aid for AIGuard/Lab/Env; it does not
 replace `drop_events`, `queue_depth_timeline`, `latency_timeline`, or
 `policy_decision_log`, and it is not a deployment decision.

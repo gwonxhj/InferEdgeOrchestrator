@@ -24,6 +24,7 @@ from inferedge_orchestrator.sustained import (
     POLICY_PRESSURE_SUMMARY_SCHEMA,
     SCHEDULER_FAIRNESS_SUMMARY_SCHEMA,
     STALE_DROP_SUMMARY_SCHEMA,
+    WORKER_HEALTH_TREND_SCHEMA,
     apply_device_local_input_overrides,
     load_tegrastats_timeline,
     validate_edgeenv_runtime_telemetry_feed,
@@ -215,6 +216,32 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     assert "Lab remains the final deployment decision owner" in (
         fairness["interpretation"]
     )
+    worker_health_trend = timeline["worker_health_trend"]
+    assert worker_health_trend["schema_version"] == WORKER_HEALTH_TREND_SCHEMA
+    assert worker_health_trend["operation_context_role"] == "supplemental"
+    assert worker_health_trend["scheduler_owner"] == "orchestrator"
+    assert worker_health_trend["decision_owner"] == "lab"
+    assert worker_health_trend["not_a_deployment_decision"] is True
+    assert worker_health_trend["source"] == (
+        "worker_health_snapshot+runtime_event_summary"
+    )
+    assert worker_health_trend["health_state_counts"] == (
+        report["worker_health_snapshot"]["health_state_counts"]
+    )
+    assert "degraded" in worker_health_trend["tasks_by_health_state"]
+    assert "voice_command_agent" in worker_health_trend["tasks_by_health_state"][
+        "degraded"
+    ]
+    assert "voice_command_agent" in worker_health_trend["task_health_context"]
+    voice_health = worker_health_trend["task_health_context"]["voice_command_agent"]
+    assert voice_health["health_state"] in {"constrained", "degraded"}
+    assert voice_health["scheduler_delay_event_count"] > 0
+    assert voice_health["fallback_count"] > 0
+    assert "review_worker_scheduler_delay" in worker_health_trend["review_hints"]
+    assert "review_worker_fallback" in worker_health_trend["review_hints"]
+    assert "Lab remains the final deployment decision owner" in (
+        worker_health_trend["interpretation"]
+    )
     assert "review_queue_pressure" in timeline["review_hints"]
     assert "review_scheduler_delay" in timeline["review_hints"]
     assert "review_stale_drop" in timeline["review_hints"]
@@ -298,6 +325,10 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     assert candidate["operation"]["stale_drop_summary"] == stale_drop
     assert candidate["operation"]["operation_risk_rollup"] == risk_rollup
     assert candidate["operation"]["scheduler_fairness_summary"] == fairness
+    assert (
+        candidate["operation"]["operation_timeline_summary"]["worker_health_trend"]
+        == worker_health_trend
+    )
     protection = candidate["operation"]["latency_budget_protection"]
     assert protection["schema_version"] == LATENCY_BUDGET_PROTECTION_SCHEMA
     assert protection["operation_context_role"] == "supplemental"
@@ -629,6 +660,32 @@ def test_write_edgeenv_runtime_telemetry_feed_requires_stale_drop_schema(
     with pytest.raises(
         ValueError,
         match="stale_drop_summary.scheduler_owner must be orchestrator",
+    ):
+        write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
+
+
+def test_write_edgeenv_runtime_telemetry_feed_requires_worker_health_trend_schema(
+    tmp_path,
+) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    report = write_multi_workload_sustained(
+        config,
+        output=tmp_path / "report.json",
+        frames=4,
+    )
+    report["edgeenv_runtime_telemetry_feed"]["candidate_context"]["operation"][
+        "operation_timeline_summary"
+    ]["worker_health_trend"]["decision_owner"] = "orchestrator"
+
+    with pytest.raises(
+        ValueError,
+        match="worker_health_trend.decision_owner must be lab",
     ):
         write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
 
