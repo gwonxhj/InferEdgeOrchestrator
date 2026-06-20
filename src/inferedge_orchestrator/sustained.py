@@ -43,6 +43,7 @@ STALE_DROP_REASON_CLASSES = {
     "queue_overflow_drop_oldest": "stale_queue_overflow",
     "load_shedding_backlog_threshold_exceeded": "load_shedding_stale_backlog",
 }
+WORKER_HEALTH_TREND_SCHEMA = "inferedge-orchestrator-worker-health-trend-v1"
 SCHEDULER_FAIRNESS_SUMMARY_SCHEMA = (
     "inferedge-orchestrator-scheduler-fairness-summary-v1"
 )
@@ -754,6 +755,58 @@ def _validate_operation_timeline_summary(payload: dict[str, Any]) -> None:
                 "operation_timeline_summary.scheduler_fairness must be an object"
             )
         _validate_scheduler_fairness_summary(scheduler_fairness)
+    worker_health_trend = payload.get("worker_health_trend")
+    if worker_health_trend is not None:
+        if not isinstance(worker_health_trend, dict):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                "operation_timeline_summary.worker_health_trend must be an object"
+            )
+        _validate_worker_health_trend(worker_health_trend)
+
+
+def _validate_worker_health_trend(payload: dict[str, Any]) -> None:
+    if payload.get("schema_version") != WORKER_HEALTH_TREND_SCHEMA:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "operation_timeline_summary.worker_health_trend.schema_version must be "
+            f"{WORKER_HEALTH_TREND_SCHEMA}"
+        )
+    if payload.get("operation_context_role") != "supplemental":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "operation_timeline_summary.worker_health_trend."
+            "operation_context_role must be supplemental"
+        )
+    if payload.get("scheduler_owner") != "orchestrator":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "operation_timeline_summary.worker_health_trend.scheduler_owner "
+            "must be orchestrator"
+        )
+    if payload.get("decision_owner") != "lab":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "operation_timeline_summary.worker_health_trend.decision_owner "
+            "must be lab"
+        )
+    if payload.get("not_a_deployment_decision") is not True:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "operation_timeline_summary.worker_health_trend."
+            "not_a_deployment_decision must be true"
+        )
+    for field in (
+        "health_state_counts",
+        "tasks_by_health_state",
+        "task_health_context",
+    ):
+        if not isinstance(payload.get(field), dict):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                "operation_timeline_summary.worker_health_trend."
+                f"{field} must be an object"
+            )
 
 
 def _validate_policy_pressure_summary(payload: dict[str, Any]) -> None:
@@ -1520,6 +1573,7 @@ def _operation_timeline_summary(
         "policy_pressure": _policy_pressure_summary(report),
         "stale_drop": stale_drop,
         "scheduler_fairness": _scheduler_fairness_summary(config, report),
+        "worker_health_trend": _worker_health_trend_summary(report),
         "affected_tasks": {
             "deadline_missed": _string_list(
                 runtime_event_summary.get("tasks_with_deadline_miss")
@@ -1572,6 +1626,88 @@ def _latency_timeline_summary(report: dict[str, Any]) -> dict[str, Any]:
         },
         "tasks_with_deadline_miss": tasks_with_deadline_miss,
     }
+
+
+def _worker_health_trend_summary(report: dict[str, Any]) -> dict[str, Any]:
+    worker_health = _dict_value(report.get("worker_health_snapshot"))
+    workers = _dict_value(worker_health.get("workers"))
+    runtime_event_summary = _dict_value(report.get("runtime_event_summary"))
+    task_event_summary = _dict_value(runtime_event_summary.get("task_event_summary"))
+    health_state_counts = _dict_value(worker_health.get("health_state_counts"))
+    tasks_by_health_state: dict[str, list[str]] = {}
+    task_health_context: dict[str, dict[str, Any]] = {}
+
+    for task_name, worker in sorted(workers.items()):
+        if not isinstance(task_name, str) or not isinstance(worker, dict):
+            continue
+        health_state = str(worker.get("health_state", "unknown"))
+        tasks_by_health_state.setdefault(health_state, []).append(task_name)
+        task_events = _dict_value(task_event_summary.get(task_name))
+        task_health_context[task_name] = {
+            "health_state": health_state,
+            "primary_health_reason": worker.get("primary_health_reason"),
+            "health_reasons": _string_list(worker.get("health_reasons")),
+            "executed_count": _non_negative_int_value(worker.get("executed_count")),
+            "dropped_count": _non_negative_int_value(worker.get("dropped_count")),
+            "deadline_missed_count": _non_negative_int_value(
+                worker.get("deadline_missed_count")
+            ),
+            "fallback_count": _non_negative_int_value(worker.get("fallback_count")),
+            "drop_rate": _number_value(worker.get("drop_rate")) or 0.0,
+            "deadline_miss_rate": _number_value(worker.get("deadline_miss_rate"))
+            or 0.0,
+            "fallback_rate": _number_value(worker.get("fallback_rate")) or 0.0,
+            "scheduler_delay_event_count": _non_negative_int_value(
+                task_events.get("scheduler_delay_event_count")
+            ),
+            "resource_degraded_event_count": _non_negative_int_value(
+                task_events.get("resource_degraded_event_count")
+            ),
+        }
+
+    return {
+        "schema_version": WORKER_HEALTH_TREND_SCHEMA,
+        "operation_context_role": "supplemental",
+        "scheduler_owner": "orchestrator",
+        "decision_owner": "lab",
+        "not_a_deployment_decision": True,
+        "source": "worker_health_snapshot+runtime_event_summary",
+        "health_state_counts": health_state_counts,
+        "tasks_by_health_state": tasks_by_health_state,
+        "task_health_context": task_health_context,
+        "degraded_workers": _string_list(worker_health.get("degraded_workers")),
+        "constrained_workers": _string_list(worker_health.get("constrained_workers")),
+        "review_hints": _worker_health_trend_review_hints(
+            tasks_by_health_state,
+            task_health_context,
+        ),
+        "interpretation": (
+            "Worker health trend is supplemental operation evidence. "
+            "Lab remains the final deployment decision owner."
+        ),
+    }
+
+
+def _worker_health_trend_review_hints(
+    tasks_by_health_state: dict[str, list[str]],
+    task_health_context: dict[str, dict[str, Any]],
+) -> list[str]:
+    hints: list[str] = []
+    if tasks_by_health_state.get("degraded"):
+        hints.append("review_degraded_workers")
+    if tasks_by_health_state.get("constrained"):
+        hints.append("review_constrained_workers")
+    if any(
+        context.get("scheduler_delay_event_count", 0) > 0
+        for context in task_health_context.values()
+    ):
+        hints.append("review_worker_scheduler_delay")
+    if any(
+        context.get("fallback_count", 0) > 0
+        for context in task_health_context.values()
+    ):
+        hints.append("review_worker_fallback")
+    return hints or ["worker_health_nominal"]
 
 
 def _policy_timeline_summary(report: dict[str, Any]) -> dict[str, Any]:
