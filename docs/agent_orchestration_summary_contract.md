@@ -291,6 +291,10 @@ readout of queue pressure, latency wait, policy decisions, affected tasks, and
 review hints. The same block now includes a `stale_drop` summary that classifies
 oldest-queued-frame drops and load-shedding drops as stale/backlog evidence,
 including `tasks_with_stale_drop`, reason counts, and `review_stale_drop` hints.
+It also includes `pressure_window`, a supplemental reviewer-first summary of
+queue-depth windows that stayed above the overload threshold, including
+window count, longest window cycles, peak queue depth, limited/protected tasks,
+fallback tasks, and the `review_sustained_pressure_window` first-read marker.
 It also includes `worker_health_trend`, a supplemental compact view of
 `worker_health_snapshot` plus runtime events with health-state counts,
 tasks-by-health-state, per-task scheduler delay/fallback/resource degradation
@@ -314,7 +318,9 @@ lineage, per-task source/stage mappings, positive event counts, and ownership
 markers only; it does not perform regression analysis or deployment judgement.
 The checker output also prints the compact `operation_timeline` review hints and
 stale-drop count/tasks so reviewers can see queue delay/fallback/deadline/stale
-drop pressure without opening the full JSON first.
+drop pressure without opening the full JSON first. It also prints the
+`pressure_window` first-read line so the sustained overload interval is visible
+without treating it as a deployment decision.
 The `run-multi-workload-sustained` CLI also prints an `operation-risk` first-read
 line from `operation_risk_rollup` with risk level, primary reasons, and affected
 tasks. This is a reviewer navigation aid only; the JSON rollup remains the

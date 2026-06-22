@@ -291,6 +291,10 @@ latency wait, policy decision, affected task, review hint를 compact하게
 보여줍니다. 같은 block은 `stale_drop` summary도 포함해 oldest queued frame
 drop과 load-shedding drop을 stale/backlog evidence로 분류하고,
 `tasks_with_stale_drop`, reason count, `review_stale_drop` hint를 보존합니다.
+또한 `pressure_window`를 포함해 overload threshold를 넘긴 queue-depth 구간을
+reviewer-first summary로 보여줍니다. 여기에는 window count, longest window
+cycles, peak queue depth, limited/protected task, fallback task,
+`review_sustained_pressure_window` first-read marker가 포함됩니다.
 또한 `worker_health_trend`를 포함해 `worker_health_snapshot`과 runtime event를
 compact하게 묶고, health-state count, health state별 task, task별 scheduler
 delay/fallback/resource degradation context, `scheduler_owner=orchestrator`,
@@ -316,7 +320,9 @@ EdgeEnv로 넘기기 전에 저장된 feed를 검증하려면
 deployment judgement를 수행하지 않습니다.
 checker 출력은 compact `operation_timeline` review hint와 stale-drop count/task도
 함께 보여주므로, reviewer가 전체 JSON을 열기 전에
-queue delay/fallback/deadline/stale drop pressure를 확인할 수 있습니다.
+queue delay/fallback/deadline/stale drop pressure를 확인할 수 있습니다. 또한
+`pressure_window` first-read line도 출력해 sustained overload interval을
+deployment decision이 아닌 reviewer navigation으로 확인할 수 있게 합니다.
 `run-multi-workload-sustained` CLI도 `operation_risk_rollup`에서 가져온
 `operation-risk` first-read line을 출력해 risk level, primary reason, affected
 task를 바로 보여줍니다. 이는 reviewer navigation aid일 뿐이며 JSON rollup이

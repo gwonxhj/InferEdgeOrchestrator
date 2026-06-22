@@ -51,6 +51,9 @@ SCHEDULER_FAIRNESS_SUMMARY_SCHEMA = (
 POLICY_PRESSURE_SUMMARY_SCHEMA = (
     "inferedge-orchestrator-policy-pressure-summary-v1"
 )
+PRESSURE_WINDOW_SUMMARY_SCHEMA = (
+    "inferedge-orchestrator-pressure-window-summary-v1"
+)
 
 
 def apply_device_local_input_overrides(
@@ -748,6 +751,14 @@ def _validate_operation_timeline_summary(payload: dict[str, Any]) -> None:
                 "operation_timeline_summary.policy_pressure must be an object"
             )
         _validate_policy_pressure_summary(policy_pressure)
+    pressure_window = payload.get("pressure_window")
+    if pressure_window is not None:
+        if not isinstance(pressure_window, dict):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                "operation_timeline_summary.pressure_window must be an object"
+            )
+        _validate_pressure_window_summary(pressure_window)
     scheduler_fairness = payload.get("scheduler_fairness")
     if scheduler_fairness is not None:
         if not isinstance(scheduler_fairness, dict):
@@ -883,6 +894,66 @@ def _validate_policy_pressure_summary(payload: dict[str, Any]) -> None:
             "policy_pressure_summary.backlog_thresholds must be a "
             "non-negative integer list"
         )
+
+
+def _validate_pressure_window_summary(payload: dict[str, Any]) -> None:
+    if payload.get("schema_version") != PRESSURE_WINDOW_SUMMARY_SCHEMA:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "operation_timeline_summary.pressure_window.schema_version must be "
+            f"{PRESSURE_WINDOW_SUMMARY_SCHEMA}"
+        )
+    if payload.get("operation_context_role") != "supplemental":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "operation_timeline_summary.pressure_window."
+            "operation_context_role must be supplemental"
+        )
+    if payload.get("scheduler_owner") != "orchestrator":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "operation_timeline_summary.pressure_window.scheduler_owner "
+            "must be orchestrator"
+        )
+    if payload.get("decision_owner") != "lab":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "operation_timeline_summary.pressure_window.decision_owner "
+            "must be lab"
+        )
+    if payload.get("not_a_deployment_decision") is not True:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "operation_timeline_summary.pressure_window."
+            "not_a_deployment_decision must be true"
+        )
+    for field in (
+        "window_count",
+        "longest_window_cycles",
+        "peak_total_queue_depth",
+        "overload_backlog_threshold",
+    ):
+        value = payload.get(field)
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                f"operation_timeline_summary.pressure_window.{field} must be "
+                "a non-negative integer"
+            )
+    windows = payload.get("windows")
+    if not isinstance(windows, list):
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "operation_timeline_summary.pressure_window.windows must be a list"
+        )
+    for field in ("limited_tasks", "protected_tasks", "pressure_reasons"):
+        value = payload.get(field)
+        if not isinstance(value, list):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                "operation_timeline_summary.pressure_window."
+                f"{field} must be a list"
+            )
 
 
 def _validate_stale_drop_summary(payload: dict[str, Any]) -> None:
@@ -1542,6 +1613,7 @@ def _operation_timeline_summary(
     worker_health = _dict_value(report.get("worker_health_snapshot"))
     workers = _dict_value(worker_health.get("workers"))
     stale_drop = _stale_drop_summary(report)
+    pressure_window = _pressure_window_summary(report)
     return {
         "schema_version": OPERATION_TIMELINE_SUMMARY_SCHEMA,
         "source": (
@@ -1572,6 +1644,7 @@ def _operation_timeline_summary(
         "latency": _latency_timeline_summary(report),
         "policy": _policy_timeline_summary(report),
         "policy_pressure": _policy_pressure_summary(report),
+        "pressure_window": pressure_window,
         "stale_drop": stale_drop,
         "scheduler_fairness": _scheduler_fairness_summary(config, report),
         "worker_health_trend": _worker_health_trend_summary(report),
@@ -1591,6 +1664,7 @@ def _operation_timeline_summary(
             queue_summary,
             runtime_event_summary,
             stale_drop,
+            pressure_window,
         ),
     }
 
@@ -1827,6 +1901,172 @@ def _policy_pressure_markers(
     return markers
 
 
+def _pressure_window_summary(report: dict[str, Any]) -> dict[str, Any]:
+    queue_summary = _dict_value(report.get("queue_state_summary"))
+    threshold = _non_negative_int_value(
+        queue_summary.get("overload_backlog_threshold")
+    )
+    decisions = _dict_list(report.get("policy_decision_log"))
+    if not threshold:
+        for decision in decisions:
+            threshold = _non_negative_int_value(decision.get("backlog_threshold"))
+            if threshold:
+                break
+
+    windows = _pressure_windows(
+        _dict_list(report.get("queue_depth_timeline")),
+        threshold=threshold,
+    )
+    decision_context = _pressure_window_decision_context(decisions)
+    peak_window = _peak_pressure_window(windows)
+    longest_window = _longest_pressure_window(windows)
+    window_count = len(windows)
+    return {
+        "schema_version": PRESSURE_WINDOW_SUMMARY_SCHEMA,
+        "operation_context_role": "supplemental",
+        "scheduler_owner": "orchestrator",
+        "decision_owner": "lab",
+        "not_a_deployment_decision": True,
+        "source": "queue_depth_timeline+policy_decision_log",
+        "first_read": (
+            "review_sustained_pressure_window"
+            if window_count
+            else "pressure_window_nominal"
+        ),
+        "overload_backlog_threshold": threshold,
+        "window_count": window_count,
+        "longest_window_cycles": (
+            longest_window.get("cycle_count", 0) if longest_window else 0
+        ),
+        "peak_total_queue_depth": (
+            peak_window.get("peak_total_queue_depth", 0) if peak_window else 0
+        ),
+        "peak_window": peak_window,
+        "longest_window": longest_window,
+        "windows": windows,
+        **decision_context,
+        "interpretation": (
+            "Pressure windows are supplemental reviewer navigation evidence "
+            "showing when queue backlog stayed above the scheduler threshold; "
+            "Lab remains the final deployment decision owner."
+        ),
+    }
+
+
+def _pressure_windows(
+    samples: list[dict[str, Any]],
+    *,
+    threshold: int,
+) -> list[dict[str, Any]]:
+    if threshold <= 0:
+        return []
+    windows: list[dict[str, Any]] = []
+    active: dict[str, Any] | None = None
+    active_cycles: set[int] = set()
+
+    for sample in samples:
+        total_queue_depth = _non_negative_int_value(sample.get("total_queue_depth"))
+        cycle = _non_negative_int_value(sample.get("cycle"))
+        if total_queue_depth <= threshold:
+            if active is not None:
+                _finalize_pressure_window(active, active_cycles)
+                windows.append(active)
+                active = None
+                active_cycles = set()
+            continue
+        stage = sample.get("stage")
+        if active is None:
+            active = {
+                "start_cycle": cycle,
+                "end_cycle": cycle,
+                "sample_count": 0,
+                "peak_total_queue_depth": 0,
+                "peak_stage": stage,
+            }
+        active["end_cycle"] = cycle
+        active["sample_count"] += 1
+        active_cycles.add(cycle)
+        if total_queue_depth > active["peak_total_queue_depth"]:
+            active["peak_total_queue_depth"] = total_queue_depth
+            active["peak_stage"] = stage
+            queue_depth = sample.get("queue_depth")
+            if isinstance(queue_depth, dict):
+                active["peak_queue_depth"] = dict(queue_depth)
+
+    if active is not None:
+        _finalize_pressure_window(active, active_cycles)
+        windows.append(active)
+    return windows
+
+
+def _finalize_pressure_window(
+    window: dict[str, Any],
+    cycles: set[int],
+) -> None:
+    window["cycle_count"] = len(cycles)
+
+
+def _peak_pressure_window(windows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not windows:
+        return None
+    return dict(
+        max(
+            windows,
+            key=lambda window: (
+                _non_negative_int_value(window.get("peak_total_queue_depth")),
+                _non_negative_int_value(window.get("cycle_count")),
+            ),
+        )
+    )
+
+
+def _longest_pressure_window(windows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not windows:
+        return None
+    return dict(
+        max(
+            windows,
+            key=lambda window: (
+                _non_negative_int_value(window.get("cycle_count")),
+                _non_negative_int_value(window.get("peak_total_queue_depth")),
+            ),
+        )
+    )
+
+
+def _pressure_window_decision_context(
+    decisions: list[dict[str, Any]],
+) -> dict[str, Any]:
+    limited_tasks: list[str] = []
+    protected_tasks: list[str] = []
+    pressure_reasons: list[str] = []
+    fallback_tasks: list[str] = []
+    for decision in decisions:
+        limited = decision.get("limited_task")
+        if isinstance(limited, str) and limited and limited not in limited_tasks:
+            limited_tasks.append(limited)
+        protected = decision.get("protected_task")
+        if (
+            isinstance(protected, str)
+            and protected
+            and protected not in protected_tasks
+        ):
+            protected_tasks.append(protected)
+        reason = decision.get("decision_reason") or decision.get("reason")
+        if isinstance(reason, str) and reason and reason not in pressure_reasons:
+            pressure_reasons.append(reason)
+        if bool(decision.get("fallback_used")) and isinstance(limited, str):
+            if limited and limited not in fallback_tasks:
+                fallback_tasks.append(limited)
+    return {
+        "limited_tasks": limited_tasks,
+        "protected_tasks": protected_tasks,
+        "fallback_tasks": fallback_tasks,
+        "pressure_reasons": pressure_reasons,
+        "policy_decision_count": len(decisions),
+    }
+
+
 def _stale_drop_summary(report: dict[str, Any]) -> dict[str, Any]:
     events = _dict_list(report.get("drop_events"))
     stale_reason_counts: dict[str, int] = {}
@@ -1920,8 +2160,11 @@ def _operation_timeline_review_hints(
     queue_summary: dict[str, Any],
     runtime_event_summary: dict[str, Any],
     stale_drop_summary: dict[str, Any],
+    pressure_window_summary: dict[str, Any],
 ) -> list[str]:
     hints: list[str] = []
+    if _positive_int(pressure_window_summary.get("window_count")):
+        hints.append("review_sustained_pressure_window")
     if queue_summary.get("queue_pressure_state") == "overloaded":
         hints.append("review_queue_pressure")
     if _positive_int(runtime_event_summary.get("scheduler_delay_event_count")):
