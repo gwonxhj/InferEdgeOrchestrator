@@ -1156,6 +1156,9 @@ def test_run_multi_workload_sustained_device_local_starter(tmp_path) -> None:
     assert "runtime_thermal_instability" in feed["edgeenv_mapping_hint"][
         "aiguard_evidence_candidates"
     ]
+    assert "edgeenv_orchestrator_worker_health_trend" in feed[
+        "edgeenv_mapping_hint"
+    ]["aiguard_evidence_candidates"]
     assert feed["edgeenv_mapping_hint"]["coverage_summary_owner"] == "edgeenv"
     assert feed["edgeenv_mapping_hint"]["coverage_summary_path"] == (
         EDGEENV_HISTORY_COVERAGE_PATH

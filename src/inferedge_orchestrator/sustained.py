@@ -28,6 +28,7 @@ EDGEENV_CANDIDATE_CONTEXT_REQUIRED_FIELDS = [
 EDGEENV_AIGUARD_EVIDENCE_CANDIDATES = [
     "runtime_queue_overload",
     "runtime_thermal_instability",
+    "edgeenv_orchestrator_worker_health_trend",
 ]
 EDGEENV_PRODUCER_LINEAGE_AIGUARD_EVIDENCE_TYPE = (
     "edgeenv_orchestrator_producer_lineage"

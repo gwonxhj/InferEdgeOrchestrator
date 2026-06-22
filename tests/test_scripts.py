@@ -79,7 +79,8 @@ def test_edgeenv_runtime_feed_contract_checker_passes_device_local_feed(
     ) in out
     assert (
         "operation_evidence_candidates: runtime_queue_overload, "
-        "runtime_thermal_instability"
+        "runtime_thermal_instability, "
+        "edgeenv_orchestrator_worker_health_trend"
     ) in out
     assert "device_local_producer_sources" in out
     assert "producer_stage_by_task" in out

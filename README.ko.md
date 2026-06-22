@@ -163,8 +163,9 @@ flowchart LR
   `coverage_summary_path=runtime_telemetry_context.history.telemetry_coverage`,
   `operation_context_role=supplemental`, 그리고 EdgeEnv/AIGuard/Lab이 사용하는
   candidate context 필수 필드를 검증한다. 또한 `aiguard_evidence_candidates`가
-  `runtime_queue_overload`, `runtime_thermal_instability`를 유지하는지 확인해
-  downstream diagnosis/report fixture의 deterministic anomaly 경계를 보존한다.
+  `runtime_queue_overload`, `runtime_thermal_instability`,
+  `edgeenv_orchestrator_worker_health_trend`를 유지하는지 확인해 downstream
+  diagnosis/report fixture의 deterministic anomaly 경계를 보존한다.
 - policy-pressure context는 operation timeline에서
   `candidate_context.operation.policy_pressure_summary`로 mirror되며,
   `role=supplemental`, `scheduler_owner=orchestrator`, `decision_owner=lab`,

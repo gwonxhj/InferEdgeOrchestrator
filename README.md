@@ -165,9 +165,10 @@ The boundary is intentional:
   `coverage_summary_path=runtime_telemetry_context.history.telemetry_coverage`,
   `operation_context_role=supplemental`, and the required candidate context
   fields used by EdgeEnv, AIGuard, and Lab. It also requires
-  `aiguard_evidence_candidates` to keep `runtime_queue_overload` and
-  `runtime_thermal_instability` so downstream diagnosis/report fixtures keep
-  the same deterministic anomaly boundary.
+  `aiguard_evidence_candidates` to keep `runtime_queue_overload`,
+  `runtime_thermal_instability`, and
+  `edgeenv_orchestrator_worker_health_trend` so downstream diagnosis/report
+  fixtures keep the same deterministic anomaly boundary.
 - Policy-pressure context is mirrored from the operation timeline into
   `candidate_context.operation.policy_pressure_summary` with
   `role=supplemental`, `scheduler_owner=orchestrator`, `decision_owner=lab`,
