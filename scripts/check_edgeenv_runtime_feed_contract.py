@@ -112,6 +112,7 @@ def main(argv: list[str] | None = None) -> int:
         affected = operation_timeline_summary.get("affected_tasks") or {}
         review_hints = operation_timeline_summary.get("review_hints") or []
         stale_drop = operation_timeline_summary.get("stale_drop") or {}
+        pressure_window = operation_timeline_summary.get("pressure_window") or {}
         policy_pressure = (
             policy_pressure_summary
             or operation_timeline_summary.get("policy_pressure")
@@ -142,6 +143,21 @@ def main(argv: list[str] | None = None) -> int:
                 f"{_format_list(policy_pressure.get('fallback_tasks'))}; "
                 "markers="
                 f"{_format_list(policy_pressure.get('pressure_markers'))}"
+            )
+        if pressure_window:
+            print(
+                "pressure_window: "
+                f"windows={pressure_window.get('window_count', 0)}; "
+                "longest_cycles="
+                f"{pressure_window.get('longest_window_cycles', 0)}; "
+                "peak_queue="
+                f"{pressure_window.get('peak_total_queue_depth', 0)}; "
+                "limited="
+                f"{_format_list(pressure_window.get('limited_tasks'))}; "
+                "protected="
+                f"{_format_list(pressure_window.get('protected_tasks'))}; "
+                "first_read="
+                f"{pressure_window.get('first_read') or 'unknown'}"
             )
         if scheduler_fairness:
             print(

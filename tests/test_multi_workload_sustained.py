@@ -22,6 +22,7 @@ from inferedge_orchestrator.sustained import (
     MULTI_WORKLOAD_SCHEMA,
     OPERATION_TIMELINE_SUMMARY_SCHEMA,
     POLICY_PRESSURE_SUMMARY_SCHEMA,
+    PRESSURE_WINDOW_SUMMARY_SCHEMA,
     SCHEDULER_FAIRNESS_SUMMARY_SCHEMA,
     STALE_DROP_SUMMARY_SCHEMA,
     WORKER_HEALTH_TREND_SCHEMA,
@@ -135,6 +136,43 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
         "queue_backlog_threshold_exceeded"
     )
     assert timeline["policy"]["first_decision"]["queue_depth_snapshot"]
+    pressure_window = timeline["pressure_window"]
+    assert pressure_window["schema_version"] == PRESSURE_WINDOW_SUMMARY_SCHEMA
+    assert pressure_window["operation_context_role"] == "supplemental"
+    assert pressure_window["scheduler_owner"] == "orchestrator"
+    assert pressure_window["decision_owner"] == "lab"
+    assert pressure_window["not_a_deployment_decision"] is True
+    assert pressure_window["first_read"] == "review_sustained_pressure_window"
+    assert pressure_window["window_count"] > 0
+    assert pressure_window["overload_backlog_threshold"] == (
+        report["queue_state_summary"]["overload_backlog_threshold"]
+    )
+    assert pressure_window["peak_total_queue_depth"] == (
+        report["queue_state_summary"]["max_total_queue_depth"]
+    )
+    assert pressure_window["longest_window_cycles"] > 0
+    assert pressure_window["peak_window"]["peak_queue_depth"]
+    assert pressure_window["longest_window"]["cycle_count"] == (
+        pressure_window["longest_window_cycles"]
+    )
+    assert pressure_window["policy_decision_count"] == len(
+        report["policy_decision_log"]
+    )
+    assert pressure_window["limited_tasks"] == [
+        "voice_command_agent",
+        "vision_agent",
+    ]
+    assert pressure_window["protected_tasks"] == ["safety_monitor_agent"]
+    assert pressure_window["fallback_tasks"] == [
+        "voice_command_agent",
+        "vision_agent",
+    ]
+    assert pressure_window["pressure_reasons"] == [
+        "queue_backlog_threshold_exceeded"
+    ]
+    assert "Lab remains the final deployment decision owner" in (
+        pressure_window["interpretation"]
+    )
     policy_pressure = timeline["policy_pressure"]
     assert policy_pressure["schema_version"] == POLICY_PRESSURE_SUMMARY_SCHEMA
     assert policy_pressure["role"] == "supplemental"
@@ -242,6 +280,7 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     assert "Lab remains the final deployment decision owner" in (
         worker_health_trend["interpretation"]
     )
+    assert "review_sustained_pressure_window" in timeline["review_hints"]
     assert "review_queue_pressure" in timeline["review_hints"]
     assert "review_scheduler_delay" in timeline["review_hints"]
     assert "review_stale_drop" in timeline["review_hints"]
@@ -320,6 +359,10 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     assert (
         candidate["operation"]["operation_timeline_summary"]["policy_pressure"]
         == policy_pressure
+    )
+    assert (
+        candidate["operation"]["operation_timeline_summary"]["pressure_window"]
+        == pressure_window
     )
     assert candidate["operation"]["policy_pressure_summary"] == policy_pressure
     assert candidate["operation"]["stale_drop_summary"] == stale_drop

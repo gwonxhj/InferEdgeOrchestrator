@@ -93,6 +93,9 @@ def test_edgeenv_runtime_feed_contract_checker_passes_device_local_feed(
     assert "stale_drop=" in out
     assert "stale_drop_tasks=" in out
     assert "max_queue_wait_ms=" in out
+    assert "pressure_window:" in out
+    assert "first_read=review_sustained_pressure_window" in out
+    assert "protected=safety_monitor_agent" in out
     assert "policy_pressure:" in out
     assert "decisions=" in out
     assert "limited=" in out
