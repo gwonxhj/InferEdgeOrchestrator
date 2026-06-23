@@ -249,6 +249,8 @@ def _run_multi_workload_sustained(args: argparse.Namespace) -> int:
             f"limited={_format_cli_list(policy_pressure.get('limited_tasks'))} "
             f"protected={_format_cli_list(policy_pressure.get('protected_tasks'))} "
             f"fallback={_format_cli_list(policy_pressure.get('fallback_tasks'))} "
+            "reason_counts="
+            f"{_format_cli_count_map(policy_pressure.get('decision_reason_counts'))} "
             f"markers={_format_cli_list(policy_pressure.get('pressure_markers'))}"
         )
     if isinstance(risk_rollup, dict) and risk_rollup:
@@ -343,4 +345,15 @@ def _format_cli_list(value: object) -> str:
     if not isinstance(value, list):
         return "none"
     items = [str(item) for item in value if isinstance(item, str) and item]
+    return ",".join(items) if items else "none"
+
+
+def _format_cli_count_map(value: object) -> str:
+    if not isinstance(value, dict):
+        return "none"
+    items = [
+        f"{key}:{count}"
+        for key, count in sorted(value.items())
+        if isinstance(key, str) and key and isinstance(count, int | float)
+    ]
     return ",".join(items) if items else "none"

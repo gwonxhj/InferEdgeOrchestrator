@@ -99,6 +99,7 @@ def test_edgeenv_runtime_feed_contract_checker_passes_device_local_feed(
     assert "policy_pressure:" in out
     assert "decisions=" in out
     assert "limited=" in out
+    assert "reason_counts=queue_backlog_threshold_exceeded:" in out
     assert "markers=" in out
     assert "scheduler_fairness:" in out
     assert "starvation_risk=" in out

@@ -914,6 +914,7 @@ def test_cli_run_multi_workload_sustained_writes_edgeenv_feed_output(
     assert "policy-pressure: decisions=" in captured.out
     assert "limited=" in captured.out
     assert "protected=" in captured.out
+    assert "reason_counts=queue_backlog_threshold_exceeded:" in captured.out
     assert "markers=" in captured.out
     assert "operation-risk: level=review" in captured.out
     assert "first_read=review_operation_risk_context" in captured.out
