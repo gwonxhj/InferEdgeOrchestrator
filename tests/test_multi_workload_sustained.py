@@ -23,6 +23,7 @@ from inferedge_orchestrator.sustained import (
     OPERATION_TIMELINE_SUMMARY_SCHEMA,
     POLICY_PRESSURE_SUMMARY_SCHEMA,
     PRESSURE_WINDOW_SUMMARY_SCHEMA,
+    SCENARIO_COVERAGE_SUMMARY_SCHEMA,
     SCHEDULER_FAIRNESS_SUMMARY_SCHEMA,
     STALE_DROP_SUMMARY_SCHEMA,
     WORKER_HEALTH_TREND_SCHEMA,
@@ -116,6 +117,49 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
         "policy_decision": len(report["policy_decision_log"]),
         "runtime_event": report["runtime_event_summary"]["event_count"],
     }
+    scenario_coverage = timeline["scenario_coverage"]
+    assert scenario_coverage["schema_version"] == SCENARIO_COVERAGE_SUMMARY_SCHEMA
+    assert scenario_coverage["operation_context_role"] == "supplemental"
+    assert scenario_coverage["scheduler_owner"] == "orchestrator"
+    assert scenario_coverage["decision_owner"] == "lab"
+    assert scenario_coverage["not_a_deployment_decision"] is True
+    assert scenario_coverage["first_read"] == "review_sustained_scenario_coverage"
+    assert scenario_coverage["scenario_mode"] == "sustained_high_load"
+    assert scenario_coverage["scenario_label"] == (
+        "producer_backed_sustained_high_load"
+    )
+    assert scenario_coverage["observed_cycle_count"] >= 8
+    assert scenario_coverage["max_observed_cycle"] >= 7
+    assert scenario_coverage["task_count"] == 3
+    assert scenario_coverage["queue_depth_sample_count"] == len(
+        report["queue_depth_timeline"]
+    )
+    assert scenario_coverage["latency_sample_count"] == len(
+        report["latency_timeline"]
+    )
+    assert scenario_coverage["runtime_event_count"] == (
+        report["runtime_event_summary"]["event_count"]
+    )
+    assert scenario_coverage["policy_decision_count"] == len(
+        report["policy_decision_log"]
+    )
+    assert scenario_coverage["producer_source_count"] == (
+        signals["producer_source_count"]
+    )
+    assert scenario_coverage["device_local_producer_count"] == (
+        signals["device_local_producer_count"]
+    )
+    assert set(scenario_coverage["producer_sources"]) == set(
+        signals["producer_sources"]
+    )
+    assert set(scenario_coverage["coverage_markers"]) >= {
+        "queue_depth_timeline_present",
+        "latency_timeline_present",
+        "runtime_event_summary_present",
+    }
+    assert "Lab remains the final deployment decision owner" in (
+        scenario_coverage["interpretation"]
+    )
     assert timeline["queue"]["max_total_queue_depth"] == (
         report["queue_state_summary"]["max_total_queue_depth"]
     )
@@ -357,6 +401,10 @@ def test_run_multi_workload_sustained_writes_profile_summary(tmp_path) -> None:
     )
     assert candidate["operation"]["operation_timeline_summary"] == timeline
     assert (
+        candidate["operation"]["operation_timeline_summary"]["scenario_coverage"]
+        == scenario_coverage
+    )
+    assert (
         candidate["operation"]["operation_timeline_summary"]["policy_pressure"]
         == policy_pressure
     )
@@ -468,6 +516,19 @@ def test_write_edgeenv_runtime_telemetry_feed_exports_standalone_artifact(
         EDGEENV_AIGUARD_EVIDENCE_CANDIDATES
     )
     producer = feed["candidate_context"]["producer"]
+    scenario_coverage = feed["candidate_context"]["operation"][
+        "operation_timeline_summary"
+    ]["scenario_coverage"]
+    assert scenario_coverage["first_read"] == "review_sustained_scenario_coverage"
+    assert scenario_coverage["producer_sources"] == [
+        "resource_snapshot_fixture",
+        "image_file",
+        "fastapi_request_fixture",
+    ]
+    assert set(scenario_coverage["coverage_markers"]) >= {
+        "producer_context_present",
+        "device_local_producer_context_present",
+    }
     assert producer["operation_context_role"] == "supplemental"
     assert producer["device_local_producer_sources"] == [
         "resource_snapshot_fixture",
@@ -677,6 +738,32 @@ def test_write_edgeenv_runtime_telemetry_feed_requires_operation_timeline_schema
     with pytest.raises(
         ValueError,
         match="operation_timeline_summary.schema_version must be",
+    ):
+        write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
+
+
+def test_write_edgeenv_runtime_telemetry_feed_requires_scenario_coverage_boundary(
+    tmp_path,
+) -> None:
+    config = OrchestratorConfig.from_dict(
+        json.loads(
+            Path("configs/agent_multi_workload_sustained_local.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    report = write_multi_workload_sustained(
+        config,
+        output=tmp_path / "report.json",
+        frames=4,
+    )
+    report["edgeenv_runtime_telemetry_feed"]["candidate_context"]["operation"][
+        "operation_timeline_summary"
+    ]["scenario_coverage"]["decision_owner"] = "orchestrator"
+
+    with pytest.raises(
+        ValueError,
+        match="scenario_coverage.decision_owner must be lab",
     ):
         write_edgeenv_runtime_telemetry_feed(report, tmp_path / "feed.json")
 
@@ -911,6 +998,14 @@ def test_cli_run_multi_workload_sustained_writes_edgeenv_feed_output(
     assert "stale_drop=" in captured.out
     assert "stale_drop_tasks=" in captured.out
     assert "max_queue_wait_ms=" in captured.out
+    assert "scenario-coverage: first_read=review_sustained_scenario_coverage" in (
+        captured.out
+    )
+    assert "cycles=" in captured.out
+    assert "queue_samples=" in captured.out
+    assert "sources=resource_snapshot_fixture,image_file,fastapi_request_fixture" in (
+        captured.out
+    )
     assert "policy-pressure: decisions=" in captured.out
     assert "limited=" in captured.out
     assert "protected=" in captured.out
@@ -1410,6 +1505,10 @@ def test_cli_device_local_overrides_write_edgeenv_feed_output(
     assert "stale_drop=" in captured.out
     assert "stale_drop_tasks=" in captured.out
     assert "max_queue_wait_ms=" in captured.out
+    assert "scenario-coverage: first_read=review_sustained_scenario_coverage" in (
+        captured.out
+    )
+    assert "cycles=" in captured.out
     assert "operation-risk: level=review" in captured.out
     assert "first_read=review_operation_risk_context" in captured.out
     report = json.loads(output.read_text(encoding="utf-8"))

@@ -54,6 +54,9 @@ POLICY_PRESSURE_SUMMARY_SCHEMA = (
 PRESSURE_WINDOW_SUMMARY_SCHEMA = (
     "inferedge-orchestrator-pressure-window-summary-v1"
 )
+SCENARIO_COVERAGE_SUMMARY_SCHEMA = (
+    "inferedge-orchestrator-scenario-coverage-summary-v1"
+)
 
 
 def apply_device_local_input_overrides(
@@ -724,6 +727,14 @@ def _validate_operation_timeline_summary(payload: dict[str, Any]) -> None:
                 "edgeenv_runtime_telemetry_feed.candidate_context.operation."
                 f"operation_timeline_summary.{field} must be an object"
             )
+    scenario_coverage = payload.get("scenario_coverage")
+    if scenario_coverage is not None:
+        if not isinstance(scenario_coverage, dict):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                "operation_timeline_summary.scenario_coverage must be an object"
+            )
+        _validate_scenario_coverage_summary(scenario_coverage)
     review_hints = payload.get("review_hints")
     if (
         not isinstance(review_hints, list)
@@ -775,6 +786,83 @@ def _validate_operation_timeline_summary(payload: dict[str, Any]) -> None:
                 "operation_timeline_summary.worker_health_trend must be an object"
             )
         _validate_worker_health_trend(worker_health_trend)
+
+
+def _validate_scenario_coverage_summary(payload: dict[str, Any]) -> None:
+    if payload.get("schema_version") != SCENARIO_COVERAGE_SUMMARY_SCHEMA:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "operation_timeline_summary.scenario_coverage.schema_version must be "
+            f"{SCENARIO_COVERAGE_SUMMARY_SCHEMA}"
+        )
+    if payload.get("operation_context_role") != "supplemental":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "operation_timeline_summary.scenario_coverage."
+            "operation_context_role must be supplemental"
+        )
+    if payload.get("scheduler_owner") != "orchestrator":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "operation_timeline_summary.scenario_coverage.scheduler_owner "
+            "must be orchestrator"
+        )
+    if payload.get("decision_owner") != "lab":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "operation_timeline_summary.scenario_coverage.decision_owner "
+            "must be lab"
+        )
+    if payload.get("not_a_deployment_decision") is not True:
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "operation_timeline_summary.scenario_coverage."
+            "not_a_deployment_decision must be true"
+        )
+    if payload.get("first_read") != "review_sustained_scenario_coverage":
+        raise ValueError(
+            "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+            "operation_timeline_summary.scenario_coverage.first_read must be "
+            "review_sustained_scenario_coverage"
+        )
+    for field in (
+        "observed_cycle_count",
+        "max_observed_cycle",
+        "task_count",
+        "queue_depth_sample_count",
+        "latency_sample_count",
+        "runtime_event_count",
+        "policy_decision_count",
+        "producer_source_count",
+        "device_local_producer_count",
+    ):
+        value = payload.get(field)
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                "operation_timeline_summary.scenario_coverage."
+                f"{field} must be a non-negative integer"
+            )
+    for field in (
+        "producer_sources",
+        "coverage_markers",
+    ):
+        value = payload.get(field)
+        if not isinstance(value, list) or not all(
+            isinstance(item, str) and item for item in value
+        ):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                "operation_timeline_summary.scenario_coverage."
+                f"{field} must be a string list"
+            )
+    for field in ("producer_sources_by_task", "producer_stage_by_task"):
+        if not isinstance(payload.get(field), dict):
+            raise ValueError(
+                "edgeenv_runtime_telemetry_feed.candidate_context.operation."
+                "operation_timeline_summary.scenario_coverage."
+                f"{field} must be an object"
+            )
 
 
 def _validate_worker_health_trend(payload: dict[str, Any]) -> None:
@@ -1626,6 +1714,7 @@ def _operation_timeline_summary(
             "policy_decision": len(_dict_list(report.get("policy_decision_log"))),
             "runtime_event": runtime_event_summary.get("event_count", 0),
         },
+        "scenario_coverage": _scenario_coverage_summary(config, report),
         "queue": {
             "max_total_queue_depth": queue_summary.get("max_total_queue_depth", 0),
             "average_total_queue_depth": queue_summary.get(
@@ -1665,6 +1754,107 @@ def _operation_timeline_summary(
             runtime_event_summary,
             stale_drop,
             pressure_window,
+        ),
+    }
+
+
+def _scenario_coverage_summary(
+    config: OrchestratorConfig | None,
+    report: dict[str, Any],
+) -> dict[str, Any]:
+    run = _dict_value(report.get("run"))
+    identity = _scenario_identity(config) if config is not None else {}
+    queue_depth_timeline = _dict_list(report.get("queue_depth_timeline"))
+    latency_timeline = _dict_list(report.get("latency_timeline"))
+    policy_decision_log = _dict_list(report.get("policy_decision_log"))
+    runtime_event_summary = _dict_value(report.get("runtime_event_summary"))
+    totals = _dict_value(_dict_value(report.get("agent_runtime_summary")).get("totals"))
+    producer = _edgeenv_producer_context(report)
+    cycles = sorted(
+        {
+            cycle
+            for sample in queue_depth_timeline
+            if isinstance((cycle := sample.get("cycle")), int)
+        }
+    )
+    producer_sources = _string_list(producer.get("producer_sources"))
+    coverage_markers = [
+        (
+            "queue_depth_timeline_present"
+            if queue_depth_timeline
+            else "queue_depth_timeline_missing"
+        ),
+        (
+            "latency_timeline_present"
+            if latency_timeline
+            else "latency_timeline_missing"
+        ),
+        "runtime_event_summary_present"
+        if runtime_event_summary
+        else "runtime_event_summary_missing",
+    ]
+    if producer:
+        coverage_markers.append("producer_context_present")
+    if _positive_int(producer.get("device_local_event_count")):
+        coverage_markers.append("device_local_producer_context_present")
+
+    return {
+        "schema_version": SCENARIO_COVERAGE_SUMMARY_SCHEMA,
+        "operation_context_role": "supplemental",
+        "scheduler_owner": "orchestrator",
+        "decision_owner": "lab",
+        "not_a_deployment_decision": True,
+        "first_read": "review_sustained_scenario_coverage",
+        "source": (
+            "run_identity+queue_depth_timeline+latency_timeline+"
+            "runtime_event_summary+producer_context"
+        ),
+        "scenario_mode": (
+            config.scenario_mode
+            if config is not None
+            else str(run.get("scenario_mode", "unknown"))
+        ),
+        "scenario_label": str(
+            run.get("scenario_label")
+            or identity.get("scenario_label")
+            or "unknown"
+        ),
+        "scenario_category": str(
+            run.get("scenario_category")
+            or identity.get("scenario_category")
+            or "unknown"
+        ),
+        "observed_cycle_count": len(cycles),
+        "max_observed_cycle": max(cycles) if cycles else 0,
+        "task_count": len(config.tasks) if config is not None else 0,
+        "queue_depth_sample_count": len(queue_depth_timeline),
+        "latency_sample_count": len(latency_timeline),
+        "runtime_event_count": _non_negative_int_value(
+            runtime_event_summary.get("event_count")
+        ),
+        "policy_decision_count": len(policy_decision_log),
+        "executed_count": _non_negative_int_value(totals.get("executed_count")),
+        "dropped_count": _non_negative_int_value(totals.get("dropped_count")),
+        "deadline_missed_count": _non_negative_int_value(
+            totals.get("deadline_missed_count")
+        ),
+        "fallback_count": _non_negative_int_value(totals.get("fallback_count")),
+        "producer_source_count": _non_negative_int_value(
+            producer.get("producer_event_count")
+        ),
+        "device_local_producer_count": _non_negative_int_value(
+            producer.get("device_local_event_count")
+        ),
+        "producer_sources": producer_sources,
+        "producer_sources_by_task": _dict_value(
+            producer.get("producer_sources_by_task")
+        ),
+        "producer_stage_by_task": _dict_value(producer.get("producer_stage_by_task")),
+        "coverage_markers": coverage_markers,
+        "interpretation": (
+            "Scenario coverage is supplemental reviewer navigation evidence for "
+            "the sustained run scope; Lab remains the final deployment decision "
+            "owner."
         ),
     }
 

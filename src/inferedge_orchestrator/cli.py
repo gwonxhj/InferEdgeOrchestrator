@@ -214,6 +214,9 @@ def _run_multi_workload_sustained(args: argparse.Namespace) -> int:
     affected_tasks = timeline.get("affected_tasks", {}) if isinstance(timeline, dict) else {}
     latency = timeline.get("latency", {}) if isinstance(timeline, dict) else {}
     stale_drop = timeline.get("stale_drop", {}) if isinstance(timeline, dict) else {}
+    scenario_coverage = (
+        timeline.get("scenario_coverage", {}) if isinstance(timeline, dict) else {}
+    )
     policy_pressure = (
         timeline.get("policy_pressure", {}) if isinstance(timeline, dict) else {}
     )
@@ -242,6 +245,16 @@ def _run_multi_workload_sustained(args: argparse.Namespace) -> int:
         f"stale_drop_tasks={_format_cli_list(affected_tasks.get('stale_drop'))} "
         f"max_queue_wait_ms={latency.get('max_queue_wait_ms', 0)}"
     )
+    if scenario_coverage:
+        print(
+            "scenario-coverage: "
+            f"first_read={scenario_coverage.get('first_read', 'unknown')} "
+            f"cycles={scenario_coverage.get('observed_cycle_count', 0)} "
+            f"queue_samples={scenario_coverage.get('queue_depth_sample_count', 0)} "
+            f"latency_samples={scenario_coverage.get('latency_sample_count', 0)} "
+            f"producers={scenario_coverage.get('producer_source_count', 0)} "
+            f"sources={_format_cli_list(scenario_coverage.get('producer_sources'))}"
+        )
     if policy_pressure:
         print(
             "policy-pressure: "

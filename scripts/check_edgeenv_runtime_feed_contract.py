@@ -112,6 +112,9 @@ def main(argv: list[str] | None = None) -> int:
         affected = operation_timeline_summary.get("affected_tasks") or {}
         review_hints = operation_timeline_summary.get("review_hints") or []
         stale_drop = operation_timeline_summary.get("stale_drop") or {}
+        scenario_coverage = (
+            operation_timeline_summary.get("scenario_coverage") or {}
+        )
         pressure_window = operation_timeline_summary.get("pressure_window") or {}
         policy_pressure = (
             policy_pressure_summary
@@ -131,6 +134,19 @@ def main(argv: list[str] | None = None) -> int:
             f"stale_drop_tasks={_format_list(affected.get('stale_drop'))}; "
             f"max_queue_wait_ms={latency.get('max_queue_wait_ms', 0)}"
         )
+        if scenario_coverage:
+            print(
+                "scenario_coverage: "
+                f"first_read={scenario_coverage.get('first_read') or 'unknown'}; "
+                f"cycles={scenario_coverage.get('observed_cycle_count', 0)}; "
+                "queue_samples="
+                f"{scenario_coverage.get('queue_depth_sample_count', 0)}; "
+                "latency_samples="
+                f"{scenario_coverage.get('latency_sample_count', 0)}; "
+                f"producers={scenario_coverage.get('producer_source_count', 0)}; "
+                "sources="
+                f"{_format_list(scenario_coverage.get('producer_sources'))}"
+            )
         if policy_pressure:
             print(
                 "policy_pressure: "
