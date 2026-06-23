@@ -321,8 +321,9 @@ deployment judgement를 수행하지 않습니다.
 checker 출력은 compact `operation_timeline` review hint와 stale-drop count/task도
 함께 보여주므로, reviewer가 전체 JSON을 열기 전에
 queue delay/fallback/deadline/stale drop pressure를 확인할 수 있습니다. 또한
-`pressure_window` first-read line도 출력해 sustained overload interval을
-deployment decision이 아닌 reviewer navigation으로 확인할 수 있게 합니다.
+`policy_pressure` reason count와 `pressure_window` first-read line도 출력해
+sustained overload interval과 scheduler reason distribution을 deployment
+decision이 아닌 reviewer navigation으로 확인할 수 있게 합니다.
 `run-multi-workload-sustained` CLI도 `operation_risk_rollup`에서 가져온
 `operation-risk` first-read line을 출력해 risk level, primary reason, affected
 task를 바로 보여줍니다. 이는 reviewer navigation aid일 뿐이며 JSON rollup이

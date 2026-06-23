@@ -319,8 +319,9 @@ markers only; it does not perform regression analysis or deployment judgement.
 The checker output also prints the compact `operation_timeline` review hints and
 stale-drop count/tasks so reviewers can see queue delay/fallback/deadline/stale
 drop pressure without opening the full JSON first. It also prints the
-`pressure_window` first-read line so the sustained overload interval is visible
-without treating it as a deployment decision.
+`policy_pressure` reason counts and `pressure_window` first-read line so the
+sustained overload interval and the scheduler reason distribution are visible
+without treating them as a deployment decision.
 The `run-multi-workload-sustained` CLI also prints an `operation-risk` first-read
 line from `operation_risk_rollup` with risk level, primary reasons, and affected
 tasks. This is a reviewer navigation aid only; the JSON rollup remains the

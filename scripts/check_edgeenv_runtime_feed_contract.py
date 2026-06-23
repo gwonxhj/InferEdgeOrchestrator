@@ -141,6 +141,8 @@ def main(argv: list[str] | None = None) -> int:
                 f"{_format_list(policy_pressure.get('protected_tasks'))}; "
                 "fallback="
                 f"{_format_list(policy_pressure.get('fallback_tasks'))}; "
+                "reason_counts="
+                f"{_format_count_map(policy_pressure.get('decision_reason_counts'))}; "
                 "markers="
                 f"{_format_list(policy_pressure.get('pressure_markers'))}"
             )
@@ -176,6 +178,17 @@ def _format_list(value: Any) -> str:
     if not isinstance(value, list):
         return "none"
     items = [str(item) for item in value if isinstance(item, str) and item]
+    return ",".join(items) if items else "none"
+
+
+def _format_count_map(value: Any) -> str:
+    if not isinstance(value, dict):
+        return "none"
+    items = [
+        f"{key}:{count}"
+        for key, count in sorted(value.items())
+        if isinstance(key, str) and key and isinstance(count, int | float)
+    ]
     return ",".join(items) if items else "none"
 
 
